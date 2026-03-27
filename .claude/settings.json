@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /Users/ferri/Documents/dev/learning/frontend/nextjs/daffa-florist/src/components/*.tsx)",
+      "Bash(python3 .agents/skills/ui-ux-pro-max/scripts/search.py \"florist flower shop wedding service elegant luxury\" --design-system -p \"Daffa Florist\" --persist)",
+      "Bash(python3 .agents/skills/ui-ux-pro-max/scripts/search.py \"florist flower elegant luxury premium\" --domain color -n 5)",
+      "Bash(python3 .agents/skills/ui-ux-pro-max/scripts/search.py \"elegant luxury serif\" --domain typography -n 5)",
+      "WebFetch(domain:www.instagram.com)",
+      "WebSearch",
+      "WebFetch(domain:maps.app.goo.gl)",
+      "Bash(git remote:*)"
+    ]
+  }
+}

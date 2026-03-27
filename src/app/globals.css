@@ -1,34 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --bg: #ffffff;
-  --bg-surface: #f9f9f7;
-  --bg-card: #ffffff;
-  --border: #e5e5e5;
-  --border-hover: #d4d4d4;
-  --text: #0a0a0a;
-  --text-secondary: #525252;
-  --text-muted: #a3a3a3;
-  --accent: #6366f1;
-  --accent-dim: rgba(99,102,241,0.08);
-  --accent-blue: #3b82f6;
-  --accent-purple: #7c3aed;
-  --accent-amber: #f59e0b;
+  /* Florist Color Palette — Warm Blush + Sage Green + Gold */
+  --bg: #F5EBE4;
+  --bg-surface: #F0E2D8;
+  --bg-card: #FAF5F0;
+  --bg-hero: linear-gradient(135deg, #F5EBE4 0%, #F0E2D8 50%, #EDE7E0 100%);
+
+  --primary: #9D174D;
+  --primary-light: #E8A0B8;
+  --primary-dark: #831843;
+
+  --secondary: #3D6B4F;
+  --secondary-light: #A8D5B8;
+  --secondary-dark: #1E3A2A;
+
+  --accent: #8B6914;
+  --accent-light: #D4B86A;
+
+  --border: #D6C5B8;
+  --border-hover: #C4AE9E;
+
+  --text: #1C1917;
+  --text-secondary: #57534E;
+  --text-muted: #8C8279;
+
+  --destructive: #C22D2D;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(28, 25, 23, 0.06);
+  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 8px 30px rgba(28, 25, 23, 0.1);
+  --shadow-glow: 0 0 20px rgba(157, 23, 77, 0.12);
 }
 
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text);
   --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-serif: 'Playfair Display', Georgia, serif;
 }
 
 * { box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 80px;
+  scroll-padding-top: 96px;
 }
 
 body {
@@ -39,94 +57,167 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Subtle light dot grid */
-.dot-grid {
-  background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-/* Scrollbar */
+/* Elegant scrollbar */
 ::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #f9f9f7; }
-::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
 /* Selection */
-::selection { background: rgba(99,102,241,0.15); color: #0a0a0a; }
+::selection { background: rgba(157, 23, 77, 0.15); color: var(--text); }
 
-/* Gradient text utility */
+/* Section spacing */
+section { padding: 96px 0; }
+@media (max-width: 640px) { section { padding: 64px 0; } }
+
+/* Typography utilities */
+.font-serif { font-family: 'Playfair Display', Georgia, serif; }
+
 .gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-section { padding: 96px 0; }
-@media (max-width: 640px) { section { padding: 56px 0; } }
-
-/* Twinkling animated rainbow border */
-@keyframes rainbow-move {
-  0%   { background-position: 0% center; }
-  100% { background-position: 200% center; }
+.gradient-text-green {
+  background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.rainbow-border {
-  padding: 1.5px;
-  border-radius: 22px;
-  background: linear-gradient(90deg, #f97316, #f59e0b, #10b981, #3b82f6, #7c3aed, #ec4899, #f97316);
-  background-size: 200% auto;
-  animation: rainbow-move 2.5s linear infinite;
+/* Subtle floral pattern background */
+.floral-bg {
+  background-image: radial-gradient(circle at 20% 50%, rgba(157, 23, 77, 0.03) 0%, transparent 50%),
+                     radial-gradient(circle at 80% 20%, rgba(61, 107, 79, 0.03) 0%, transparent 50%),
+                     radial-gradient(circle at 50% 80%, rgba(139, 105, 20, 0.03) 0%, transparent 50%);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Image hover zoom */
+.img-zoom {
+  overflow: hidden;
+}
+.img-zoom img {
+  transition: transform 0.5s ease;
+}
+.img-zoom:hover img {
+  transform: scale(1.05);
+}
+
+/* Button base styles */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  padding: 14px 32px;
+  border-radius: 9999px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+}
+.btn-primary:hover {
+  background: var(--primary-dark);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  padding: 14px 32px;
+  border-radius: 9999px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--primary);
+}
+.btn-secondary:hover {
+  background: rgba(157, 23, 77, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Glassmorphic card */
+.glass {
+  background: rgba(245, 235, 228, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(214, 197, 184, 0.4);
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes petal-fall {
+  0% { transform: translateY(-10%) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+}
+
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; }
+
+/* Testimonial marquee carousel */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  overflow: hidden;
+}
+
+.marquee-scroll {
+  display: flex;
+  gap: 20px;
+  width: max-content;
+  animation: marquee-scroll 40s linear infinite;
+}
+
+.marquee-reverse {
+  animation-direction: reverse;
+}
+
+.marquee-track:hover .marquee-scroll {
+  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rainbow-border { animation: none; }
-}
-
-/* Typing cursor */
-@keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
-
-.cursor-blink  { animation: cursor-blink 0.65s step-end infinite; }
-.cursor-hidden { opacity: 0; }
-
-/* Experience alternating timeline layout */
-.exp-row {
-  display: grid;
-  grid-template-columns: 1fr 72px 1fr;
-  align-items: start;
-  gap: 0;
-}
-
-/* Desktop slots */
-.exp-slot-left  { padding-right: 24px; }
-.exp-slot-mid   { display: flex; justify-content: center; }
-.exp-slot-right { padding-left: 24px; }
-.exp-slot-spacer { /* empty placeholder */ }
-
-@media (max-width: 768px) {
-  .exp-row {
-    grid-template-columns: 52px 1fr;
-  }
-  /* Left-side cards move to col 2, row 1 */
-  .exp-slot-left {
-    grid-column: 2;
-    grid-row: 1;
-    padding-right: 0;
-    padding-left: 16px;
-  }
-  /* Dot shifts to col 1 */
-  .exp-slot-mid {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  /* Spacer and right-aligned cards */
-  .exp-slot-spacer { display: none; }
-  .exp-slot-right {
-    grid-column: 2;
-    grid-row: 1;
-    padding-left: 16px;
-  }
+  .animate-float,
+  .animate-fade-in-up { animation: none; }
+  .card-hover:hover { transform: none; }
+  .img-zoom:hover img { transform: none; }
+  .marquee-scroll { animation: none; }
 }

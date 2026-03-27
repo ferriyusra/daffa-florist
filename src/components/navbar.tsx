@@ -1,270 +1,195 @@
 'use client';
+
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
-import { Menu, X, Mail } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X } from 'lucide-react';
 
 const navLinks = [
-  { href: '#hero',       label: 'Home',       id: 'hero',       page: false },
-  { href: '#about',      label: 'About',      id: 'about',      page: false },
-  { href: '#skills',     label: 'Skills',     id: 'skills',     page: false },
-  { href: '#experience', label: 'Experience', id: 'experience', page: false },
-  { href: '#projects',   label: 'Projects',   id: 'projects',   page: false },
-  { href: '#contact',    label: 'Contact',    id: 'contact',    page: false },
-  { href: '/articles',   label: 'Articles',   id: 'articles',   page: true  },
+	{ label: 'Beranda', href: '#beranda' },
+	{ label: 'Produk', href: '#produk' },
+	{ label: 'Tentang', href: '#tentang' },
+	{ label: 'Galeri', href: '#galeri' },
+	{ label: 'Testimoni', href: '#testimoni' },
+	{ label: 'Kontak', href: '#kontak' },
 ];
 
-const MD = 768; // breakpoint in px
-
 export default function Navbar() {
-  const pathname = usePathname();
-  const [menuOpen,      setMenuOpen]      = useState(false);
-  const [activeSection, setActiveSection] = useState('hero');
-  const [hovered,       setHovered]       = useState<string | null>(null);
-  const [isMobile,      setIsMobile]      = useState(false);
+	const [scrolled, setScrolled] = useState(false);
+	const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isHomePage = pathname === '/';
+	useEffect(() => {
+		const onScroll = () => setScrolled(window.scrollY > 60);
+		window.addEventListener('scroll', onScroll, { passive: true });
+		return () => window.removeEventListener('scroll', onScroll);
+	}, []);
 
-  // Detect mobile breakpoint + close menu on resize to desktop
-  useEffect(() => {
-    const check = () => {
-      const mobile = window.innerWidth < MD;
-      setIsMobile(mobile);
-      if (!mobile) setMenuOpen(false);
-    };
-    check();
-    window.addEventListener('resize', check, { passive: true });
-    return () => window.removeEventListener('resize', check);
-  }, []);
+	const headerHeight = scrolled ? 56 : 80;
 
-  // Active section via scroll — only on home page
-  useEffect(() => {
-    if (!isHomePage) return;
-    const OFFSET = 88;
-    const ids = navLinks.filter((l) => !l.page).map((l) => l.id);
+	return (
+		<>
+			<header className='fixed top-0 left-0 right-0 z-50'>
+				{/* Single header bar */}
+				<div
+					className='transition-all duration-300 ease-out border-b'
+					style={{
+						background: 'var(--bg-surface)',
+						borderColor: 'var(--border)',
+						height: headerHeight,
+						boxShadow: scrolled ? 'var(--shadow-md)' : 'none',
+					}}
+				>
+					<div className='mx-auto max-w-[1200px] px-6 h-full flex items-center'>
+						{/* Hamburger — always visible on left */}
+						<button
+							onClick={() => setMobileOpen(!mobileOpen)}
+							className='text-[var(--text)] hover:text-[var(--primary)] transition-colors cursor-pointer mr-6'
+							aria-label={mobileOpen ? 'Tutup menu' : 'Buka menu'}
+						>
+							{mobileOpen ? <X size={20} /> : <Menu size={20} />}
+						</button>
 
-    const update = () => {
-      let current = ids[0];
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (!el) continue;
-        if (el.getBoundingClientRect().top <= OFFSET) current = id;
-      }
-      setActiveSection(current);
-    };
+						{/* Left — tagline (hidden when scrolled or mobile) */}
+						<div
+							className='hidden md:flex items-center justify-center flex-1 h-full border-r border-[var(--border)] transition-opacity duration-300'
+							style={{ opacity: scrolled ? 0 : 1, pointerEvents: scrolled ? 'none' : 'auto' }}
+						>
+							<p
+								className='text-[10px] font-medium tracking-[0.2em] uppercase text-center leading-relaxed'
+								style={{ color: 'var(--text-secondary)' }}
+							>
+								Karangan Bunga
+								<br />
+								Ampar Putih
+							</p>
+						</div>
 
-    update();
-    window.addEventListener('scroll', update, { passive: true });
-    return () => window.removeEventListener('scroll', update);
-  }, [isHomePage]);
+						{/* Center — brand */}
+						<a
+							href='#beranda'
+							className='flex flex-col items-center justify-center h-full cursor-pointer flex-1'
+						>
+							<span
+								className='font-serif font-semibold tracking-tight text-[var(--text)] transition-all duration-300'
+								style={{ fontSize: scrolled ? '1.25rem' : 'clamp(1.5rem, 3vw, 2rem)' }}
+							>
+								Dafa Florist
+							</span>
+							<span
+								className='text-[9px] font-medium tracking-[0.3em] uppercase mt-0.5 transition-opacity duration-300'
+								style={{ color: 'var(--text-muted)', opacity: scrolled ? 0 : 1 }}
+							>
+								Ampar Putih
+							</span>
+						</a>
 
-  return (
-    <>
-      {/* ── Floating pill navbar ── */}
-      <nav
-        style={{
-          position: 'fixed',
-          top: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 50,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          padding: '6px 6px 6px 8px',
-          background: '#ffffff',
-          border: '2px solid #0a0a0a',
-          borderRadius: 100,
-          boxShadow: '4px 4px 0px #0a0a0a',
-          // Mobile: full width pill, Desktop: hug content
-          width: isMobile ? 'calc(100vw - 32px)' : 'max-content',
-          maxWidth: isMobile ? 480 : 'none',
-          boxSizing: 'border-box',
-        }}>
+						{/* Right — phone CTA (fades on scroll) */}
+						<div
+							className='hidden md:flex items-center justify-center flex-1 h-full border-l border-[var(--border)] transition-opacity duration-300'
+							style={{ opacity: scrolled ? 0 : 1, pointerEvents: scrolled ? 'none' : 'auto' }}
+						>
+							<div className='text-center'>
+								<p
+									className='text-[9px] font-medium tracking-[0.2em] uppercase'
+									style={{ color: 'var(--text-muted)' }}
+								>
+									Hubungi Kami
+								</p>
+								<p
+									className='text-[11px] font-semibold tracking-[0.15em] uppercase mt-1'
+									style={{ color: 'var(--text)' }}
+								>
+									0812 3456 7890
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</header>
 
-        {/* Logo circle */}
-        <a href='#hero' style={{ textDecoration: 'none', flexShrink: 0 }} aria-label='Home'>
-          <div style={{
-            width: 40, height: 40,
-            borderRadius: '50%',
-            background: '#0a0a0a',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ color: '#ffffff', fontSize: 13, fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>
-              FY
-            </span>
-          </div>
-        </a>
+			{/* Full-screen menu overlay */}
+			<AnimatePresence>
+				{mobileOpen && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.3, ease: 'easeOut' as const }}
+						className='fixed inset-0 z-40 overflow-y-auto'
+						style={{ background: 'var(--bg-surface)', top: headerHeight }}
+					>
+						<div className='mx-auto max-w-[700px] px-6 py-16'>
+							<div className='grid sm:grid-cols-2 gap-x-12 gap-y-2'>
+								{navLinks.map(({ label, href }, i) => (
+									<motion.div
+										key={href}
+										initial={{ opacity: 0, y: 16 }}
+										animate={{ opacity: 1, y: 0 }}
+										exit={{ opacity: 0, y: 8 }}
+										transition={{ duration: 0.35, delay: i * 0.06, ease: 'easeOut' as const }}
+									>
+										<a
+											href={href}
+											onClick={() => setMobileOpen(false)}
+											className='group block py-8 border-t border-[var(--border)] cursor-pointer'
+										>
+											<span
+												className='text-[10px] font-medium tracking-[0.2em] block mb-3'
+												style={{ color: 'var(--text-muted)' }}
+											>
+												{String(i + 1).padStart(2, '0')}
+											</span>
+											<span className='font-serif text-[clamp(1.5rem,4vw,2.25rem)] font-medium text-[var(--text)] group-hover:text-[var(--primary)] transition-colors duration-200'>
+												{label}
+											</span>
+										</a>
+									</motion.div>
+								))}
+							</div>
 
-        {/* ── Desktop: nav links + CTA ── */}
-        {!isMobile && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-              {navLinks.map((link) => {
-                const resolvedHref = !link.page && !isHomePage
-                  ? `/${link.href}`
-                  : link.href;
-                const active = link.page
-                  ? pathname === link.href
-                  : isHomePage && activeSection === link.id;
-                const hover  = hovered === link.id;
-                const linkStyle: React.CSSProperties = {
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '8px 14px',
-                  borderRadius: 100,
-                  textDecoration: 'none',
-                  fontSize: 14,
-                  fontWeight: active ? 700 : 500,
-                  fontFamily: "'Inter', sans-serif",
-                  color:      active ? '#ffffff' : hover ? '#0a0a0a' : '#525252',
-                  background: active ? '#0a0a0a' : hover ? 'rgba(0,0,0,0.05)' : 'transparent',
-                  transition: 'background 0.18s ease, color 0.18s ease',
-                  whiteSpace: 'nowrap',
-                };
-                return link.page ? (
-                  <Link
-                    key={link.id}
-                    href={resolvedHref}
-                    onMouseEnter={() => setHovered(link.id)}
-                    onMouseLeave={() => setHovered(null)}
-                    style={linkStyle}>
-                    {link.label}
-                  </Link>
-                ) : (
-                  <a
-                    key={link.id}
-                    href={resolvedHref}
-                    onMouseEnter={() => setHovered(link.id)}
-                    onMouseLeave={() => setHovered(null)}
-                    style={linkStyle}>
-                    {link.label}
-                  </a>
-                );
-              })}
-            </div>
+							{/* Social links in menu */}
+							<div className='mt-12 sm:mt-16 flex justify-end'>
+								<div className='text-right'>
+									<p
+										className='text-[9px] font-medium tracking-[0.25em] uppercase mb-3'
+										style={{ color: 'var(--text-muted)' }}
+									>
+										Follow Kami:
+									</p>
+									<div className='flex gap-4'>
+										<a
+											href='https://instagram.com/daffaflorist'
+											target='_blank'
+											rel='noopener noreferrer'
+											className='text-[var(--text)] hover:text-[var(--primary)] transition-colors cursor-pointer'
+											aria-label='Instagram'
+										>
+											<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round'>
+												<rect x='2' y='2' width='20' height='20' rx='5' />
+												<circle cx='12' cy='12' r='5' />
+												<circle cx='17.5' cy='6.5' r='1' fill='currentColor' stroke='none' />
+											</svg>
+										</a>
+										<a
+											href='https://wa.me/6281234567890'
+											target='_blank'
+											rel='noopener noreferrer'
+											className='text-[var(--text)] hover:text-[var(--primary)] transition-colors cursor-pointer'
+											aria-label='WhatsApp'
+										>
+											<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round'>
+												<path d='M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z' />
+											</svg>
+										</a>
+									</div>
+								</div>
+							</div>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
-            {/* Mail CTA */}
-            <a
-              href={isHomePage ? '#contact' : '/#contact'}
-              aria-label='Contact'
-              style={{
-                width: 40, height: 40,
-                borderRadius: 12,
-                background: '#0a0a0a',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                textDecoration: 'none',
-                flexShrink: 0,
-                transition: 'background 0.18s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#6366f1'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#0a0a0a'; }}>
-              <Mail size={16} color='#ffffff' />
-            </a>
-          </>
-        )}
-
-        {/* ── Mobile: spacer + hamburger ── */}
-        {isMobile && (
-          <>
-            {/* Spacer pushes hamburger to the right */}
-            <div style={{ flex: 1 }} />
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label='Toggle menu'
-              style={{
-                width: 40, height: 40,
-                borderRadius: 12,
-                background: '#0a0a0a',
-                border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}>
-              {menuOpen
-                ? <X    size={16} color='#ffffff' />
-                : <Menu size={16} color='#ffffff' />}
-            </button>
-          </>
-        )}
-      </nav>
-
-      {/* ── Mobile dropdown menu ── */}
-      {isMobile && menuOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 80,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 49,
-            width: 'calc(100vw - 32px)',
-            maxWidth: 480,
-            background: '#ffffff',
-            border: '2px solid #0a0a0a',
-            borderRadius: 20,
-            boxShadow: '4px 4px 0px #0a0a0a',
-            padding: 12,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            boxSizing: 'border-box',
-          }}>
-          {navLinks.map((link) => {
-            const resolvedHref = !link.page && !isHomePage
-              ? `/${link.href}`
-              : link.href;
-            const active = link.page
-              ? pathname === link.href
-              : isHomePage && activeSection === link.id;
-            const mobileStyle: React.CSSProperties = {
-              display: 'flex', alignItems: 'center',
-              padding: '11px 16px',
-              borderRadius: 12,
-              color:      active ? '#ffffff' : '#525252',
-              background: active ? '#0a0a0a' : 'transparent',
-              textDecoration: 'none',
-              fontSize: 15, fontWeight: active ? 700 : 500,
-              fontFamily: "'Inter', sans-serif",
-              transition: 'background 0.18s ease, color 0.18s ease',
-            };
-            return link.page ? (
-              <Link
-                key={link.id}
-                href={resolvedHref}
-                onClick={() => setMenuOpen(false)}
-                style={mobileStyle}>
-                {link.label}
-              </Link>
-            ) : (
-              <a
-                key={link.id}
-                href={resolvedHref}
-                onClick={() => setMenuOpen(false)}
-                style={mobileStyle}>
-                {link.label}
-              </a>
-            );
-          })}
-
-          <a
-            href={isHomePage ? '#contact' : '/#contact'}
-            onClick={() => setMenuOpen(false)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '11px 16px',
-              marginTop: 4,
-              borderRadius: 12,
-              background: '#6366f1',
-              color: '#ffffff',
-              textDecoration: 'none',
-              fontSize: 14, fontWeight: 700,
-              fontFamily: "'Inter', sans-serif",
-            }}>
-            <Mail size={14} /> Hire Me
-          </a>
-        </div>
-      )}
-    </>
-  );
+			{/* Spacer — matches header height */}
+			<div className='transition-all duration-300' style={{ height: headerHeight }} />
+		</>
+	);
 }
