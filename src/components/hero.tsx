@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, MessageCircle, Star, Truck } from 'lucide-react';
+import FloatingPetals from './floating-petals';
 
 export default function Hero() {
 	return (
@@ -10,6 +11,9 @@ export default function Hero() {
 			id='home'
 			className='relative min-h-dvh flex items-center overflow-hidden'
 			style={{ background: 'var(--bg-hero)' }}>
+			{/* Floating petals */}
+			<FloatingPetals />
+
 			{/* Decorative blobs */}
 			<div className='absolute inset-0 pointer-events-none overflow-hidden'>
 				<div

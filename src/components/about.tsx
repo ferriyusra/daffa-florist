@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import Image from 'next/image';
 import { motion, useInView } from 'framer-motion';
 import { Flower2, Clock, Truck, ShieldCheck } from 'lucide-react';
+import CountUp from './count-up';
 
 const highlights = [
 	{
@@ -92,13 +93,13 @@ export default function About() {
 						{/* Stats */}
 						<div className='grid grid-cols-3 gap-6 mt-10 pt-8 border-t border-[var(--border)]'>
 							{[
-								{ num: '1+', label: 'Tahun Melayani' },
-								{ num: '30+', label: 'Pelanggan Puas' },
-								{ num: '50+', label: 'Rangkaian Dibuat' },
-							].map(({ num, label }) => (
+								{ target: 1, suffix: '+', label: 'Tahun Melayani' },
+								{ target: 30, suffix: '+', label: 'Pelanggan Puas' },
+								{ target: 50, suffix: '+', label: 'Rangkaian Dibuat' },
+							].map(({ target, suffix, label }) => (
 								<div key={label}>
 									<p className='font-serif text-2xl font-bold text-[var(--secondary)]'>
-										{num}
+										<CountUp target={target} suffix={suffix} />
 									</p>
 									<p className='text-sm text-[var(--text-muted)] mt-1'>
 										{label}

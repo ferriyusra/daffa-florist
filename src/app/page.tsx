@@ -6,6 +6,7 @@ import Gallery from '@/components/gallery';
 import Testimonials from '@/components/testimonials';
 import Contact from '@/components/contact';
 import Footer from '@/components/footer';
+import SectionDivider from '@/components/section-divider';
 
 const jsonLd = {
 	'@context': 'https://schema.org',
@@ -150,10 +151,15 @@ export default function Home() {
 			<main className='min-h-screen'>
 				<Navbar />
 				<Hero />
+				<SectionDivider />
 				<Products />
+				<SectionDivider />
 				<About />
+				<SectionDivider />
 				<Gallery />
+				<SectionDivider />
 				<Testimonials />
+				<SectionDivider />
 				<Contact />
 				<Footer />
 			</main>

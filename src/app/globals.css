@@ -214,10 +214,49 @@ section { padding: 96px 0; }
   animation-play-state: paused;
 }
 
+/* Floating petals animation */
+@keyframes petal-drift {
+  0% {
+    transform: translateY(-5vh) rotate(0deg);
+    opacity: 0;
+  }
+  5% {
+    opacity: var(--petal-opacity);
+  }
+  85% {
+    opacity: var(--petal-opacity);
+  }
+  100% {
+    transform: translateY(105vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes petal-sway {
+  0%, 100% { translate: 0 0; }
+  25% { translate: 18px 0; }
+  75% { translate: -18px 0; }
+}
+
+.floating-petals-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.floating-petal {
+  position: absolute;
+  top: -5%;
+  animation: petal-drift linear infinite, petal-sway 5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
   .animate-fade-in-up { animation: none; }
   .card-hover:hover { transform: none; }
   .img-zoom:hover img { transform: none; }
   .marquee-scroll { animation: none; }
+  .floating-petal { display: none; }
 }
