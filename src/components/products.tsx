@@ -27,8 +27,8 @@ const products = [
 	{
 		title: 'Papan Bunga Premium',
 		description:
-			'Papan bunga premium dengan rangkaian bunga segar dan hiasan mewah untuk momen istimewa.',
-		features: ['Bunga segar pilihan', 'Hiasan premium', 'Berbagai tema warna'],
+			'Papan bunga premium dengan hiasan mewah dan rangkaian bunga indah untuk momen istimewa.',
+		features: ['Hiasan premium', 'Tahan lama & awet', 'Berbagai tema warna'],
 		price: 'Mulai Rp 500.000',
 		image: '/product/papan-bunga-3.PNG',
 		color: 'var(--secondary)',
@@ -36,8 +36,8 @@ const products = [
 	{
 		title: 'Dekorasi Mobil Pengantin',
 		description:
-			'Dekorasi bunga segar untuk mobil pengantin yang cantik di hari bahagia Anda.',
-		features: ['Desain romantis', 'Bunga segar pilihan', 'Pasang di lokasi'],
+			'Dekorasi bunga untuk mobil pengantin yang cantik dan mewah di hari bahagia Anda.',
+		features: ['Desain romantis', 'Rangkaian indah', 'Pasang di lokasi'],
 		price: 'Mulai Rp 500.000',
 		image: '/product/mobil-pengantin-1.PNG',
 		color: 'var(--primary-dark)',
@@ -65,7 +65,7 @@ export default function Products() {
 	const inView = useInView(ref, { once: true, margin: '-80px' });
 
 	return (
-		<section id='produk' className='floral-bg'>
+		<section id='product' className='floral-bg'>
 			<div className='mx-auto max-w-[1200px] px-6'>
 				{/* Header */}
 				<div className='text-center max-w-[600px] mx-auto mb-16'>
@@ -74,17 +74,18 @@ export default function Products() {
 						style={{
 							background: 'rgba(157, 23, 77, 0.08)',
 							color: 'var(--primary)',
-						}}
-					>
+						}}>
 						Produk Kami
 					</span>
 					<h2 className='font-serif text-[clamp(2rem,4vw,3rem)] font-bold mb-4'>
-						Karangan Bunga untuk{' '}
-						<span className='gradient-text'>Setiap Kesempatan</span>
+						Papan Bunga & Karangan Bunga{' '}
+						<span className='gradient-text'>Ampar Putih</span>
 					</h2>
-					<p style={{ color: 'var(--text-secondary)' }} className='text-lg leading-relaxed'>
-						Dafa Florist menyediakan berbagai rangkaian bunga segar berkualitas
-						dengan harga terjangkau di area Ampar Putih dan sekitarnya.
+					<p
+						style={{ color: 'var(--text-secondary)' }}
+						className='text-lg leading-relaxed'>
+						Dafa Florist menyediakan berbagai rangkaian bunga berkualitas dengan
+						harga terjangkau di area Ampar Putih dan sekitarnya.
 					</p>
 				</div>
 
@@ -94,15 +95,13 @@ export default function Products() {
 					variants={containerVariants}
 					initial='hidden'
 					animate={inView ? 'visible' : 'hidden'}
-					className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'
-				>
+					className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
 					{products.map((product) => (
 						<motion.div
 							key={product.title}
 							variants={cardVariants}
 							className='group bg-[var(--bg-card)] rounded-2xl overflow-hidden border border-[var(--border)] card-hover cursor-pointer'
-							style={{ boxShadow: 'var(--shadow-sm)' }}
-						>
+							style={{ boxShadow: 'var(--shadow-sm)' }}>
 							{/* Product image */}
 							<div className='relative aspect-4/3 overflow-hidden'>
 								<Image
@@ -114,7 +113,9 @@ export default function Products() {
 								/>
 								{/* Price badge */}
 								<div className='absolute top-3 right-3 glass rounded-full px-3 py-1.5'>
-									<p className='text-xs font-semibold' style={{ color: 'var(--text)' }}>
+									<p
+										className='text-xs font-semibold'
+										style={{ color: 'var(--text)' }}>
 										{product.price}
 									</p>
 								</div>
@@ -122,9 +123,13 @@ export default function Products() {
 
 							{/* Content */}
 							<div className='p-5'>
-								<h3 className='font-serif text-lg font-semibold mb-2'>{product.title}</h3>
+								<h3 className='font-serif text-lg font-semibold mb-2'>
+									{product.title}
+								</h3>
 
-								<p className='text-sm leading-relaxed mb-4' style={{ color: 'var(--text-secondary)' }}>
+								<p
+									className='text-sm leading-relaxed mb-4'
+									style={{ color: 'var(--text-secondary)' }}>
 									{product.description}
 								</p>
 
@@ -134,9 +139,11 @@ export default function Products() {
 										<li
 											key={f}
 											className='flex items-start gap-2 text-xs'
-											style={{ color: 'var(--text-secondary)' }}
-										>
-											<span className='mt-1.5 w-1 h-1 rounded-full shrink-0' style={{ background: product.color }} />
+											style={{ color: 'var(--text-secondary)' }}>
+											<span
+												className='mt-1.5 w-1 h-1 rounded-full shrink-0'
+												style={{ background: product.color }}
+											/>
 											{f}
 										</li>
 									))}
@@ -144,10 +151,9 @@ export default function Products() {
 
 								{/* CTA link */}
 								<a
-									href='#kontak'
+									href='#contact'
 									className='inline-flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer group/link'
-									style={{ color: product.color }}
-								>
+									style={{ color: product.color }}>
 									Pesan Sekarang
 									<ArrowRight
 										size={14}

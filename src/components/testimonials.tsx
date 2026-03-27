@@ -30,7 +30,7 @@ const testimonials = [
 	{
 		name: 'Sarah Wibowo',
 		product: 'Bucket Bunga',
-		text: 'Sudah 3 kali pesan dan tidak pernah mengecewakan. Bunga selalu segar dan indah.',
+		text: 'Sudah 3 kali pesan dan tidak pernah mengecewakan. Hasilnya selalu rapi dan indah.',
 		rating: 5,
 	},
 	{
@@ -42,7 +42,7 @@ const testimonials = [
 	{
 		name: 'Lisa Permata',
 		product: 'Bunga Wisuda',
-		text: 'Bouquet-nya cantik dan fresh banget. Wisuda jadi makin berkesan. Recommended!',
+		text: 'Bouquet-nya cantik banget dan tahan lama. Wisuda jadi makin berkesan. Recommended!',
 		rating: 5,
 	},
 	{
@@ -57,14 +57,12 @@ function TestimonialCard({ t }: { t: (typeof testimonials)[0] }) {
 	return (
 		<div
 			className='w-[320px] shrink-0 bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)] select-none'
-			style={{ boxShadow: 'var(--shadow-sm)' }}
-		>
+			style={{ boxShadow: 'var(--shadow-sm)' }}>
 			{/* Header: avatar + name + product badge */}
 			<div className='flex items-center gap-3 mb-4'>
 				<div
 					className='w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm text-white shrink-0'
-					style={{ background: 'var(--primary)' }}
-				>
+					style={{ background: 'var(--primary)' }}>
 					{t.name.charAt(0)}
 				</div>
 				<div className='min-w-0'>
@@ -72,10 +70,17 @@ function TestimonialCard({ t }: { t: (typeof testimonials)[0] }) {
 					<div className='flex items-center gap-2'>
 						<div className='flex gap-0.5'>
 							{Array.from({ length: t.rating }).map((_, i) => (
-								<Star key={i} size={11} fill='var(--accent)' color='var(--accent)' />
+								<Star
+									key={i}
+									size={11}
+									fill='var(--accent)'
+									color='var(--accent)'
+								/>
 							))}
 						</div>
-						<span className='text-[10px] font-medium' style={{ color: 'var(--text-muted)' }}>
+						<span
+							className='text-[10px] font-medium'
+							style={{ color: 'var(--text-muted)' }}>
 							· {t.product}
 						</span>
 					</div>
@@ -83,7 +88,9 @@ function TestimonialCard({ t }: { t: (typeof testimonials)[0] }) {
 			</div>
 
 			{/* Review text */}
-			<p className='text-sm leading-relaxed' style={{ color: 'var(--text-secondary)' }}>
+			<p
+				className='text-sm leading-relaxed'
+				style={{ color: 'var(--text-secondary)' }}>
 				&ldquo;{t.text}&rdquo;
 			</p>
 		</div>
@@ -95,21 +102,30 @@ export default function Testimonials() {
 	const row2 = testimonials.slice(4).concat(testimonials.slice(0, 2));
 
 	return (
-		<section id='testimoni' className='overflow-hidden' style={{ background: 'var(--bg-surface)' }}>
+		<section
+			id='testimony'
+			className='overflow-hidden'
+			style={{ background: 'var(--bg-surface)' }}>
 			<div className='mx-auto max-w-[1200px] px-6'>
 				{/* Header */}
 				<div className='text-center max-w-[540px] mx-auto mb-12'>
 					<span
 						className='inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase mb-4'
-						style={{ background: 'rgba(61, 107, 79, 0.08)', color: 'var(--secondary)' }}
-					>
+						style={{
+							background: 'rgba(61, 107, 79, 0.08)',
+							color: 'var(--secondary)',
+						}}>
 						Testimoni
 					</span>
 					<h2 className='font-serif text-[clamp(2rem,4vw,3rem)] font-bold mb-4'>
-						Kepercayaan <span className='gradient-text-green'>Pelanggan</span> Kami
+						Kepercayaan <span className='gradient-text-green'>Pelanggan</span>{' '}
+						Kami
 					</h2>
-					<p className='text-base leading-relaxed' style={{ color: 'var(--text-secondary)' }}>
-						Kepuasan pelanggan adalah prioritas kami. Lihat apa kata mereka tentang Dafa Florist.
+					<p
+						className='text-base leading-relaxed'
+						style={{ color: 'var(--text-secondary)' }}>
+						Kepuasan pelanggan adalah prioritas kami. Lihat apa kata mereka
+						tentang Dafa Florist.
 					</p>
 				</div>
 			</div>
@@ -117,8 +133,20 @@ export default function Testimonials() {
 			{/* Marquee row 1 — scrolls left */}
 			<div className='relative mb-5'>
 				{/* Fade edges */}
-				<div className='absolute left-0 top-0 bottom-0 w-20 z-10' style={{ background: 'linear-gradient(to right, var(--bg-surface), transparent)' }} />
-				<div className='absolute right-0 top-0 bottom-0 w-20 z-10' style={{ background: 'linear-gradient(to left, var(--bg-surface), transparent)' }} />
+				<div
+					className='absolute left-0 top-0 bottom-0 w-20 z-10'
+					style={{
+						background:
+							'linear-gradient(to right, var(--bg-surface), transparent)',
+					}}
+				/>
+				<div
+					className='absolute right-0 top-0 bottom-0 w-20 z-10'
+					style={{
+						background:
+							'linear-gradient(to left, var(--bg-surface), transparent)',
+					}}
+				/>
 
 				<div className='marquee-track'>
 					<div className='marquee-scroll'>
@@ -131,8 +159,20 @@ export default function Testimonials() {
 
 			{/* Marquee row 2 — scrolls right (reverse) */}
 			<div className='relative'>
-				<div className='absolute left-0 top-0 bottom-0 w-20 z-10' style={{ background: 'linear-gradient(to right, var(--bg-surface), transparent)' }} />
-				<div className='absolute right-0 top-0 bottom-0 w-20 z-10' style={{ background: 'linear-gradient(to left, var(--bg-surface), transparent)' }} />
+				<div
+					className='absolute left-0 top-0 bottom-0 w-20 z-10'
+					style={{
+						background:
+							'linear-gradient(to right, var(--bg-surface), transparent)',
+					}}
+				/>
+				<div
+					className='absolute right-0 top-0 bottom-0 w-20 z-10'
+					style={{
+						background:
+							'linear-gradient(to left, var(--bg-surface), transparent)',
+					}}
+				/>
 
 				<div className='marquee-track'>
 					<div className='marquee-scroll marquee-reverse'>

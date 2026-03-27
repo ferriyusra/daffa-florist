@@ -1,0 +1,5 @@
+# Dafa Florist - Karangan Bunga Ampar Putih
+User-agent: *
+Allow: /
+
+Sitemap: https://dafaflorist.com/sitemap.xml

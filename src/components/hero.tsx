@@ -7,10 +7,9 @@ import { ArrowRight, MapPin, MessageCircle, Star, Truck } from 'lucide-react';
 export default function Hero() {
 	return (
 		<section
-			id='beranda'
+			id='home'
 			className='relative min-h-dvh flex items-center overflow-hidden'
-			style={{ background: 'var(--bg-hero)' }}
-		>
+			style={{ background: 'var(--bg-hero)' }}>
 			{/* Decorative blobs */}
 			<div className='absolute inset-0 pointer-events-none overflow-hidden'>
 				<div
@@ -29,41 +28,40 @@ export default function Hero() {
 					<motion.div
 						initial={{ opacity: 0, y: 30 }}
 						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.6, ease: 'easeOut' }}
-					>
+						transition={{ duration: 0.6, ease: 'easeOut' }}>
 						<span
 							className='inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold tracking-wide mb-6'
 							style={{
 								background: 'rgba(157, 23, 77, 0.08)',
 								color: 'var(--primary)',
-							}}
-						>
+							}}>
 							<MapPin size={13} />
 							Ampar Putih & Sekitarnya
 						</span>
 
 						<h1 className='font-serif text-[clamp(2.5rem,5vw,3.75rem)] leading-[1.08] font-bold mb-5'>
-							Rangkaian Bunga{' '}
-							<span className='gradient-text'>Segar</span> untuk Momen{' '}
-							<span className='gradient-text-green'>Spesial</span>
+							Karangan Bunga <span className='gradient-text'>Cantik</span> untuk
+							Momen <span className='gradient-text-green'>Spesial</span>
 						</h1>
 
-						<p className='text-base leading-relaxed mb-8 max-w-[480px]' style={{ color: 'var(--text-secondary)' }}>
-							Papan bunga ucapan, bucket bunga, rangkaian wisuda, dan dekorasi
-							mobil pengantin — bunga segar dengan harga terjangkau.
+						<p
+							className='text-base leading-relaxed mb-8 max-w-[480px]'
+							style={{ color: 'var(--text-secondary)' }}>
+							Papan bunga ucapan, bucket bunga, hingga dekorasi mobil pengantin
+							— rangkaian bunga tahan lama dengan harga terjangkau di Ampar
+							Putih.
 						</p>
 
 						<div className='flex flex-wrap gap-3 mb-10'>
-							<a href='#produk' className='btn-primary'>
+							<a href='#product' className='btn-primary'>
 								Lihat Produk
 								<ArrowRight size={16} />
 							</a>
 							<a
-								href='https://wa.me/6281234567890'
+								href='https://wa.me/6285274320917'
 								target='_blank'
 								rel='noopener noreferrer'
-								className='btn-secondary'
-							>
+								className='btn-secondary'>
 								<MessageCircle size={16} />
 								WhatsApp Kami
 							</a>
@@ -72,19 +70,34 @@ export default function Hero() {
 						{/* Trust badges — inline compact */}
 						<div className='flex flex-wrap items-center gap-5'>
 							{[
-								{ icon: Star, num: '5.0', label: 'Rating', color: 'var(--accent)' },
-								{ icon: Truck, num: '50+', label: 'Terkirim', color: 'var(--secondary)' },
+								{
+									icon: Star,
+									num: '5.0',
+									label: 'Rating',
+									color: 'var(--accent)',
+								},
+								{
+									icon: Truck,
+									num: '50+',
+									label: 'Terkirim',
+									color: 'var(--secondary)',
+								},
 							].map(({ icon: Icon, num, label, color }) => (
 								<div key={label} className='flex items-center gap-2.5'>
 									<div
 										className='w-9 h-9 rounded-lg flex items-center justify-center'
-										style={{ background: `color-mix(in srgb, ${color} 10%, transparent)` }}
-									>
+										style={{
+											background: `color-mix(in srgb, ${color} 10%, transparent)`,
+										}}>
 										<Icon size={16} style={{ color }} />
 									</div>
 									<div>
 										<p className='text-sm font-bold leading-tight'>{num}</p>
-										<p className='text-[11px]' style={{ color: 'var(--text-muted)' }}>{label}</p>
+										<p
+											className='text-[11px]'
+											style={{ color: 'var(--text-muted)' }}>
+											{label}
+										</p>
 									</div>
 								</div>
 							))}
@@ -94,13 +107,16 @@ export default function Hero() {
 									style={{
 										background: 'rgba(157, 23, 77, 0.08)',
 										color: 'var(--primary)',
-									}}
-								>
-									100%
+									}}>
+									✓
 								</div>
 								<div>
-									<p className='text-sm font-bold leading-tight'>Segar</p>
-									<p className='text-[11px]' style={{ color: 'var(--text-muted)' }}>Bunga Pilihan</p>
+									<p className='text-sm font-bold leading-tight'>Tahan Lama</p>
+									<p
+										className='text-[11px]'
+										style={{ color: 'var(--text-muted)' }}>
+										Tetap Cantik
+									</p>
 								</div>
 							</div>
 						</div>
@@ -111,8 +127,7 @@ export default function Hero() {
 						initial={{ opacity: 0, scale: 0.95 }}
 						animate={{ opacity: 1, scale: 1 }}
 						transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
-						className='relative hidden lg:block'
-					>
+						className='relative hidden lg:block'>
 						{/* Main image */}
 						<div className='relative aspect-[3/4] rounded-3xl overflow-hidden shadow-lg'>
 							<Image
@@ -131,11 +146,17 @@ export default function Hero() {
 						<motion.div
 							className='absolute -top-3 -right-3 glass rounded-2xl px-4 py-3 shadow-md'
 							animate={{ y: [0, -6, 0] }}
-							transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-						>
-							<p className='text-xs font-semibold flex items-center gap-1.5' style={{ color: 'var(--text)' }}>
+							transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>
+							<p
+								className='text-xs font-semibold flex items-center gap-1.5'
+								style={{ color: 'var(--text)' }}>
 								<span className='w-2 h-2 rounded-full bg-green-500 animate-pulse' />
 								Menerima Pesanan
+							</p>
+							<p
+								className='text-[10px] mt-1 font-medium'
+								style={{ color: 'var(--primary)' }}>
+								Segera hadir: Bunga Segar!
 							</p>
 						</motion.div>
 
@@ -145,8 +166,7 @@ export default function Hero() {
 							style={{ borderColor: 'var(--bg)' }}
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.6, delay: 0.5, ease: 'easeOut' }}
-						>
+							transition={{ duration: 0.6, delay: 0.5, ease: 'easeOut' }}>
 							<Image
 								src='/product/mobil-pengantin-1.PNG'
 								alt='Dekorasi mobil pengantin dari Dafa Florist'

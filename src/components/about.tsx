@@ -8,15 +8,15 @@ import { Flower2, Clock, Truck, ShieldCheck } from 'lucide-react';
 const highlights = [
 	{
 		icon: Flower2,
-		title: 'Bunga Segar Pilihan',
+		title: 'Tahan Lama & Awet',
 		description:
-			'Kami hanya menggunakan bunga segar berkualitas yang dipilih langsung setiap hari.',
+			'Rangkaian bunga kami tetap cantik dalam jangka waktu lama — tidak layu, tidak perlu disiram.',
 	},
 	{
 		icon: Clock,
-		title: 'Layanan Cepat',
+		title: 'Proses Cepat',
 		description:
-			'Same-day delivery tersedia untuk pemesanan sebelum jam 12 siang di area Ampar Putih.',
+			'Pengerjaan cepat dan bisa diantar di hari yang sama untuk area Ampar Putih dan sekitarnya.',
 	},
 	{
 		icon: Truck,
@@ -37,7 +37,7 @@ export default function About() {
 	const inView = useInView(ref, { once: true, margin: '-80px' });
 
 	return (
-		<section id='tentang' style={{ background: 'var(--bg-surface)' }}>
+		<section id='about' style={{ background: 'var(--bg-surface)' }}>
 			<div className='mx-auto max-w-[1200px] px-6'>
 				<div className='grid lg:grid-cols-2 gap-16 items-center'>
 					{/* Left — image + text */}
@@ -56,8 +56,9 @@ export default function About() {
 						</span>
 
 						<h2 className='font-serif text-[clamp(2rem,4vw,3rem)] font-bold mb-6'>
-							Dafa Florist,{' '}
-							<span className='gradient-text-green'>Ampar Putih</span>
+							Toko Bunga{' '}
+							<span className='gradient-text-green'>Ampar Putih</span>, Pasaman
+							Barat
 						</h2>
 
 						{/* About image */}
@@ -74,14 +75,17 @@ export default function About() {
 						<div className='space-y-4 text-[var(--text-secondary)] leading-relaxed'>
 							<p>
 								<strong className='text-[var(--text)]'>Dafa Florist</strong>{' '}
-								adalah toko karangan bunga di Ampar Putih yang melayani
-								pemesanan papan bunga ucapan, bucket bunga, bouquet wisuda, dan
+								adalah toko karangan bunga di Ampar Putih, Pasaman Barat yang
+								melayani pemesanan papan bunga ucapan, bucket bunga, dan
 								dekorasi mobil pengantin.
 							</p>
 							<p>
-								Kami berkomitmen menghadirkan rangkaian bunga segar dengan harga
-								terjangkau untuk setiap momen penting Anda — pernikahan,
-								pembukaan toko, wisuda, duka cita, dan acara spesial lainnya.
+								Saat ini kami menggunakan bunga artifisial berkualitas yang
+								tahan lama dan tetap cantik.{' '}
+								<strong className='text-[var(--secondary)]'>
+									Segera hadir: rangkaian bunga asli dan segar
+								</strong>{' '}
+								untuk melengkapi koleksi kami!
 							</p>
 						</div>
 
