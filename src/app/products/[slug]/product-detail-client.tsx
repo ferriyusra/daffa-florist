@@ -15,9 +15,8 @@ import {
 	ShoppingCart,
 	Truck,
 } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import { useCart } from '@/hooks/use-cart';
-import type { Product } from '@/lib/products';
+import { useAuth, useCart } from '@/hooks';
+import type { Product } from '@/lib';
 
 export default function ProductDetailClient({
 	product,

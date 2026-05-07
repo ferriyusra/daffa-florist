@@ -4,8 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
+import { Footer, Navbar } from '@/components';
 
 export default function RegisterPage() {
 	return (

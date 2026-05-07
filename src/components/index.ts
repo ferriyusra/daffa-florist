@@ -1,0 +1,11 @@
+export { default as About } from './about';
+export { default as Contact } from './contact';
+export { default as CountUp } from './count-up';
+export { default as FloatingPetals } from './floating-petals';
+export { default as Footer } from './footer';
+export { default as Gallery } from './gallery';
+export { default as Hero } from './hero';
+export { default as Navbar } from './navbar';
+export { default as Products } from './products';
+export { default as SectionDivider } from './section-divider';
+export { default as Testimonials } from './testimonials';

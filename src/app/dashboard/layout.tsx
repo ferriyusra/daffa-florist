@@ -4,9 +4,8 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Package, MapPin } from 'lucide-react';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
-import { useAuth } from '@/hooks/use-auth';
+import { Footer, Navbar } from '@/components';
+import { useAuth } from '@/hooks';
 
 const tabs = [
 	{ label: 'Pesanan Saya', href: '/dashboard/orders', icon: Package },

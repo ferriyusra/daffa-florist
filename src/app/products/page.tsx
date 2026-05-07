@@ -11,14 +11,9 @@ import {
 	SlidersHorizontal,
 	X,
 } from 'lucide-react';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
-import {
-	productCategories,
-	products,
-	type ProductCategory,
-} from '@/lib/products';
-import { formatRupiah } from '@/hooks/use-cart';
+import { Footer, Navbar } from '@/components';
+import { productCategories, products, type ProductCategory } from '@/lib';
+import { formatRupiah } from '@/hooks';
 
 type SortOption = 'recommended' | 'price-asc' | 'price-desc' | 'name';
 

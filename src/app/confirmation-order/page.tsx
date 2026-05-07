@@ -21,10 +21,8 @@ import {
 	Truck,
 	Wallet,
 } from 'lucide-react';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
-import { useAuth } from '@/hooks/use-auth';
-import { formatRupiah, useCart } from '@/hooks/use-cart';
+import { Footer, Navbar } from '@/components';
+import { formatRupiah, useAuth, useCart } from '@/hooks';
 
 const SHIPPING_FEE = 25_000;
 

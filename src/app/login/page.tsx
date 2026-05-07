@@ -4,9 +4,8 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
+import { useAuth } from '@/hooks';
+import { Footer, Navbar } from '@/components';
 
 export default function LoginPage() {
 	return (

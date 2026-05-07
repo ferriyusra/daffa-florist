@@ -6,9 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Check, ShoppingCart } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import { useCart } from '@/hooks/use-cart';
-import { products as allProducts, type Product } from '@/lib/products';
+import { useAuth, useCart } from '@/hooks';
+import { products as allProducts, type Product } from '@/lib';
 
 const featuredProducts = allProducts.slice(0, 4);
 

@@ -1,12 +1,14 @@
-import Navbar from '@/components/navbar';
-import Hero from '@/components/hero';
-import Products from '@/components/products';
-import About from '@/components/about';
-import Gallery from '@/components/gallery';
-import Testimonials from '@/components/testimonials';
-import Contact from '@/components/contact';
-import Footer from '@/components/footer';
-import SectionDivider from '@/components/section-divider';
+import {
+	About,
+	Contact,
+	Footer,
+	Gallery,
+	Hero,
+	Navbar,
+	Products,
+	SectionDivider,
+	Testimonials,
+} from '@/components';
 
 const jsonLd = {
 	'@context': 'https://schema.org',

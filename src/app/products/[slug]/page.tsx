@@ -1,12 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
-import {
-	getProductBySlug,
-	getRelatedProducts,
-	products,
-} from '@/lib/products';
+import { Footer, Navbar } from '@/components';
+import { getProductBySlug, getRelatedProducts, products } from '@/lib';
 import ProductDetailClient from './product-detail-client';
 
 type Params = Promise<{ slug: string }>;

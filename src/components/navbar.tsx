@@ -14,8 +14,7 @@ import {
 	ShoppingCart,
 	User,
 } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import { useCart } from '@/hooks/use-cart';
+import { useAuth, useCart } from '@/hooks';
 
 const navLinks = [
 	{ label: 'Beranda', href: '/#home' },
