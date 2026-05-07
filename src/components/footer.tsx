@@ -10,12 +10,12 @@ import {
 } from 'lucide-react';
 
 const quickLinks = [
-	{ label: 'Beranda', href: '#home' },
-	{ label: 'Produk', href: '#product' },
-	{ label: 'Tentang Kami', href: '#about' },
-	{ label: 'Galeri', href: '#gallery' },
-	{ label: 'Testimoni', href: '#testimony' },
-	{ label: 'Kontak', href: '#contact' },
+	{ label: 'Beranda', href: '/#home' },
+	{ label: 'Produk', href: '/#product' },
+	{ label: 'Tentang Kami', href: '/#about' },
+	{ label: 'Galeri', href: '/#gallery' },
+	{ label: 'Testimoni', href: '/#testimony' },
+	{ label: 'Kontak', href: '/#contact' },
 ];
 
 const products = [
@@ -125,7 +125,7 @@ export default function Footer() {
 							{products.map((p) => (
 								<li key={p}>
 									<a
-										href='#product'
+										href='/#product'
 										className='text-sm opacity-50 hover:opacity-100 transition-opacity cursor-pointer'>
 										{p}
 									</a>

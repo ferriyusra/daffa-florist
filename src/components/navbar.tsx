@@ -1,21 +1,33 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, MessageCircle, Instagram, MapPin } from 'lucide-react';
+import {
+	Menu,
+	X,
+	MessageCircle,
+	Instagram,
+	MapPin,
+	LogIn,
+	LogOut,
+	User,
+} from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const navLinks = [
-	{ label: 'Beranda', href: '#home' },
-	{ label: 'Produk', href: '#product' },
-	{ label: 'Tentang', href: '#about' },
-	{ label: 'Galeri', href: '#gallery' },
-	{ label: 'Testimoni', href: '#testimony' },
-	{ label: 'Kontak', href: '#contact' },
+	{ label: 'Beranda', href: '/#home' },
+	{ label: 'Produk', href: '/#product' },
+	{ label: 'Tentang', href: '/#about' },
+	{ label: 'Galeri', href: '/#gallery' },
+	{ label: 'Testimoni', href: '/#testimony' },
+	{ label: 'Kontak', href: '/#contact' },
 ];
 
 export default function Navbar() {
 	const [scrolled, setScrolled] = useState(false);
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const { user, isLoading, logout } = useAuth();
 
 	useEffect(() => {
 		const onScroll = () => setScrolled(window.scrollY > 60);
@@ -64,7 +76,7 @@ export default function Navbar() {
 
 						{/* Center — brand */}
 						<a
-							href='#home'
+							href='/'
 							className='flex flex-col items-center justify-center h-full cursor-pointer flex-1'>
 							<span
 								className='font-serif font-semibold tracking-tight text-[var(--text)] transition-all duration-300'
@@ -102,6 +114,43 @@ export default function Navbar() {
 									0852 7432 0917
 								</p>
 							</div>
+						</div>
+
+						{/* Auth state — persistent on right */}
+						<div className='ml-4 flex items-center'>
+							{isLoading ? null : user ? (
+								<div className='flex items-center gap-2'>
+									<div
+										className='hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full'
+										style={{
+											background: 'rgba(157, 23, 77, 0.08)',
+											color: 'var(--primary)',
+										}}>
+										<User size={14} />
+										<span className='text-xs font-semibold max-w-[100px] truncate'>
+											{user.name}
+										</span>
+									</div>
+									<button
+										onClick={logout}
+										aria-label='Keluar'
+										className='inline-flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] hover:border-[var(--primary)] transition-colors cursor-pointer'
+										style={{ color: 'var(--text-secondary)' }}>
+										<LogOut size={15} />
+									</button>
+								</div>
+							) : (
+								<Link
+									href='/login'
+									className='inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-transform hover:scale-[1.02] cursor-pointer'
+									style={{
+										background: 'var(--primary)',
+										color: 'white',
+									}}>
+									<LogIn size={13} />
+									Masuk
+								</Link>
+							)}
 						</div>
 					</div>
 				</div>

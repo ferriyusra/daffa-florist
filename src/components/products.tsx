@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const products = [
 	{
@@ -64,6 +65,19 @@ const cardVariants = {
 export default function Products() {
 	const ref = useRef(null);
 	const inView = useInView(ref, { once: true, margin: '-80px' });
+	const { user } = useAuth();
+
+	const buildOrderHref = (product: (typeof products)[number]) => {
+		const params = new URLSearchParams({
+			product: product.title,
+			price: product.price,
+			image: product.image,
+		}).toString();
+		const confirmationPath = `/confirmation-order?${params}`;
+		return user
+			? confirmationPath
+			: `/login?redirect=${encodeURIComponent(confirmationPath)}`;
+	};
 
 	return (
 		<section id='product' className='floral-bg'>
@@ -152,14 +166,7 @@ export default function Products() {
 
 								{/* CTA link */}
 								<Link
-									href={{
-										pathname: '/confirmation-order',
-										query: {
-											product: product.title,
-											price: product.price,
-											image: product.image,
-										},
-									}}
+									href={buildOrderHref(product)}
 									className='inline-flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer group/link'
 									style={{ color: product.color }}>
 									Pesan Sekarang
