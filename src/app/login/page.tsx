@@ -20,6 +20,9 @@ export default function LoginPage() {
 	);
 }
 
+const DEMO_EMAIL = 'test2026@test.test';
+const DEMO_PASSWORD = 'test2026';
+
 function LoginForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -28,14 +31,24 @@ function LoginForm() {
 	const [password, setPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState('');
 
-	const redirectTo = searchParams.get('redirect') ?? '/';
+	const redirectTo = searchParams.get('redirect') ?? '/dashboard';
 
 	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		setError('');
+
+		if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+			setError(
+				'Email atau password salah. Gunakan kredensial demo yang ditampilkan di bawah.',
+			);
+			return;
+		}
+
 		setSubmitting(true);
 		setTimeout(() => {
-			login({ name: email.split('@')[0] || 'Pengguna', email });
+			login({ name: 'Pengguna Demo', email });
 			router.push(redirectTo);
 		}, 600);
 	};
@@ -147,6 +160,17 @@ function LoginForm() {
 							</a>
 						</div>
 
+						{error && (
+							<p
+								className='text-sm rounded-xl px-4 py-3'
+								style={{
+									background: 'rgba(220, 38, 38, 0.08)',
+									color: '#dc2626',
+								}}>
+								{error}
+							</p>
+						)}
+
 						<button
 							type='submit'
 							disabled={submitting}
@@ -154,6 +178,25 @@ function LoginForm() {
 							style={{ background: 'var(--primary)' }}>
 							{submitting ? 'Memproses...' : 'Masuk'}
 						</button>
+
+						<div
+							className='rounded-xl p-4 text-xs space-y-1'
+							style={{
+								background: 'rgba(157, 23, 77, 0.06)',
+								color: 'var(--text-secondary)',
+							}}>
+							<p
+								className='font-semibold'
+								style={{ color: 'var(--primary)' }}>
+								Akun Demo
+							</p>
+							<p>
+								Email: <span className='font-mono'>{DEMO_EMAIL}</span>
+							</p>
+							<p>
+								Password: <span className='font-mono'>{DEMO_PASSWORD}</span>
+							</p>
+						</div>
 
 						<p
 							className='text-center text-sm'

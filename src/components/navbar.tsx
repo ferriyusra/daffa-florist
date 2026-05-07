@@ -11,9 +11,11 @@ import {
 	MapPin,
 	LogIn,
 	LogOut,
+	ShoppingCart,
 	User,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useCart } from '@/hooks/use-cart';
 
 const navLinks = [
 	{ label: 'Beranda', href: '/#home' },
@@ -28,6 +30,7 @@ export default function Navbar() {
 	const [scrolled, setScrolled] = useState(false);
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const { user, isLoading, logout } = useAuth();
+	const { totalItems } = useCart();
 
 	useEffect(() => {
 		const onScroll = () => setScrolled(window.scrollY > 60);
@@ -116,12 +119,32 @@ export default function Navbar() {
 							</div>
 						</div>
 
+						{/* Cart icon — always visible */}
+						<Link
+							href='/confirmation-order'
+							aria-label='Lihat keranjang'
+							className='ml-4 relative inline-flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] hover:border-[var(--primary)] transition-colors cursor-pointer'
+							style={{ color: 'var(--text-secondary)' }}>
+							<ShoppingCart size={15} />
+							{totalItems > 0 && (
+								<span
+									className='absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center'
+									style={{
+										background: 'var(--primary)',
+										boxShadow: '0 0 0 2px var(--bg-surface)',
+									}}>
+									{totalItems > 99 ? '99+' : totalItems}
+								</span>
+							)}
+						</Link>
+
 						{/* Auth state — persistent on right */}
-						<div className='ml-4 flex items-center'>
+						<div className='ml-2 flex items-center'>
 							{isLoading ? null : user ? (
 								<div className='flex items-center gap-2'>
-									<div
-										className='hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full'
+									<Link
+										href='/dashboard'
+										className='hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:opacity-80 cursor-pointer'
 										style={{
 											background: 'rgba(157, 23, 77, 0.08)',
 											color: 'var(--primary)',
@@ -130,7 +153,7 @@ export default function Navbar() {
 										<span className='text-xs font-semibold max-w-[100px] truncate'>
 											{user.name}
 										</span>
-									</div>
+									</Link>
 									<button
 										onClick={logout}
 										aria-label='Keluar'
