@@ -198,11 +198,7 @@ export default function Products() {
 				<div className='mt-12 text-center'>
 					<Link
 						href='/products'
-						className='inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold border-2 transition-all hover:scale-[1.02] hover:bg-[var(--primary)] hover:text-white'
-						style={{
-							borderColor: 'var(--primary)',
-							color: 'var(--primary)',
-						}}>
+						className='inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold border-2 border-[var(--primary)] text-[var(--primary)] bg-transparent transition-all hover:scale-[1.02] hover:bg-[var(--primary)] hover:text-white'>
 						Lihat Semua Produk
 						<ArrowRight size={16} />
 					</Link>
