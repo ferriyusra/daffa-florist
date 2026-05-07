@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
@@ -150,8 +151,15 @@ export default function Products() {
 								</ul>
 
 								{/* CTA link */}
-								<a
-									href='#contact'
+								<Link
+									href={{
+										pathname: '/confirmation-order',
+										query: {
+											product: product.title,
+											price: product.price,
+											image: product.image,
+										},
+									}}
 									className='inline-flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer group/link'
 									style={{ color: product.color }}>
 									Pesan Sekarang
@@ -159,7 +167,7 @@ export default function Products() {
 										size={14}
 										className='transition-transform duration-200 group-hover/link:translate-x-1'
 									/>
-								</a>
+								</Link>
 							</div>
 						</motion.div>
 					))}
