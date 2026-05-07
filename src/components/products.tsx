@@ -190,12 +190,12 @@ export default function Products() {
 											type='button'
 											onClick={() => handleAddToCart(product)}
 											aria-label='Tambah ke keranjang'
-											className='inline-flex items-center justify-center w-10 h-10 rounded-full border transition-all cursor-pointer shrink-0'
+											className='inline-flex items-center justify-center w-10 h-10 rounded-full border transition-all cursor-pointer shrink-0 hover:scale-[1.05]'
 											style={{
 												borderColor: isAdded
 													? '#16a34a'
-													: 'var(--border)',
-												color: isAdded ? '#16a34a' : product.color,
+													: 'var(--primary)',
+												color: isAdded ? '#16a34a' : 'var(--primary)',
 												background: isAdded
 													? 'rgba(34, 197, 94, 0.1)'
 													: 'transparent',
@@ -209,8 +209,11 @@ export default function Products() {
 										<button
 											type='button'
 											onClick={() => handleOrderNow(product)}
-											className='flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium text-white transition-transform hover:scale-[1.02] cursor-pointer group/cta'
-											style={{ background: product.color }}>
+											className='flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-md cursor-pointer group/cta'
+											style={{
+												background: 'var(--primary)',
+												boxShadow: '0 2px 8px rgba(157, 23, 77, 0.2)',
+											}}>
 											Pesan Sekarang
 											<ArrowRight
 												size={14}
