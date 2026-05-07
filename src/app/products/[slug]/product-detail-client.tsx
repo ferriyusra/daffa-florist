@@ -209,9 +209,10 @@ export default function ProductDetailClient({
 									</span>
 									<button
 										type='button'
-										onClick={() => setQuantity((q) => q + 1)}
+										onClick={() => setQuantity((q) => Math.min(10, q + 1))}
 										aria-label='Tambah jumlah'
-										className='inline-flex items-center justify-center w-9 h-9 cursor-pointer hover:text-[var(--primary)] transition-colors'
+										disabled={quantity >= 10}
+										className='inline-flex items-center justify-center w-9 h-9 cursor-pointer hover:text-[var(--primary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
 										style={{ color: 'var(--text-secondary)' }}>
 										<Plus size={14} />
 									</button>

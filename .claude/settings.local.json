@@ -20,7 +20,8 @@
       "Bash(curl -sL \"https://cdn.simpleicons.org/amazonaws/FF9900\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/amazonwebservices/amazonwebservices-plain-wordmark.svg\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/openai/openai-original.svg\")",
-      "Bash(rtk proxy *)"
+      "Bash(rtk proxy *)",
+      "Bash(rtk find *)"
     ],
     "additionalDirectories": [
       "/Users/ferri/Documents/dev/learning/frontend/nextjs/my-app/src"
