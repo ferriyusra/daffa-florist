@@ -2,50 +2,15 @@
 
 import { useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Check, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { parsePriceFromLabel, useCart } from '@/hooks/use-cart';
+import { useCart } from '@/hooks/use-cart';
+import { products as allProducts, type Product } from '@/lib/products';
 
-const products = [
-	{
-		title: 'Papan Bunga Wedding',
-		description:
-			'Papan bunga ucapan Happy Wedding dengan desain elegan. Tersedia berbagai warna dan ukuran.',
-		features: ['Ucapan custom', 'Ukuran 1.5m - 2m', 'Antar & pasang gratis'],
-		price: 'Mulai Rp 350.000',
-		image: '/product/papan-bunga-5.PNG',
-		color: 'var(--primary)',
-	},
-	{
-		title: 'Papan Bunga Ucapan',
-		description:
-			'Papan bunga ucapan selamat & sukses untuk acara resmi, sertijab, pembukaan, dan lainnya.',
-		features: ['Desain profesional', 'Warna custom', 'Pengiriman tepat waktu'],
-		price: 'Mulai Rp 350.000',
-		image: '/product/papan-bunga-4.PNG',
-		color: 'var(--accent)',
-	},
-	{
-		title: 'Papan Bunga Premium',
-		description:
-			'Papan bunga premium dengan hiasan mewah dan rangkaian bunga indah untuk momen istimewa.',
-		features: ['Hiasan premium', 'Tahan lama & awet', 'Berbagai tema warna'],
-		price: 'Mulai Rp 500.000',
-		image: '/product/papan-bunga-3.PNG',
-		color: 'var(--secondary)',
-	},
-	{
-		title: 'Dekorasi Mobil Pengantin',
-		description:
-			'Dekorasi bunga untuk mobil pengantin yang cantik dan mewah di hari bahagia Anda.',
-		features: ['Desain romantis', 'Rangkaian indah', 'Pasang di lokasi'],
-		price: 'Mulai Rp 500.000',
-		image: '/product/mobil-pengantin-1.PNG',
-		color: 'var(--primary-dark)',
-	},
-];
+const featuredProducts = allProducts.slice(0, 4);
 
 const containerVariants = {
 	hidden: {},
@@ -63,8 +28,6 @@ const cardVariants = {
 	},
 };
 
-type Product = (typeof products)[number];
-
 export default function Products() {
 	const ref = useRef(null);
 	const inView = useInView(ref, { once: true, margin: '-80px' });
@@ -74,18 +37,18 @@ export default function Products() {
 	const [addedId, setAddedId] = useState<string | null>(null);
 
 	const toCartItem = (product: Product) => ({
-		id: product.title,
+		id: product.slug,
 		title: product.title,
-		price: parsePriceFromLabel(product.price),
-		priceLabel: product.price,
+		price: product.price,
+		priceLabel: product.priceLabel,
 		image: product.image,
 	});
 
 	const handleAddToCart = (product: Product) => {
 		addItem(toCartItem(product));
-		setAddedId(product.title);
+		setAddedId(product.slug);
 		setTimeout(() => {
-			setAddedId((id) => (id === product.title ? null : id));
+			setAddedId((id) => (id === product.slug ? null : id));
 		}, 1500);
 	};
 
@@ -129,16 +92,18 @@ export default function Products() {
 					initial='hidden'
 					animate={inView ? 'visible' : 'hidden'}
 					className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
-					{products.map((product) => {
-						const isAdded = addedId === product.title;
+					{featuredProducts.map((product) => {
+						const isAdded = addedId === product.slug;
 						return (
 							<motion.div
-								key={product.title}
+								key={product.slug}
 								variants={cardVariants}
 								className='group bg-[var(--bg-card)] rounded-2xl overflow-hidden border border-[var(--border)] card-hover flex flex-col'
 								style={{ boxShadow: 'var(--shadow-sm)' }}>
 								{/* Product image */}
-								<div className='relative aspect-4/3 overflow-hidden'>
+								<Link
+									href={`/products/${product.slug}`}
+									className='relative aspect-4/3 overflow-hidden block'>
 									<Image
 										src={product.image}
 										alt={product.title}
@@ -151,21 +116,23 @@ export default function Products() {
 										<p
 											className='text-xs font-semibold'
 											style={{ color: 'var(--text)' }}>
-											{product.price}
+											{product.priceLabel}
 										</p>
 									</div>
-								</div>
+								</Link>
 
 								{/* Content */}
 								<div className='p-5 flex flex-col flex-1'>
-									<h3 className='font-serif text-lg font-semibold mb-2'>
-										{product.title}
-									</h3>
+									<Link href={`/products/${product.slug}`}>
+										<h3 className='font-serif text-lg font-semibold mb-2 hover:text-[var(--primary)] transition-colors'>
+											{product.title}
+										</h3>
+									</Link>
 
 									<p
 										className='text-sm leading-relaxed mb-4'
 										style={{ color: 'var(--text-secondary)' }}>
-										{product.description}
+										{product.shortDescription}
 									</p>
 
 									{/* Features */}
@@ -226,6 +193,20 @@ export default function Products() {
 						);
 					})}
 				</motion.div>
+
+				{/* See all CTA */}
+				<div className='mt-12 text-center'>
+					<Link
+						href='/products'
+						className='inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold border-2 transition-all hover:scale-[1.02] hover:bg-[var(--primary)] hover:text-white'
+						style={{
+							borderColor: 'var(--primary)',
+							color: 'var(--primary)',
+						}}>
+						Lihat Semua Produk
+						<ArrowRight size={16} />
+					</Link>
+				</div>
 			</div>
 		</section>
 	);

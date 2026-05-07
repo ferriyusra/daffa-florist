@@ -19,7 +19,7 @@ import { useCart } from '@/hooks/use-cart';
 
 const navLinks = [
 	{ label: 'Beranda', href: '/#home' },
-	{ label: 'Produk', href: '/#product' },
+	{ label: 'Produk', href: '/products' },
 	{ label: 'Tentang', href: '/#about' },
 	{ label: 'Galeri', href: '/#gallery' },
 	{ label: 'Testimoni', href: '/#testimony' },
