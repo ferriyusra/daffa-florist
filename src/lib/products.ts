@@ -1,11 +1,41 @@
 export const productCategories = [
 	'Wedding',
-	'Ucapan',
+	'Duka Cita',
+	'Grand Opening',
+	'Congratulations',
+	'Wisuda',
 	'Dekorasi',
 	'Premium',
 ] as const;
 
 export type ProductCategory = (typeof productCategories)[number];
+
+export type ProductSize = {
+	id: string;
+	label: string;
+	price: number;
+	priceLabel: string;
+	note?: string;
+};
+
+export type ProductTemplate = {
+	id: string;
+	name: string;
+	image: string;
+};
+
+export type ProductThemeColor = {
+	id: string;
+	name: string;
+	value: string;
+};
+
+export type ProductAddon = {
+	id: string;
+	name: string;
+	price: number;
+	priceLabel: string;
+};
 
 export type Product = {
 	slug: string;
@@ -21,7 +51,73 @@ export type Product = {
 	images: string[];
 	color: string;
 	tags: string[];
+	sizes: ProductSize[];
+	designTemplates: ProductTemplate[];
+	themeColors: ProductThemeColor[];
+	addons: ProductAddon[];
+	productionTime: string;
+	serviceAreas: string[];
 };
+
+const formatPrice = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
+
+const standardServiceAreas = [
+	'Simpang Empat',
+	'Talu',
+	'Ujung Gading',
+	'Kinali',
+	'Sasak Ranah Pasisie',
+	'Pasaman',
+];
+
+const defaultAddons = (): ProductAddon[] => [
+	{
+		id: 'standing-flower',
+		name: 'Standing Flower',
+		price: 150_000,
+		priceLabel: formatPrice(150_000),
+	},
+	{
+		id: 'lampu',
+		name: 'Lampu Hias',
+		price: 75_000,
+		priceLabel: formatPrice(75_000),
+	},
+	{
+		id: 'custom-ribbon',
+		name: 'Custom Ribbon',
+		price: 50_000,
+		priceLabel: formatPrice(50_000),
+	},
+	{
+		id: 'ucapan-premium',
+		name: 'Ucapan Premium',
+		price: 100_000,
+		priceLabel: formatPrice(100_000),
+	},
+];
+
+const papanBungaSizes = (basePrice: number): ProductSize[] => [
+	{
+		id: '1-25m',
+		label: '1.25m',
+		price: basePrice,
+		priceLabel: formatPrice(basePrice),
+	},
+	{
+		id: '2m',
+		label: '2m',
+		price: Math.round(basePrice * 1.5),
+		priceLabel: formatPrice(Math.round(basePrice * 1.5)),
+	},
+	{
+		id: 'custom',
+		label: 'Custom',
+		price: Math.round(basePrice * 1.7),
+		priceLabel: formatPrice(Math.round(basePrice * 1.7)),
+		note: 'Ukuran custom dikonfirmasi via WhatsApp',
+	},
+];
 
 export const products: Product[] = [
 	{
@@ -31,14 +127,12 @@ export const products: Product[] = [
 			'Papan bunga ucapan Happy Wedding dengan desain elegan dan ukuran standar.',
 		description:
 			'Rangkaian papan bunga klasik untuk ucapan pernikahan. Desain elegan dengan bunga segar dan tulisan custom sesuai permintaan. Cocok untuk gedung resepsi maupun rumah.',
-		features: ['Ucapan custom', 'Ukuran 1.5m - 2m', 'Antar & pasang gratis'],
+		features: ['Ucapan custom', 'Ukuran 1.25m - 2m', 'Antar & pasang gratis'],
 		specs: [
-			{ label: 'Ukuran', value: '1.5m × 2m' },
 			{ label: 'Bahan', value: 'Bunga segar & artificial' },
 			{ label: 'Pengiriman', value: 'Gratis area Pasaman Barat' },
-			{ label: 'Estimasi', value: '1-2 hari kerja' },
 		],
-		price: 350000,
+		price: 350_000,
 		priceLabel: 'Rp 350.000',
 		category: 'Wedding',
 		image: '/product/papan-bunga-5.PNG',
@@ -49,6 +143,33 @@ export const products: Product[] = [
 		],
 		color: 'var(--primary)',
 		tags: ['wedding', 'pernikahan', 'happy wedding', 'klasik'],
+		sizes: papanBungaSizes(350_000),
+		designTemplates: [
+			{
+				id: 'klasik-rose',
+				name: 'Klasik Rose',
+				image: '/product/papan-bunga-5.PNG',
+			},
+			{
+				id: 'klasik-elegan',
+				name: 'Elegan Pastel',
+				image: '/product/papan-bunga-3.PNG',
+			},
+			{
+				id: 'klasik-romantis',
+				name: 'Romantis Putih',
+				image: '/product/papan-bunga-4.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'rose', name: 'Rose', value: '#e11d48' },
+			{ id: 'pastel', name: 'Pastel', value: '#fbcfe8' },
+			{ id: 'putih', name: 'Putih', value: '#fafafa' },
+			{ id: 'maroon', name: 'Maroon', value: '#7f1d1d' },
+		],
+		addons: defaultAddons(),
+		productionTime: '1-2 hari kerja',
+		serviceAreas: standardServiceAreas,
 	},
 	{
 		slug: 'papan-bunga-wedding-royale',
@@ -59,12 +180,10 @@ export const products: Product[] = [
 			'Papan bunga edisi premium dengan rangkaian bunga lebih padat dan dekorasi tambahan. Cocok untuk pernikahan eksklusif yang ingin tampil istimewa di hari spesial.',
 		features: ['Hiasan premium', 'Bunga padat & mewah', 'Stand kayu eksklusif'],
 		specs: [
-			{ label: 'Ukuran', value: '2m × 2.5m' },
 			{ label: 'Bahan', value: 'Bunga segar premium' },
 			{ label: 'Pengiriman', value: 'Gratis area Pasaman Barat' },
-			{ label: 'Estimasi', value: '2-3 hari kerja' },
 		],
-		price: 750000,
+		price: 750_000,
 		priceLabel: 'Rp 750.000',
 		category: 'Wedding',
 		image: '/product/papan-bunga-3.PNG',
@@ -75,6 +194,33 @@ export const products: Product[] = [
 		],
 		color: 'var(--primary)',
 		tags: ['wedding', 'premium', 'royale', 'mewah'],
+		sizes: papanBungaSizes(750_000),
+		designTemplates: [
+			{
+				id: 'royale-mewah',
+				name: 'Royale Mewah',
+				image: '/product/papan-bunga-3.PNG',
+			},
+			{
+				id: 'royale-eksklusif',
+				name: 'Eksklusif Emas',
+				image: '/product/papan-bunga-5.PNG',
+			},
+			{
+				id: 'royale-glamour',
+				name: 'Glamour Marun',
+				image: '/product/papan-bunga-1.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'maroon', name: 'Maroon', value: '#7f1d1d' },
+			{ id: 'emas', name: 'Emas', value: '#d4af37' },
+			{ id: 'putih', name: 'Putih', value: '#fafafa' },
+			{ id: 'rose', name: 'Rose', value: '#e11d48' },
+		],
+		addons: defaultAddons(),
+		productionTime: '2-3 hari kerja',
+		serviceAreas: standardServiceAreas,
 	},
 	{
 		slug: 'papan-bunga-ucapan-selamat',
@@ -85,14 +231,12 @@ export const products: Product[] = [
 			'Papan bunga dengan tulisan ucapan selamat custom untuk berbagai keperluan: ulang tahun, kelulusan, promosi jabatan, dan pencapaian lainnya.',
 		features: ['Desain profesional', 'Warna custom', 'Pengiriman tepat waktu'],
 		specs: [
-			{ label: 'Ukuran', value: '1.5m × 2m' },
 			{ label: 'Bahan', value: 'Bunga segar & artificial' },
 			{ label: 'Pengiriman', value: 'Gratis area Pasaman Barat' },
-			{ label: 'Estimasi', value: '1 hari kerja' },
 		],
-		price: 350000,
+		price: 350_000,
 		priceLabel: 'Rp 350.000',
-		category: 'Ucapan',
+		category: 'Congratulations',
 		image: '/product/papan-bunga-4.PNG',
 		images: [
 			'/product/papan-bunga-4.PNG',
@@ -100,7 +244,34 @@ export const products: Product[] = [
 			'/product/papan-bunga-5.PNG',
 		],
 		color: 'var(--accent)',
-		tags: ['selamat', 'sukses', 'ucapan'],
+		tags: ['selamat', 'sukses', 'ucapan', 'congratulations'],
+		sizes: papanBungaSizes(350_000),
+		designTemplates: [
+			{
+				id: 'selamat-formal',
+				name: 'Formal Cerah',
+				image: '/product/papan-bunga-4.PNG',
+			},
+			{
+				id: 'selamat-fresh',
+				name: 'Fresh Pastel',
+				image: '/product/papan-bunga-1.PNG',
+			},
+			{
+				id: 'selamat-elegan',
+				name: 'Elegan Putih',
+				image: '/product/papan-bunga-5.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'pink', name: 'Pink', value: '#ec4899' },
+			{ id: 'kuning', name: 'Kuning', value: '#facc15' },
+			{ id: 'biru', name: 'Biru', value: '#3b82f6' },
+			{ id: 'ungu', name: 'Ungu', value: '#a855f7' },
+		],
+		addons: defaultAddons(),
+		productionTime: '1 hari kerja',
+		serviceAreas: standardServiceAreas,
 	},
 	{
 		slug: 'papan-bunga-grand-opening',
@@ -111,14 +282,12 @@ export const products: Product[] = [
 			'Papan bunga eksklusif untuk grand opening usaha. Desain mencolok dengan kombinasi warna cerah agar terlihat menonjol dan menarik perhatian pelanggan.',
 		features: ['Warna cerah & mencolok', 'Tulisan eye-catching', 'Cepat sampai'],
 		specs: [
-			{ label: 'Ukuran', value: '1.5m × 2m' },
 			{ label: 'Bahan', value: 'Bunga segar & artificial' },
 			{ label: 'Pengiriman', value: 'Gratis area Pasaman Barat' },
-			{ label: 'Estimasi', value: '1 hari kerja' },
 		],
-		price: 400000,
+		price: 400_000,
 		priceLabel: 'Rp 400.000',
-		category: 'Ucapan',
+		category: 'Grand Opening',
 		image: '/product/papan-bunga-1.PNG',
 		images: [
 			'/product/papan-bunga-1.PNG',
@@ -127,6 +296,33 @@ export const products: Product[] = [
 		],
 		color: 'var(--accent)',
 		tags: ['grand opening', 'pembukaan', 'usaha'],
+		sizes: papanBungaSizes(400_000),
+		designTemplates: [
+			{
+				id: 'go-vibrant',
+				name: 'Vibrant Cerah',
+				image: '/product/papan-bunga-1.PNG',
+			},
+			{
+				id: 'go-modern',
+				name: 'Modern Bold',
+				image: '/product/papan-bunga-4.PNG',
+			},
+			{
+				id: 'go-festive',
+				name: 'Festive Mix',
+				image: '/product/papan-bunga-3.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'merah', name: 'Merah', value: '#dc2626' },
+			{ id: 'oranye', name: 'Oranye', value: '#f97316' },
+			{ id: 'kuning', name: 'Kuning', value: '#facc15' },
+			{ id: 'hijau', name: 'Hijau', value: '#16a34a' },
+		],
+		addons: defaultAddons(),
+		productionTime: '1 hari kerja',
+		serviceAreas: standardServiceAreas,
 	},
 	{
 		slug: 'papan-bunga-duka-cita',
@@ -137,14 +333,12 @@ export const products: Product[] = [
 			'Papan bunga ucapan duka cita untuk menyampaikan belasungkawa dengan tulus. Desain dipilih sopan dengan warna lembut yang sesuai untuk momen berkabung.',
 		features: ['Warna lembut', 'Tulisan menyentuh', 'Pengiriman cepat'],
 		specs: [
-			{ label: 'Ukuran', value: '1.5m × 2m' },
 			{ label: 'Bahan', value: 'Bunga segar & artificial' },
 			{ label: 'Pengiriman', value: 'Gratis area Pasaman Barat' },
-			{ label: 'Estimasi', value: 'Same day' },
 		],
-		price: 400000,
+		price: 400_000,
 		priceLabel: 'Rp 400.000',
-		category: 'Ucapan',
+		category: 'Duka Cita',
 		image: '/product/papan-bunga-2.PNG',
 		images: [
 			'/product/papan-bunga-2.PNG',
@@ -153,6 +347,33 @@ export const products: Product[] = [
 		],
 		color: 'var(--accent)',
 		tags: ['duka cita', 'belasungkawa', 'turut berduka'],
+		sizes: papanBungaSizes(400_000),
+		designTemplates: [
+			{
+				id: 'duka-sopan',
+				name: 'Sopan Lembut',
+				image: '/product/papan-bunga-2.PNG',
+			},
+			{
+				id: 'duka-minimalis',
+				name: 'Minimalis Putih',
+				image: '/product/papan-bunga-4.PNG',
+			},
+			{
+				id: 'duka-tulus',
+				name: 'Tulus Krem',
+				image: '/product/papan-bunga-1.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'putih', name: 'Putih', value: '#fafafa' },
+			{ id: 'krem', name: 'Krem', value: '#f5f5dc' },
+			{ id: 'lavender', name: 'Lavender', value: '#c4b5fd' },
+			{ id: 'hijau-lembut', name: 'Hijau Lembut', value: '#bbf7d0' },
+		],
+		addons: defaultAddons(),
+		productionTime: 'Same day',
+		serviceAreas: standardServiceAreas,
 	},
 	{
 		slug: 'papan-bunga-sertijab',
@@ -163,14 +384,12 @@ export const products: Product[] = [
 			'Papan bunga khusus acara serah terima jabatan dengan desain formal. Cocok untuk instansi pemerintahan, militer, kepolisian, dan korporasi.',
 		features: ['Desain formal', 'Warna sesuai instansi', 'Tepat waktu'],
 		specs: [
-			{ label: 'Ukuran', value: '1.5m × 2m' },
 			{ label: 'Bahan', value: 'Bunga segar & artificial' },
 			{ label: 'Pengiriman', value: 'Gratis area Pasaman Barat' },
-			{ label: 'Estimasi', value: '1 hari kerja' },
 		],
-		price: 350000,
+		price: 350_000,
 		priceLabel: 'Rp 350.000',
-		category: 'Ucapan',
+		category: 'Congratulations',
 		image: '/product/papan-bunga-4.PNG',
 		images: [
 			'/product/papan-bunga-4.PNG',
@@ -179,6 +398,33 @@ export const products: Product[] = [
 		],
 		color: 'var(--accent)',
 		tags: ['sertijab', 'serah terima jabatan', 'formal'],
+		sizes: papanBungaSizes(350_000),
+		designTemplates: [
+			{
+				id: 'sertijab-formal',
+				name: 'Formal Korporat',
+				image: '/product/papan-bunga-4.PNG',
+			},
+			{
+				id: 'sertijab-instansi',
+				name: 'Instansi Resmi',
+				image: '/product/papan-bunga-5.PNG',
+			},
+			{
+				id: 'sertijab-elegan',
+				name: 'Elegan Klasik',
+				image: '/product/papan-bunga-2.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'biru-tua', name: 'Biru Tua', value: '#1e3a8a' },
+			{ id: 'merah', name: 'Merah', value: '#dc2626' },
+			{ id: 'hijau-tua', name: 'Hijau Tua', value: '#166534' },
+			{ id: 'putih', name: 'Putih', value: '#fafafa' },
+		],
+		addons: defaultAddons(),
+		productionTime: '1 hari kerja',
+		serviceAreas: standardServiceAreas,
 	},
 	{
 		slug: 'dekorasi-mobil-pengantin',
@@ -191,34 +437,71 @@ export const products: Product[] = [
 		specs: [
 			{ label: 'Tipe Mobil', value: 'Sedan, SUV, MPV' },
 			{ label: 'Bahan', value: 'Bunga segar & ribbon' },
-			{ label: 'Pengiriman', value: 'Pasang di lokasi' },
-			{ label: 'Estimasi', value: '2-3 jam pemasangan' },
 		],
-		price: 500000,
+		price: 500_000,
 		priceLabel: 'Rp 500.000',
 		category: 'Dekorasi',
 		image: '/product/mobil-pengantin-1.PNG',
 		images: ['/product/mobil-pengantin-1.PNG', '/product/papan-bunga-5.PNG'],
 		color: 'var(--primary-dark)',
 		tags: ['mobil pengantin', 'dekorasi', 'wedding car'],
+		sizes: [
+			{
+				id: 'mini',
+				label: 'Mini',
+				price: 500_000,
+				priceLabel: formatPrice(500_000),
+			},
+			{
+				id: 'standard',
+				label: 'Standard',
+				price: 750_000,
+				priceLabel: formatPrice(750_000),
+			},
+			{
+				id: 'premium',
+				label: 'Premium',
+				price: 1_000_000,
+				priceLabel: formatPrice(1_000_000),
+			},
+		],
+		designTemplates: [
+			{
+				id: 'mobil-romantis',
+				name: 'Romantis Klasik',
+				image: '/product/mobil-pengantin-1.PNG',
+			},
+			{
+				id: 'mobil-mewah',
+				name: 'Mewah Eksklusif',
+				image: '/product/papan-bunga-5.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'putih', name: 'Putih', value: '#fafafa' },
+			{ id: 'rose', name: 'Rose', value: '#e11d48' },
+			{ id: 'pastel', name: 'Pastel', value: '#fbcfe8' },
+			{ id: 'krem', name: 'Krem', value: '#f5f5dc' },
+		],
+		addons: defaultAddons(),
+		productionTime: '2-3 jam pemasangan',
+		serviceAreas: standardServiceAreas,
 	},
 	{
 		slug: 'bucket-bunga-premium',
 		title: 'Bucket Bunga Premium',
 		shortDescription:
-			'Bucket bunga eksklusif untuk hadiah istimewa orang tersayang.',
+			'Bucket bunga eksklusif untuk wisuda, anniversary, atau hadiah istimewa.',
 		description:
-			'Bucket bunga premium dengan rangkaian mawar, lily, dan baby breath. Dibungkus elegan, cocok untuk anniversary, wisuda, atau hadiah spesial.',
+			'Bucket bunga premium dengan rangkaian mawar, lily, dan baby breath. Dibungkus elegan, cocok untuk wisuda, anniversary, atau hadiah spesial.',
 		features: ['Bunga segar premium', 'Pembungkus eksklusif', 'Kartu ucapan'],
 		specs: [
-			{ label: 'Ukuran', value: 'Medium - Large' },
 			{ label: 'Bahan', value: 'Mawar, lily, baby breath' },
 			{ label: 'Pengiriman', value: 'Gratis area Pasaman Barat' },
-			{ label: 'Estimasi', value: 'Same day' },
 		],
-		price: 250000,
+		price: 250_000,
 		priceLabel: 'Rp 250.000',
-		category: 'Premium',
+		category: 'Wisuda',
 		image: '/product/papan-bunga-3.PNG',
 		images: [
 			'/product/papan-bunga-3.PNG',
@@ -227,6 +510,52 @@ export const products: Product[] = [
 		],
 		color: 'var(--secondary)',
 		tags: ['bucket', 'hadiah', 'wisuda', 'anniversary'],
+		sizes: [
+			{
+				id: 'small',
+				label: 'Small',
+				price: 250_000,
+				priceLabel: formatPrice(250_000),
+			},
+			{
+				id: 'medium',
+				label: 'Medium',
+				price: 350_000,
+				priceLabel: formatPrice(350_000),
+			},
+			{
+				id: 'large',
+				label: 'Large',
+				price: 500_000,
+				priceLabel: formatPrice(500_000),
+			},
+		],
+		designTemplates: [
+			{
+				id: 'bucket-mawar',
+				name: 'Mawar Premium',
+				image: '/product/papan-bunga-3.PNG',
+			},
+			{
+				id: 'bucket-mix',
+				name: 'Mix Pastel',
+				image: '/product/papan-bunga-1.PNG',
+			},
+			{
+				id: 'bucket-eksklusif',
+				name: 'Eksklusif Wisuda',
+				image: '/product/papan-bunga-5.PNG',
+			},
+		],
+		themeColors: [
+			{ id: 'pink', name: 'Pink', value: '#ec4899' },
+			{ id: 'rose', name: 'Rose', value: '#e11d48' },
+			{ id: 'putih', name: 'Putih', value: '#fafafa' },
+			{ id: 'kuning', name: 'Kuning', value: '#facc15' },
+		],
+		addons: defaultAddons(),
+		productionTime: 'Same day',
+		serviceAreas: standardServiceAreas,
 	},
 ];
 

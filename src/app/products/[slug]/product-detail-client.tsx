@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import {
 	ArrowRight,
 	Check,
 	ChevronRight,
+	MapPin,
 	Minus,
 	Package,
 	Plus,
@@ -15,8 +16,10 @@ import {
 	ShoppingCart,
 	Truck,
 } from 'lucide-react';
-import { useAuth, useCart } from '@/hooks';
+import { formatRupiah, useAuth, useCart } from '@/hooks';
 import type { Product } from '@/lib';
+
+const MAX_QUANTITY = 10;
 
 export default function ProductDetailClient({
 	product,
@@ -31,13 +34,58 @@ export default function ProductDetailClient({
 	const [quantity, setQuantity] = useState(1);
 	const [activeImage, setActiveImage] = useState(product.image);
 	const [added, setAdded] = useState(false);
+	const [selectedSizeId, setSelectedSizeId] = useState(product.sizes[0].id);
+	const [selectedTemplateId, setSelectedTemplateId] = useState(
+		product.designTemplates[0].id,
+	);
+	const [selectedColorId, setSelectedColorId] = useState(
+		product.themeColors[0].id,
+	);
+	const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+
+	const selectedSize =
+		product.sizes.find((s) => s.id === selectedSizeId) ?? product.sizes[0];
+	const selectedTemplate =
+		product.designTemplates.find((t) => t.id === selectedTemplateId) ??
+		product.designTemplates[0];
+	const selectedColor =
+		product.themeColors.find((c) => c.id === selectedColorId) ??
+		product.themeColors[0];
+	const selectedAddons = product.addons.filter((a) =>
+		selectedAddonIds.includes(a.id),
+	);
+
+	const unitPrice = useMemo(() => {
+		const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
+		return selectedSize.price + addonsTotal;
+	}, [selectedSize, selectedAddons]);
+
+	const totalPrice = unitPrice * quantity;
+
+	const cartId = `${product.slug}::${selectedSize.id}::${selectedColor.id}::${
+		selectedTemplate.id
+	}::${[...selectedAddonIds].sort().join(',')}`;
+
+	const cartTitleParts = [
+		product.title,
+		`(${selectedSize.label}`,
+		selectedColor.name ? `· ${selectedColor.name}` : '',
+		`)`,
+	];
+	const cartTitle = cartTitleParts.join(' ').replace(/\s+\)/, ')');
 
 	const cartInput = {
-		id: product.slug,
-		title: product.title,
-		price: product.price,
-		priceLabel: product.priceLabel,
-		image: product.image,
+		id: cartId,
+		title: cartTitle,
+		price: unitPrice,
+		priceLabel: formatRupiah(unitPrice),
+		image: selectedTemplate.image || product.image,
+	};
+
+	const toggleAddon = (id: string) => {
+		setSelectedAddonIds((prev) =>
+			prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+		);
 	};
 
 	const handleAddToCart = () => {
@@ -143,12 +191,11 @@ export default function ProductDetailClient({
 							{product.description}
 						</p>
 
-						<div
-							className='inline-flex items-baseline gap-2 mb-6 pb-6 border-b border-[var(--border)]'>
+						<div className='inline-flex items-baseline gap-2 mb-6 pb-6 border-b border-[var(--border)]'>
 							<span
 								className='font-serif text-3xl font-bold'
 								style={{ color: 'var(--primary)' }}>
-								{product.priceLabel}
+								{formatRupiah(unitPrice)}
 							</span>
 							<span
 								className='text-xs'
@@ -158,18 +205,30 @@ export default function ProductDetailClient({
 						</div>
 
 						{/* Specs */}
-						<div className='grid grid-cols-2 gap-4 mb-6'>
-							{product.specs.map((spec) => (
-								<div key={spec.label}>
+						{product.specs.length > 0 && (
+							<div className='grid grid-cols-2 gap-4 mb-6'>
+								{product.specs.map((spec) => (
+									<div key={spec.label}>
+										<p
+											className='text-[11px] font-semibold uppercase tracking-wider mb-1'
+											style={{ color: 'var(--text-muted)' }}>
+											{spec.label}
+										</p>
+										<p className='text-sm font-medium'>{spec.value}</p>
+									</div>
+								))}
+								<div>
 									<p
 										className='text-[11px] font-semibold uppercase tracking-wider mb-1'
 										style={{ color: 'var(--text-muted)' }}>
-										{spec.label}
+										Estimasi Pengerjaan
 									</p>
-									<p className='text-sm font-medium'>{spec.value}</p>
+									<p className='text-sm font-medium'>
+										{product.productionTime}
+									</p>
 								</div>
-							))}
-						</div>
+							</div>
+						)}
 
 						{/* Features */}
 						<ul className='space-y-2 mb-6'>
@@ -188,34 +247,263 @@ export default function ProductDetailClient({
 							))}
 						</ul>
 
+						{/* Ukuran */}
+						<div className='mb-5'>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
+								style={{ color: 'var(--text-muted)' }}>
+								Ukuran
+							</p>
+							<div className='flex flex-wrap gap-2'>
+								{product.sizes.map((size) => {
+									const active = size.id === selectedSizeId;
+									return (
+										<button
+											key={size.id}
+											type='button'
+											onClick={() => setSelectedSizeId(size.id)}
+											className='inline-flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl border-2 text-sm font-semibold cursor-pointer transition-all'
+											style={{
+												borderColor: active
+													? 'var(--primary)'
+													: 'var(--border)',
+												background: active
+													? 'rgba(157, 23, 77, 0.06)'
+													: 'var(--bg-surface)',
+												color: active ? 'var(--primary)' : 'var(--text)',
+											}}>
+											<span>{size.label}</span>
+											<span
+												className='text-[10px] font-medium'
+												style={{
+													color: active
+														? 'var(--primary)'
+														: 'var(--text-muted)',
+												}}>
+												{size.priceLabel}
+											</span>
+										</button>
+									);
+								})}
+							</div>
+							{selectedSize.note && (
+								<p
+									className='text-[11px] mt-2'
+									style={{ color: 'var(--text-muted)' }}>
+									{selectedSize.note}
+								</p>
+							)}
+						</div>
+
+						{/* Template Desain */}
+						<div className='mb-5'>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
+								style={{ color: 'var(--text-muted)' }}>
+								Template Desain
+							</p>
+							<div className='grid grid-cols-3 gap-2'>
+								{product.designTemplates.map((tpl) => {
+									const active = tpl.id === selectedTemplateId;
+									return (
+										<button
+											key={tpl.id}
+											type='button'
+											onClick={() => {
+												setSelectedTemplateId(tpl.id);
+												setActiveImage(tpl.image);
+											}}
+											className='relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all'
+											style={{
+												borderColor: active
+													? 'var(--primary)'
+													: 'var(--border)',
+											}}>
+											<div className='relative aspect-square'>
+												<Image
+													src={tpl.image}
+													alt={tpl.name}
+													fill
+													className='object-cover'
+													sizes='120px'
+												/>
+											</div>
+											<div
+												className='px-2 py-1.5 text-[10px] font-semibold text-center truncate'
+												style={{
+													background: active
+														? 'rgba(157, 23, 77, 0.08)'
+														: 'var(--bg-surface)',
+													color: active ? 'var(--primary)' : 'var(--text)',
+												}}>
+												{tpl.name}
+											</div>
+										</button>
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Warna Tema */}
+						<div className='mb-5'>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
+								style={{ color: 'var(--text-muted)' }}>
+								Warna Tema:{' '}
+								<span style={{ color: 'var(--text)' }}>
+									{selectedColor.name}
+								</span>
+							</p>
+							<div className='flex flex-wrap gap-2'>
+								{product.themeColors.map((c) => {
+									const active = c.id === selectedColorId;
+									return (
+										<button
+											key={c.id}
+											type='button'
+											onClick={() => setSelectedColorId(c.id)}
+											aria-label={c.name}
+											title={c.name}
+											className='relative w-9 h-9 rounded-full cursor-pointer transition-all hover:scale-110'
+											style={{
+												background: c.value,
+												boxShadow: active
+													? '0 0 0 2px var(--bg-surface), 0 0 0 4px var(--primary)'
+													: '0 0 0 1px var(--border)',
+											}}>
+											{active && (
+												<Check
+													size={14}
+													className='absolute inset-0 m-auto'
+													style={{
+														color:
+															c.value.toLowerCase() === '#fafafa' ||
+															c.value.toLowerCase() === '#f5f5dc'
+																? 'var(--text)'
+																: '#fff',
+													}}
+												/>
+											)}
+										</button>
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Add-on */}
+						<div className='mb-5'>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
+								style={{ color: 'var(--text-muted)' }}>
+								Add-on (Opsional)
+							</p>
+							<div className='space-y-2'>
+								{product.addons.map((a) => {
+									const active = selectedAddonIds.includes(a.id);
+									return (
+										<label
+											key={a.id}
+											className='flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-all'
+											style={{
+												borderColor: active
+													? 'var(--primary)'
+													: 'var(--border)',
+												background: active
+													? 'rgba(157, 23, 77, 0.04)'
+													: 'var(--bg-surface)',
+											}}>
+											<div className='flex items-center gap-2.5'>
+												<input
+													type='checkbox'
+													checked={active}
+													onChange={() => toggleAddon(a.id)}
+													className='w-4 h-4 rounded cursor-pointer'
+													style={{ accentColor: 'var(--primary)' }}
+												/>
+												<span className='text-sm font-medium'>{a.name}</span>
+											</div>
+											<span
+												className='text-xs font-semibold'
+												style={{
+													color: active
+														? 'var(--primary)'
+														: 'var(--text-secondary)',
+												}}>
+												+{a.priceLabel}
+											</span>
+										</label>
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Area Pengiriman */}
+						<div className='mb-5'>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-2 inline-flex items-center gap-1'
+								style={{ color: 'var(--text-muted)' }}>
+								<MapPin size={11} />
+								Area Pengiriman
+							</p>
+							<div className='flex flex-wrap gap-1.5'>
+								{product.serviceAreas.map((area) => (
+									<span
+										key={area}
+										className='inline-block px-2.5 py-1 rounded-full text-[11px] font-medium'
+										style={{
+											background: 'rgba(157, 23, 77, 0.06)',
+											color: 'var(--primary)',
+										}}>
+										{area}
+									</span>
+								))}
+							</div>
+						</div>
+
 						{/* Quantity + actions */}
 						<div className='mt-auto pt-6 border-t border-[var(--border)] space-y-4'>
-							<div className='flex items-center gap-4'>
-								<span className='text-sm font-medium'>Jumlah</span>
-								<div
-									className='inline-flex items-center rounded-full border border-[var(--border)] overflow-hidden'
-									style={{ background: 'var(--bg-surface)' }}>
-									<button
-										type='button'
-										onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-										aria-label='Kurangi jumlah'
-										disabled={quantity <= 1}
-										className='inline-flex items-center justify-center w-9 h-9 cursor-pointer hover:text-[var(--primary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-										style={{ color: 'var(--text-secondary)' }}>
-										<Minus size={14} />
-									</button>
-									<span className='w-10 text-center text-sm font-semibold tabular-nums'>
-										{quantity}
-									</span>
-									<button
-										type='button'
-										onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-										aria-label='Tambah jumlah'
-										disabled={quantity >= 10}
-										className='inline-flex items-center justify-center w-9 h-9 cursor-pointer hover:text-[var(--primary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-										style={{ color: 'var(--text-secondary)' }}>
-										<Plus size={14} />
-									</button>
+							<div className='flex items-center justify-between gap-4'>
+								<div className='flex items-center gap-4'>
+									<span className='text-sm font-medium'>Jumlah</span>
+									<div
+										className='inline-flex items-center rounded-full border border-[var(--border)] overflow-hidden'
+										style={{ background: 'var(--bg-surface)' }}>
+										<button
+											type='button'
+											onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+											aria-label='Kurangi jumlah'
+											disabled={quantity <= 1}
+											className='inline-flex items-center justify-center w-9 h-9 cursor-pointer hover:text-[var(--primary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+											style={{ color: 'var(--text-secondary)' }}>
+											<Minus size={14} />
+										</button>
+										<span className='w-10 text-center text-sm font-semibold tabular-nums'>
+											{quantity}
+										</span>
+										<button
+											type='button'
+											onClick={() =>
+												setQuantity((q) => Math.min(MAX_QUANTITY, q + 1))
+											}
+											aria-label='Tambah jumlah'
+											disabled={quantity >= MAX_QUANTITY}
+											className='inline-flex items-center justify-center w-9 h-9 cursor-pointer hover:text-[var(--primary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+											style={{ color: 'var(--text-secondary)' }}>
+											<Plus size={14} />
+										</button>
+									</div>
+								</div>
+								<div className='text-right'>
+									<p
+										className='text-[10px] uppercase tracking-wider font-semibold'
+										style={{ color: 'var(--text-muted)' }}>
+										Total
+									</p>
+									<p
+										className='font-serif text-xl font-bold'
+										style={{ color: 'var(--primary)' }}>
+										{formatRupiah(totalPrice)}
+									</p>
 								</div>
 							</div>
 
