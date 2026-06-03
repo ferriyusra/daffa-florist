@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING // menunggu pembayaran/verifikasi
+  CONFIRMED // pembayaran terverifikasi
+  SCHEDULED // jadwal pasang ditetapkan
+  INSTALLED // sudah dipasang di lokasi acara
+  PICKED_UP // sudah diambil kembali
+  RETURNED // unit kembali & dicek kondisinya
+  COMPLETED // selesai, deposit beres
+  CANCELLED // dibatalkan
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  phone          String?
+  hashedPassword String
+  role           UserRole @default(CUSTOMER)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  addresses Address[]
+  orders    Order[]
+}
+
+model Address {
+  id            String   @id @default(cuid())
+  userId        String
+  recipientName String
+  phone         String
+  fullAddress   String
+  city          String
+  province      String?
+  postalCode    String?
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  title            String
+  shortDescription String
+  description      String   @db.Text
+  category         String
+  basePrice        Int
+  image            String
+  images           String[]
+  features         String[]
+  tags             String[]
+  productionTime   String?
+  serviceAreas     String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  sizes           ProductSize[]
+  designTemplates ProductTemplate[]
+  themeColors     ProductThemeColor[]
+  addons          ProductAddon[]
+  orderItems      OrderItem[]
+
+  @@index([category])
+}
+
+model ProductSize {
+  id        String  @id @default(cuid())
+  productId String
+  label     String
+  price     Int
+  note      String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductTemplate {
+  id        String @id @default(cuid())
+  productId String
+  name      String
+  image     String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductThemeColor {
+  id        String @id @default(cuid())
+  productId String
+  name      String
+  value     String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductAddon {
+  id        String @id @default(cuid())
+  productId String
+  name      String
+  price     Int
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  userId       String
+  addressId    String?
+  status       OrderStatus @default(PENDING)
+  subtotal     Int
+  shippingCost Int         @default(0)
+
+  // Pengiriman: rilis awal ongkir diisi manual admin per zona.
+  // Field provider/layanan/resi disiapkan (nullable) untuk integrasi kurir di M5.
+  shippingProvider String? // MANUAL | JNE | GOSEND | ...
+  shippingService  String? // jenis layanan provider
+  trackingNumber   String? // no. resi dari provider
+
+  // Sewa & ringkasan biaya: total = subtotal + shippingCost + rentalDeposit - discount
+  discount        Int       @default(0) // potongan harga
+  rentalDeposit   Int       @default(0) // nominal deposit jaminan
+  depositRefunded Boolean   @default(false) // deposit sudah dikembalikan?
+  total           Int
+  eventDate       DateTime? // tanggal & jam acara
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User        @relation(fields: [userId], references: [id])
+  address Address?    @relation(fields: [addressId], references: [id])
+  items   OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([eventDate])
+}
+
+model OrderItem {
+  id                 String   @id @default(cuid())
+  orderId            String
+  productId          String?
+  productSlug        String
+  productTitle       String
+  productImage       String
+  sizeLabel          String?
+  price              Int
+  quantity           Int
+  designTemplateName String?
+  themeColorName     String?
+  addonNames         String[]
+
+  // Periode sewa per item. installDate & rentalDays diinput pelanggan;
+  // pickupDate = turunan (installDate + rentalDays), dihitung server saat createRental.
+  installDate DateTime
+  rentalDays  Int
+  pickupDate  DateTime
+  unitId      String? // unit fisik dialokasikan (relasi ProductUnit menyusul di S1.3)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  // Query ketersediaan/jadwal sewa (ERD §4): tumpang tindih periode per produk.
+  @@index([productId, installDate, pickupDate])
+  @@index([installDate])
+  @@index([pickupDate])
+  @@index([unitId])
+}
