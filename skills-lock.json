@@ -6,6 +6,18 @@
       "sourceType": "github",
       "computedHash": "932ef23b5d0a0aa4a89e51a9bde1217fb987d35fe2c1d5fe51c3090938ac4bd8"
     },
+    "javascript-pro": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/javascript-pro/SKILL.md",
+      "computedHash": "d5d4526309a674a2ddfd99aa9fb31fe061af225a7b3750eed52a2d38c8ce6041"
+    },
+    "modern-javascript-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/javascript-typescript/skills/modern-javascript-patterns/SKILL.md",
+      "computedHash": "ef81ef5b5b70287b3962dd0fce50c90b27c636e940ec4e80f9a0b216587be549"
+    },
     "nextjs-best-practices": {
       "source": "sickn33/antigravity-awesome-skills",
       "sourceType": "github",

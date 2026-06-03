@@ -3,8 +3,8 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { useAuth } from '@/hooks';
 import { Footer, Navbar } from '@/components';
 
 export default function LoginPage() {
@@ -19,13 +19,9 @@ export default function LoginPage() {
 	);
 }
 
-const DEMO_EMAIL = 'test2026@test.test';
-const DEMO_PASSWORD = 'test2026';
-
 function LoginForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const { login } = useAuth();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
@@ -34,22 +30,26 @@ function LoginForm() {
 
 	const redirectTo = searchParams.get('redirect') ?? '/dashboard';
 
-	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError('');
+		setSubmitting(true);
 
-		if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
-			setError(
-				'Email atau password salah. Gunakan kredensial demo yang ditampilkan di bawah.',
-			);
+		const res = await signIn('credentials', {
+			email,
+			password,
+			redirect: false,
+		});
+
+		setSubmitting(false);
+
+		if (!res || res.error) {
+			setError('Email atau password salah.');
 			return;
 		}
 
-		setSubmitting(true);
-		setTimeout(() => {
-			login({ name: 'Pengguna Demo', email });
-			router.push(redirectTo);
-		}, 600);
+		router.push(redirectTo);
+		router.refresh();
 	};
 
 	return (
@@ -177,25 +177,6 @@ function LoginForm() {
 							style={{ background: 'var(--primary)' }}>
 							{submitting ? 'Memproses...' : 'Masuk'}
 						</button>
-
-						<div
-							className='rounded-xl p-4 text-xs space-y-1'
-							style={{
-								background: 'rgba(157, 23, 77, 0.06)',
-								color: 'var(--text-secondary)',
-							}}>
-							<p
-								className='font-semibold'
-								style={{ color: 'var(--primary)' }}>
-								Akun Demo
-							</p>
-							<p>
-								Email: <span className='font-mono'>{DEMO_EMAIL}</span>
-							</p>
-							<p>
-								Password: <span className='font-mono'>{DEMO_PASSWORD}</span>
-							</p>
-						</div>
 
 						<p
 							className='text-center text-sm'

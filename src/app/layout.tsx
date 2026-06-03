@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Providers } from './providers';
 
 const siteUrl = 'https://daffa-florist.vercel.app/'; // Ganti dengan domain asli
 
@@ -85,7 +86,9 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang='id'>
-			<body className='antialiased'>{children}</body>
+			<body className='antialiased'>
+				<Providers>{children}</Providers>
+			</body>
 		</html>
 	);
 }

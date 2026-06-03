@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { Footer, Navbar } from '@/components';
+import { api } from '@/trpc/react';
 
 export default function RegisterPage() {
 	return (
@@ -28,9 +29,20 @@ function RegisterForm() {
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
 	const [error, setError] = useState('');
-	const [submitting, setSubmitting] = useState(false);
 
 	const redirectTo = searchParams.get('redirect') ?? '/';
+
+	const register = api.auth.register.useMutation({
+		onSuccess: () => {
+			const query = new URLSearchParams();
+			if (redirectTo !== '/') query.set('redirect', redirectTo);
+			const qs = query.toString();
+			router.push(`/login${qs ? `?${qs}` : ''}`);
+		},
+		onError: (err) => {
+			setError(err.message);
+		},
+	});
 
 	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -41,13 +53,7 @@ function RegisterForm() {
 			return;
 		}
 
-		setSubmitting(true);
-		setTimeout(() => {
-			const query = new URLSearchParams();
-			if (redirectTo !== '/') query.set('redirect', redirectTo);
-			const qs = query.toString();
-			router.push(`/login${qs ? `?${qs}` : ''}`);
-		}, 600);
+		register.mutate({ name, email, phone, password });
 	};
 
 	return (
@@ -225,10 +231,10 @@ function RegisterForm() {
 
 						<button
 							type='submit'
-							disabled={submitting}
+							disabled={register.isPending}
 							className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed'
 							style={{ background: 'var(--primary)' }}>
-							{submitting ? 'Memproses...' : 'Daftar Sekarang'}
+							{register.isPending ? 'Memproses...' : 'Daftar Sekarang'}
 						</button>
 
 						<p
