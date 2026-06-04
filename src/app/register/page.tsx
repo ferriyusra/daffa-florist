@@ -35,9 +35,9 @@ function RegisterForm() {
 	const register = api.auth.register.useMutation({
 		onSuccess: () => {
 			const query = new URLSearchParams();
+			query.set('registered', '1');
 			if (redirectTo !== '/') query.set('redirect', redirectTo);
-			const qs = query.toString();
-			router.push(`/login${qs ? `?${qs}` : ''}`);
+			router.push(`/login?${query.toString()}`);
 		},
 		onError: (err) => {
 			setError(err.message);

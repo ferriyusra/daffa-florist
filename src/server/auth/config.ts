@@ -1,32 +1,10 @@
-import { type DefaultSession, type NextAuthConfig } from 'next-auth';
-import 'next-auth/jwt';
+import { type NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
-
-type AppUserRole = 'CUSTOMER' | 'ADMIN';
-
-declare module 'next-auth' {
-	interface Session extends DefaultSession {
-		user: {
-			id: string;
-			role: AppUserRole;
-		} & DefaultSession['user'];
-	}
-
-	interface User {
-		role: AppUserRole;
-	}
-}
-
-declare module 'next-auth/jwt' {
-	interface JWT {
-		id: string;
-		role: AppUserRole;
-	}
-}
+import { baseAuthConfig } from './base-config';
 
 const credentialsSchema = z.object({
 	email: z.string().email(),
@@ -34,6 +12,7 @@ const credentialsSchema = z.object({
 });
 
 export const authConfig = {
+	...baseAuthConfig,
 	providers: [
 		Credentials({
 			credentials: {
@@ -64,22 +43,4 @@ export const authConfig = {
 			},
 		}),
 	],
-	session: { strategy: 'jwt' },
-	pages: { signIn: '/login' },
-	callbacks: {
-		jwt({ token, user }) {
-			if (user) {
-				if (user.id) token.id = user.id;
-				token.role = user.role;
-			}
-			return token;
-		},
-		session({ session, token }) {
-			if (token) {
-				session.user.id = token.id;
-				session.user.role = token.role;
-			}
-			return session;
-		},
-	},
 } satisfies NextAuthConfig;

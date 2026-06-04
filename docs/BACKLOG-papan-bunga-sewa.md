@@ -41,32 +41,32 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** pengunjung, **agar** bisa membuat akun untuk memesan.
 **AC:** Form register (nama, email, no HP, password) → `auth.register` membuat `User` dengan password ter-hash (bcrypt), role default `CUSTOMER`; email duplikat ditolak dengan pesan jelas; sukses → auto-login atau arahkan ke `/login`.
 
-- [ ] `XS` Verifikasi/lengkapi `auth.register` ([routers/auth.ts](../src/server/api/routers/auth.ts)) — validasi zod (email, panjang password), cek email unik, hash bcrypt.
-- [ ] `S` Form register ([register/page.tsx](../src/app/register/page.tsx)) — validasi client, tampilkan error server, state loading.
-- [ ] `XS` Setelah sukses: auto sign-in atau redirect `/login` dengan notifikasi.
+- [x] `XS` Verifikasi/lengkapi `auth.register` ([routers/auth.ts](../src/server/api/routers/auth.ts)) — validasi zod (email, panjang password), cek email unik, hash bcrypt. — sudah lengkap, terverifikasi.
+- [x] `S` Form register ([register/page.tsx](../src/app/register/page.tsx)) — validasi client, tampilkan error server, state loading. — sudah ada (cek password match, `onError`, `isPending`).
+- [x] `XS` Setelah sukses: auto sign-in atau redirect `/login` dengan notifikasi. — redirect `/login?registered=1` + banner sukses di halaman login.
 
 #### S0.2 — Login (kredensial) & sesi
 **Sebagai** pengguna terdaftar, **agar** masuk dan sesinya tersimpan.
 **AC:** Login email+password via NextAuth Credentials; gagal → pesan generik (tanpa bocorkan field mana yang salah); sukses → sesi JWT memuat `id` & `role`; redirect ke tujuan/`/dashboard`.
 
-- [ ] `XS` Verifikasi konfigurasi NextAuth Credentials ([server/auth/config.ts](../src/server/auth/config.ts)) — verifikasi bcrypt, callback `jwt`/`session` menambar `id`+`role`.
-- [ ] `S` Form login ([login/page.tsx](../src/app/login/page.tsx)) — `signIn('credentials')`, error handling, loading.
-- [ ] `XS` Verifikasi `useSession` wrapper ([use-auth.ts](../src/hooks/use-auth.ts)) mengembalikan `{ user, isLoading, logout }`.
+- [x] `XS` Verifikasi konfigurasi NextAuth Credentials ([server/auth/config.ts](../src/server/auth/config.ts)) — verifikasi bcrypt, callback `jwt`/`session` menambar `id`+`role`. — terverifikasi; callback dipindah ke `base-config.ts` (dipakai bersama config Node & edge).
+- [x] `S` Form login ([login/page.tsx](../src/app/login/page.tsx)) — `signIn('credentials')`, error handling, loading. — sudah ada (pesan generik, `submitting`).
+- [x] `XS` Verifikasi `useSession` wrapper ([use-auth.ts](../src/hooks/use-auth.ts)) mengembalikan `{ user, isLoading, logout }`. — terverifikasi.
 
 #### S0.3 — Logout
 **Sebagai** pengguna, **agar** keluar dengan aman.
 **AC:** Aksi logout memanggil `signOut`, membersihkan sesi, redirect ke beranda/`/login`; tombol tersedia di navbar (saat login) & dashboard.
 
-- [ ] `XS` Implement aksi logout via `signOut` di [use-auth.ts](../src/hooks/use-auth.ts).
-- [ ] `XS` Tombol logout di navbar/dashboard (tampil kondisional saat ada sesi).
+- [x] `XS` Implement aksi logout via `signOut` di [use-auth.ts](../src/hooks/use-auth.ts). — `logout(redirectTo='/')` = `signOut` + `router.push`+`refresh`.
+- [x] `XS` Tombol logout di navbar/dashboard (tampil kondisional saat ada sesi). — tombol di [navbar](../src/components/navbar.tsx) (saat login) & sidebar [admin](../src/app/admin/layout.tsx); navbar juga muncul di dashboard.
 
 #### S0.4 — Role, proteksi route & guard server
 **Sebagai** sistem, **agar** hanya peran berwenang mengakses area tertentu.
 **AC:** `protectedProcedure` (butuh sesi) & `adminProcedure` (role `ADMIN`) tersedia; route `/dashboard/*` butuh login; route `/admin/*` butuh role `ADMIN` (redirect bila tidak); akses langsung URL admin oleh non-admin ditolak.
 
-- [ ] `S` Verifikasi/lengkapi `protectedProcedure` & `adminProcedure` di [trpc.ts](../src/server/api/trpc.ts) (UNAUTHORIZED/FORBIDDEN). *(menggantikan task guard di S3.1.)*
-- [ ] `S` Proteksi server-side `/admin/*` (cek role di [admin/layout.tsx](../src/app/admin/layout.tsx) atau middleware) + `/dashboard/*` butuh sesi.
-- [ ] `XS` Sembunyikan tautan admin dari UI untuk non-admin.
+- [x] `S` Verifikasi/lengkapi `protectedProcedure` & `adminProcedure` di [trpc.ts](../src/server/api/trpc.ts) (UNAUTHORIZED/FORBIDDEN). *(menggantikan task guard di S3.1.)* — terverifikasi.
+- [x] `S` Proteksi server-side `/admin/*` (cek role di [admin/layout.tsx](../src/app/admin/layout.tsx) atau middleware) + `/dashboard/*` butuh sesi. — [proxy.ts](../src/proxy.ts) (konvensi middleware Next 16) + config edge [config.edge.ts](../src/server/auth/config.edge.ts); admin layout cek role sebagai defense-in-depth.
+- [x] `XS` Sembunyikan tautan admin dari UI untuk non-admin. — tautan "Admin" di navbar hanya tampil bila `role === 'ADMIN'`.
 
 ### CRUD Admin
 

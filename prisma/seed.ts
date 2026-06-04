@@ -59,19 +59,34 @@ async function main() {
 		});
 	}
 
-	const user = await prisma.user.upsert({
-		where: { email: 'uji@daffaflorist.test' },
-		update: {},
-		create: {
+	// Dua user uji (password sama: "password123") untuk menguji proteksi role.
+	const hashedPassword = await hash('password123', 10);
+	const usersToSeed = [
+		{
 			name: 'Pelanggan Uji',
 			email: 'uji@daffaflorist.test',
 			phone: '081234567890',
-			hashedPassword: await hash('password123', 10),
-			role: 'CUSTOMER',
+			role: 'CUSTOMER' as const,
 		},
-	});
+		{
+			name: 'Admin Daffa',
+			email: 'admin@daffaflorist.test',
+			phone: '081200000000',
+			role: 'ADMIN' as const,
+		},
+	];
 
-	console.log(`✓ Seed selesai: ${products.length} produk + user "${user.email}".`);
+	for (const u of usersToSeed) {
+		await prisma.user.upsert({
+			where: { email: u.email },
+			update: { role: u.role }, // jaga role tetap konsisten saat re-seed
+			create: { ...u, hashedPassword },
+		});
+	}
+
+	console.log(
+		`✓ Seed selesai: ${products.length} produk + ${usersToSeed.length} user (CUSTOMER + ADMIN).`,
+	);
 	await prisma.$disconnect();
 }
 

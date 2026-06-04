@@ -12,6 +12,7 @@ import {
 	LogIn,
 	LogOut,
 	ShoppingCart,
+	ShieldCheck,
 	User,
 } from 'lucide-react';
 import { useAuth, useCart } from '@/hooks';
@@ -141,6 +142,18 @@ export default function Navbar() {
 						<div className='ml-2 flex items-center'>
 							{isLoading ? null : user ? (
 								<div className='flex items-center gap-2'>
+									{user.role === 'ADMIN' && (
+										<Link
+											href='/admin'
+											className='hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors hover:opacity-80 cursor-pointer'
+											style={{
+												background: 'var(--secondary)',
+												color: 'white',
+											}}>
+											<ShieldCheck size={13} />
+											Admin
+										</Link>
+									)}
 									<Link
 										href='/dashboard'
 										className='hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:opacity-80 cursor-pointer'
@@ -154,7 +167,7 @@ export default function Navbar() {
 										</span>
 									</Link>
 									<button
-										onClick={logout}
+										onClick={() => logout()}
 										aria-label='Keluar'
 										className='inline-flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] hover:border-[var(--primary)] transition-colors cursor-pointer'
 										style={{ color: 'var(--text-secondary)' }}>

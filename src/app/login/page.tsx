@@ -29,6 +29,7 @@ function LoginForm() {
 	const [error, setError] = useState('');
 
 	const redirectTo = searchParams.get('redirect') ?? '/dashboard';
+	const justRegistered = searchParams.get('registered') === '1';
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -158,6 +159,18 @@ function LoginForm() {
 								Lupa password?
 							</a>
 						</div>
+
+						{justRegistered && !error && (
+							<p
+								className='text-sm rounded-xl px-4 py-3'
+								style={{
+									background: 'rgba(61, 107, 79, 0.1)',
+									color: 'var(--secondary)',
+								}}>
+								Akun berhasil dibuat. Silakan masuk dengan email & password
+								Anda.
+							</p>
+						)}
 
 						{error && (
 							<p

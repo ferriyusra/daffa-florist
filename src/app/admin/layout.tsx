@@ -68,9 +68,13 @@ export default function AdminLayout({
 	const pathname = usePathname();
 	const [mobileOpen, setMobileOpen] = useState(false);
 
+	// Defense-in-depth selain middleware (S0.4): non-admin tak boleh lihat UI admin.
 	useEffect(() => {
-		if (!isLoading && !user) {
+		if (isLoading) return;
+		if (!user) {
 			router.replace('/login?redirect=/admin');
+		} else if (user.role !== 'ADMIN') {
+			router.replace('/');
 		}
 	}, [isLoading, user, router]);
 
@@ -78,7 +82,7 @@ export default function AdminLayout({
 		setMobileOpen(false);
 	}, [pathname]);
 
-	if (isLoading || !user) {
+	if (isLoading || !user || user.role !== 'ADMIN') {
 		return <div className='min-h-screen' style={{ background: 'var(--bg)' }} />;
 	}
 
@@ -100,10 +104,7 @@ export default function AdminLayout({
 				pathname={pathname}
 				onClose={() => setMobileOpen(false)}
 				mobileOpen={mobileOpen}
-				onLogout={() => {
-					logout();
-					router.replace('/login');
-				}}
+				onLogout={() => logout('/login')}
 				userName={user.name}
 				userEmail={user.email}
 			/>
