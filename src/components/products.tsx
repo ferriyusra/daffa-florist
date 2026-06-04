@@ -1,15 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import ProductImage from './product-image';
 import { useRouter } from 'next/navigation';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Check, ShoppingCart } from 'lucide-react';
 import { useAuth, useCart } from '@/hooks';
-import { products as allProducts, type Product } from '@/lib';
-
-const featuredProducts = allProducts.slice(0, 4);
+import { type Product } from '@/lib';
+import { api } from '@/trpc/react';
 
 const containerVariants = {
 	hidden: {},
@@ -34,6 +33,9 @@ export default function Products() {
 	const { addItem } = useCart();
 	const router = useRouter();
 	const [addedId, setAddedId] = useState<string | null>(null);
+
+	const { data: allProducts = [] } = api.product.list.useQuery();
+	const featuredProducts = allProducts.slice(0, 4);
 
 	const toCartItem = (product: Product) => ({
 		id: product.slug,
@@ -62,7 +64,6 @@ export default function Products() {
 	return (
 		<section id='product' className='floral-bg'>
 			<div className='mx-auto max-w-[1200px] px-6'>
-				{/* Header */}
 				<div className='text-center max-w-[600px] mx-auto mb-16'>
 					<span
 						className='inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase mb-4'
@@ -84,7 +85,6 @@ export default function Products() {
 					</p>
 				</div>
 
-				{/* Product grid */}
 				<motion.div
 					ref={ref}
 					variants={containerVariants}
@@ -99,18 +99,15 @@ export default function Products() {
 								variants={cardVariants}
 								className='group bg-[var(--bg-card)] rounded-2xl overflow-hidden border border-[var(--border)] card-hover flex flex-col'
 								style={{ boxShadow: 'var(--shadow-sm)' }}>
-								{/* Product image */}
 								<Link
 									href={`/products/${product.slug}`}
 									className='relative aspect-4/3 overflow-hidden block'>
-									<Image
+									<ProductImage
 										src={product.image}
 										alt={product.title}
-										fill
 										className='object-cover transition-transform duration-500 group-hover:scale-105'
 										sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw'
 									/>
-									{/* Price badge */}
 									<div className='absolute top-3 right-3 glass rounded-full px-3 py-1.5'>
 										<p
 											className='text-xs font-semibold'
@@ -120,7 +117,6 @@ export default function Products() {
 									</div>
 								</Link>
 
-								{/* Content */}
 								<div className='p-5 flex flex-col flex-1'>
 									<Link href={`/products/${product.slug}`}>
 										<h3 className='font-serif text-lg font-semibold mb-2 hover:text-[var(--primary)] transition-colors'>
@@ -134,23 +130,6 @@ export default function Products() {
 										{product.shortDescription}
 									</p>
 
-									{/* Features */}
-									<ul className='space-y-1.5 mb-5'>
-										{product.features.map((f) => (
-											<li
-												key={f}
-												className='flex items-start gap-2 text-xs'
-												style={{ color: 'var(--text-secondary)' }}>
-												<span
-													className='mt-1.5 w-1 h-1 rounded-full shrink-0'
-													style={{ background: product.color }}
-												/>
-												{f}
-											</li>
-										))}
-									</ul>
-
-									{/* CTAs */}
 									<div className='mt-auto flex items-center gap-2'>
 										<button
 											type='button'
@@ -193,7 +172,6 @@ export default function Products() {
 					})}
 				</motion.div>
 
-				{/* See all CTA */}
 				<div className='mt-12 text-center'>
 					<Link
 						href='/products'

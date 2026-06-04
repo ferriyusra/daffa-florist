@@ -34,6 +34,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 > Output: autentikasi penuh (register/login/logout/sesi/role) terverifikasi & semua halaman admin terhubung CRUD ke API. Menjadi prasyarat E2 (jalur pelanggan butuh sesi) & E3 (admin butuh `adminProcedure`).
 >
 > **Catatan baseline:** sebagian auth sudah ada di code (NextAuth Credentials, `auth.register`, halaman `/login` & `/register`) dan halaman admin sudah ada sebagai **UI statis** ([admin/products](../src/app/admin/products/), [gallery](../src/app/admin/gallery/), [promos](../src/app/admin/promos/), [customers](../src/app/admin/customers/), [delivery-areas](../src/app/admin/delivery-areas/)). Story berikut ditulis lengkap (end-to-end); bila bagian sudah ada, task tetap mencakup **verifikasi + uji + tutup celah**, bukan menulis ulang.
+>
+> **Update (kerja S0.5):** halaman admin placeholder yang belum diimplementasi — gallery (S0.6), promos (S0.7), delivery-areas (S0.9) — beserta menu & route `reports` **dihapus** dari kode (UI + sidebar) agar dikerjakan ulang bersih saat storinya digarap; dashboard `/admin` dikosongkan sementara (blank page).
 
 ### Auth
 
@@ -76,9 +78,9 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **AC:** Admin bisa CRUD `Product` beserta child `ProductSize/ProductTemplate/ProductThemeColor/ProductAddon`; perubahan terbaca di katalog publik.
 > Catatan PRD: katalog publik kini dari [src/lib/products.ts](../src/lib/products.ts) (in-memory). Story ini termasuk **migrasi sumber katalog ke DB** agar CRUD bermakna.
 
-- [ ] `M` Router `admin.product.*` (`list/getById/create/update/delete`) + child entitas, zod, `adminProcedure`.
-- [ ] `S` Alihkan `product` router publik membaca dari DB (bukan `src/lib/products.ts`); seed data existing ke DB.
-- [ ] `M` Hubungkan UI [admin/products](../src/app/admin/products/) — tabel daftar, form create/edit (ukuran/template/warna/addon), hapus + konfirmasi.
+- [x] `M` Router `admin.product.*` (`list/getById/create/update/delete`) + child entitas, zod, `adminProcedure`. — [routers/admin/product.ts](../src/server/api/routers/admin/product.ts); `create` nested-create + `update` mengganti `ProductSize` secara penuh (template/warna/addon dipertahankan). Validasi dari schema zod bersama [product-schema.ts](../src/lib/product-schema.ts) (client + server).
+- [x] `S` Alihkan `product` router publik membaca dari DB (bukan `src/lib/products.ts`); seed data existing ke DB. — router map DB→`Product` (priceLabel diturunkan). Kolom `specs`/`color`/`features` **dibuang** agar selaras ERD; id/FK jadi `uuid` native (`@db.Uuid`). Katalog/featured pakai `useQuery`, detail jadi RSC dinamis. `products.ts` jadi sumber seed.
+- [x] `M` Hubungkan UI [admin/products](../src/app/admin/products/) — tabel daftar, form create/edit, hapus + konfirmasi. — grid + cari/filter + paginasi + **halaman form terpisah** (create/edit/detail). Termasuk: editor ukuran (dropdown preset, maks 4, anti-duplikat, required), slug auto dari judul (input disembunyikan), upload gambar reusable (tunggal + galeri, progress animasi via XHR), input multi-chip (tags & area layanan), validasi per-field, dialog konfirmasi reusable (hapus + logout), sidebar admin collapsible.
 
 #### S0.6 — CRUD Gallery
 **AC:** Admin CRUD item galeri (gambar, judul, kategori, urutan); tampil di galeri publik.

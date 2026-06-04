@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah, useAuth, useCart } from '@/hooks';
 import type { Product } from '@/lib';
+import { ProductImage } from '@/components';
 
 const MAX_QUANTITY = 10;
 
@@ -105,7 +105,6 @@ export default function ProductDetailClient({
 	return (
 		<main className='floral-bg min-h-[70vh]'>
 			<div className='mx-auto max-w-[1100px] px-6 py-10'>
-				{/* Breadcrumb */}
 				<nav
 					aria-label='Breadcrumb'
 					className='inline-flex items-center gap-1.5 text-xs mb-6'
@@ -128,12 +127,11 @@ export default function ProductDetailClient({
 				</nav>
 
 				<div className='grid lg:grid-cols-2 gap-8 mb-12'>
-					{/* Gallery */}
 					<div>
 						<div
 							className='relative aspect-square rounded-2xl overflow-hidden border border-[var(--border)] mb-3'
 							style={{ background: 'var(--bg-card)' }}>
-							<Image
+							<ProductImage
 								src={activeImage}
 								alt={product.title}
 								fill
@@ -166,7 +164,7 @@ export default function ProductDetailClient({
 													: 'var(--border)',
 												opacity: active ? 1 : 0.7,
 											}}>
-											<Image
+											<ProductImage
 												src={img}
 												alt={`${product.title} thumbnail`}
 												fill
@@ -180,7 +178,6 @@ export default function ProductDetailClient({
 						)}
 					</div>
 
-					{/* Info + actions */}
 					<div className='flex flex-col'>
 						<h1 className='font-serif text-3xl sm:text-4xl font-bold mb-3'>
 							{product.title}
@@ -204,50 +201,19 @@ export default function ProductDetailClient({
 							</span>
 						</div>
 
-						{/* Specs */}
-						{product.specs.length > 0 && (
-							<div className='grid grid-cols-2 gap-4 mb-6'>
-								{product.specs.map((spec) => (
-									<div key={spec.label}>
-										<p
-											className='text-[11px] font-semibold uppercase tracking-wider mb-1'
-											style={{ color: 'var(--text-muted)' }}>
-											{spec.label}
-										</p>
-										<p className='text-sm font-medium'>{spec.value}</p>
-									</div>
-								))}
-								<div>
-									<p
-										className='text-[11px] font-semibold uppercase tracking-wider mb-1'
-										style={{ color: 'var(--text-muted)' }}>
-										Estimasi Pengerjaan
-									</p>
-									<p className='text-sm font-medium'>
-										{product.productionTime}
-									</p>
-								</div>
+						{product.productionTime && (
+							<div className='mb-6'>
+								<p
+									className='text-[11px] font-semibold uppercase tracking-wider mb-1'
+									style={{ color: 'var(--text-muted)' }}>
+									Estimasi Pengerjaan
+								</p>
+								<p className='text-sm font-medium'>
+									{product.productionTime}
+								</p>
 							</div>
 						)}
 
-						{/* Features */}
-						<ul className='space-y-2 mb-6'>
-							{product.features.map((f) => (
-								<li
-									key={f}
-									className='flex items-start gap-2 text-sm'
-									style={{ color: 'var(--text-secondary)' }}>
-									<Check
-										size={16}
-										style={{ color: 'var(--primary)' }}
-										className='mt-0.5 shrink-0'
-									/>
-									{f}
-								</li>
-							))}
-						</ul>
-
-						{/* Ukuran */}
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -295,7 +261,6 @@ export default function ProductDetailClient({
 							)}
 						</div>
 
-						{/* Template Desain */}
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -320,7 +285,7 @@ export default function ProductDetailClient({
 													: 'var(--border)',
 											}}>
 											<div className='relative aspect-square'>
-												<Image
+												<ProductImage
 													src={tpl.image}
 													alt={tpl.name}
 													fill
@@ -344,7 +309,6 @@ export default function ProductDetailClient({
 							</div>
 						</div>
 
-						{/* Warna Tema */}
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -390,7 +354,6 @@ export default function ProductDetailClient({
 							</div>
 						</div>
 
-						{/* Add-on */}
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -437,7 +400,6 @@ export default function ProductDetailClient({
 							</div>
 						</div>
 
-						{/* Area Pengiriman */}
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2 inline-flex items-center gap-1'
@@ -460,7 +422,6 @@ export default function ProductDetailClient({
 							</div>
 						</div>
 
-						{/* Quantity + actions */}
 						<div className='mt-auto pt-6 border-t border-[var(--border)] space-y-4'>
 							<div className='flex items-center justify-between gap-4'>
 								<div className='flex items-center gap-4'>
@@ -544,7 +505,6 @@ export default function ProductDetailClient({
 								</button>
 							</div>
 
-							{/* Trust badges */}
 							<div
 								className='grid grid-cols-3 gap-2 pt-4 border-t border-[var(--border)] text-[11px]'
 								style={{ color: 'var(--text-secondary)' }}>
@@ -568,7 +528,6 @@ export default function ProductDetailClient({
 					</div>
 				</div>
 
-				{/* Related products */}
 				{related.length > 0 && (
 					<section>
 						<div className='flex items-end justify-between mb-5'>
@@ -602,7 +561,7 @@ export default function ProductDetailClient({
 									className='group bg-[var(--bg-card)] rounded-2xl overflow-hidden border border-[var(--border)] card-hover'
 									style={{ boxShadow: 'var(--shadow-sm)' }}>
 									<div className='relative aspect-4/3 overflow-hidden'>
-										<Image
+										<ProductImage
 											src={p.image}
 											alt={p.title}
 											fill

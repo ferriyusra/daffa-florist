@@ -6,6 +6,8 @@
 **Status:** Draft
 
 > 🆕 = entitas/atribut baru untuk sistem sewa. Sisanya sudah ada di schema existing.
+>
+> **Tipe id:** semua kolom `id` (PK) & foreign key bertipe **`uuid`** native Postgres (`@db.Uuid`, di-generate `@default(uuid())`). Kode bisnis (`slug`, `email`, `orderNumber`, `code`) tetap `string`.
 
 ---
 
@@ -33,7 +35,7 @@ erDiagram
     ProductUnit |o--o{ OrderItem : "dialokasikan ke"
 
     User {
-        string id PK
+        uuid   id PK
         string name
         string email UK
         string phone
@@ -44,8 +46,8 @@ erDiagram
     }
 
     Address {
-        string id PK
-        string userId FK
+        uuid   id PK
+        uuid   userId FK
         string recipientName
         string phone
         string fullAddress
@@ -57,7 +59,7 @@ erDiagram
     }
 
     Product {
-        string id PK
+        uuid   id PK
         string slug UK
         string title
         string shortDescription
@@ -66,61 +68,60 @@ erDiagram
         int    basePrice
         string image
         string_array images
-        string_array features
         string_array tags
         string productionTime
         string_array serviceAreas
     }
 
     ProductSize {
-        string id PK
-        string productId FK
+        uuid   id PK
+        uuid   productId FK
         string label
         int    price
         string note
     }
 
     ProductTemplate {
-        string id PK
-        string productId FK
+        uuid   id PK
+        uuid   productId FK
         string name
         string image
     }
 
     ProductThemeColor {
-        string id PK
-        string productId FK
+        uuid   id PK
+        uuid   productId FK
         string name
         string value
     }
 
     ProductAddon {
-        string id PK
-        string productId FK
+        uuid   id PK
+        uuid   productId FK
         string name
         int    price
     }
 
     ProductUnit {
-        string id PK "🆕"
-        string productId FK
+        uuid   id PK "🆕"
+        uuid   productId FK
         string sizeLabel "nullable"
         string code UK "kode aset, mis. WD-001"
         string status "AVAILABLE|RENTED|MAINTENANCE|RETIRED"
     }
 
     RentalDurationOption {
-        string id PK "🆕 (opsional)"
-        string productId FK
+        uuid   id PK "🆕 (opsional)"
+        uuid   productId FK
         int    days "1 | 3 | 7"
         int    price
     }
 
     Order {
-        string id PK
+        uuid   id PK
         string orderNumber UK
-        string userId FK
-        string addressId FK "nullable"
+        uuid   userId FK
+        uuid   addressId FK "nullable"
         enum   status "OrderStatus"
         int    subtotal
         int    shippingCost "diisi manual / dari quote provider"
@@ -138,9 +139,9 @@ erDiagram
     }
 
     OrderItem {
-        string id PK
-        string orderId FK
-        string productId FK "nullable"
+        uuid   id PK
+        uuid   orderId FK
+        uuid   productId FK "nullable"
         string productSlug
         string productTitle
         string productImage
@@ -154,29 +155,29 @@ erDiagram
         datetime installDate "🆕 input pelanggan"
         int    rentalDays "🆕 input pelanggan"
         datetime pickupDate "🆕 turunan: installDate + rentalDays"
-        string unitId FK "🆕 nullable (alokasi unit)"
+        uuid   unitId FK "🆕 nullable (alokasi unit)"
     }
 
     Payment {
-        string id PK "🆕"
-        string orderId FK
+        uuid   id PK "🆕"
+        uuid   orderId FK
         enum   type "DP|FULL|DEPOSIT|DEPOSIT_REFUND"
         string method "TRANSFER_BCA|CASH|..."
         int    amount
         enum   status "PENDING|VERIFIED|REJECTED"
         string proofImage "nullable, URL bukti"
         string note "nullable"
-        string verifiedBy FK "nullable, userId admin"
+        uuid   verifiedBy FK "nullable, userId admin"
         datetime verifiedAt "nullable"
         datetime createdAt
     }
 
     OrderStatusHistory {
-        string id PK "🆕"
-        string orderId FK
+        uuid   id PK "🆕"
+        uuid   orderId FK
         enum   fromStatus "OrderStatus, nullable"
         enum   toStatus "OrderStatus"
-        string changedBy FK "nullable, userId"
+        uuid   changedBy FK "nullable, userId"
         string note "nullable"
         datetime createdAt
     }

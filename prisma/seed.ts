@@ -17,8 +17,10 @@ async function main() {
 	const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 	const prisma = new PrismaClient({ adapter });
 
-	// Bersihkan (urutan penting): Order cascade → OrderItem; Product cascade → size/template/color/addon.
+	// Bersihkan (urutan penting): Order dulu (FK ke User bersifat restrict), lalu
+	// User (cascade → Address), lalu Product (cascade → size/template/color/addon).
 	await prisma.order.deleteMany();
+	await prisma.user.deleteMany();
 	await prisma.product.deleteMany();
 
 	for (const p of products) {
@@ -32,7 +34,6 @@ async function main() {
 				basePrice: p.price,
 				image: p.image,
 				images: p.images,
-				features: p.features,
 				tags: p.tags,
 				productionTime: p.productionTime,
 				serviceAreas: p.serviceAreas,

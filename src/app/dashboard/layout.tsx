@@ -22,12 +22,15 @@ export default function DashboardLayout({
 	const pathname = usePathname();
 
 	useEffect(() => {
-		if (!isLoading && !user) {
-			router.replace('/login?redirect=/dashboard');
+		if (isLoading) return;
+		if (!user) {
+			router.replace('/login');
+		} else if (user.role === 'ADMIN') {
+			router.replace('/admin'); // dashboard khusus customer
 		}
 	}, [isLoading, user, router]);
 
-	if (isLoading || !user) {
+	if (isLoading || !user || user.role === 'ADMIN') {
 		return (
 			<>
 				<Navbar />

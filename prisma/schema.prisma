@@ -24,7 +24,7 @@ enum OrderStatus {
 }
 
 model User {
-  id             String   @id @default(cuid())
+  id             String   @id @default(uuid()) @db.Uuid
   name           String?
   email          String   @unique
   phone          String?
@@ -38,8 +38,8 @@ model User {
 }
 
 model Address {
-  id            String   @id @default(cuid())
-  userId        String
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
   recipientName String
   phone         String
   fullAddress   String
@@ -57,7 +57,7 @@ model Address {
 }
 
 model Product {
-  id               String   @id @default(cuid())
+  id               String   @id @default(uuid()) @db.Uuid
   slug             String   @unique
   title            String
   shortDescription String
@@ -66,7 +66,6 @@ model Product {
   basePrice        Int
   image            String
   images           String[]
-  features         String[]
   tags             String[]
   productionTime   String?
   serviceAreas     String[]
@@ -83,8 +82,8 @@ model Product {
 }
 
 model ProductSize {
-  id        String  @id @default(cuid())
-  productId String
+  id        String  @id @default(uuid()) @db.Uuid
+  productId String  @db.Uuid
   label     String
   price     Int
   note      String?
@@ -95,8 +94,8 @@ model ProductSize {
 }
 
 model ProductTemplate {
-  id        String @id @default(cuid())
-  productId String
+  id        String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
   name      String
   image     String
 
@@ -106,8 +105,8 @@ model ProductTemplate {
 }
 
 model ProductThemeColor {
-  id        String @id @default(cuid())
-  productId String
+  id        String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
   name      String
   value     String
 
@@ -117,8 +116,8 @@ model ProductThemeColor {
 }
 
 model ProductAddon {
-  id        String @id @default(cuid())
-  productId String
+  id        String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
   name      String
   price     Int
 
@@ -128,10 +127,10 @@ model ProductAddon {
 }
 
 model Order {
-  id           String      @id @default(cuid())
+  id           String      @id @default(uuid()) @db.Uuid
   orderNumber  String      @unique
-  userId       String
-  addressId    String?
+  userId       String      @db.Uuid
+  addressId    String?     @db.Uuid
   status       OrderStatus @default(PENDING)
   subtotal     Int
   shippingCost Int         @default(0)
@@ -163,9 +162,9 @@ model Order {
 }
 
 model OrderItem {
-  id                 String   @id @default(cuid())
-  orderId            String
-  productId          String?
+  id                 String   @id @default(uuid()) @db.Uuid
+  orderId            String   @db.Uuid
+  productId          String?  @db.Uuid
   productSlug        String
   productTitle       String
   productImage       String
@@ -181,7 +180,7 @@ model OrderItem {
   installDate DateTime
   rentalDays  Int
   pickupDate  DateTime
-  unitId      String? // unit fisik dialokasikan (relasi ProductUnit menyusul di S1.3)
+  unitId      String?  @db.Uuid // unit fisik dialokasikan (relasi ProductUnit menyusul di S1.3)
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)

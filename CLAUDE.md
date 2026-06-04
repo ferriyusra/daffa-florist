@@ -71,7 +71,9 @@ The cart is intentionally not held in React Context — it lives in `localStorag
 
 ### Product catalog
 
-[src/lib/products.ts](src/lib/products.ts) is the current source of truth for products: `productCategories` (const tuple → `ProductCategory` union), and `Product` with sizes, templates, theme colors, and addons. The `product` tRPC router ([routers/product.ts](src/server/api/routers/product.ts)) serves this in-memory data (`list`/`getBySlug`/`related`/`categories`) — it does **not** yet read from the `Product` DB tables, even though the schema defines them. Orders, by contrast, are persisted to Postgres via the `order` router. Keep `src/lib/products.ts` as the catalog source until catalog data is migrated to the DB.
+The catalog is now **DB-backed** (migrated in S0.5). The public `product` tRPC router ([routers/product.ts](src/server/api/routers/product.ts)) reads the `Product` tables from Postgres (`list`/`getBySlug`/`related`/`categories`) and maps each row to the `Product` shape used by the UI — deriving `priceLabel` from the price. The Product model mirrors the ERD exactly (no `specs`/`color` — those were dropped to align with [docs/ERD](docs/ERD-papan-bunga-sewa.md)). Admin CRUD lives in `admin.product.*` ([routers/admin/product.ts](src/server/api/routers/admin/product.ts), `adminProcedure`), which replaces child entities (sizes/templates/themeColors/addons) wholesale on update. Consumers: the catalog ([products/page.tsx](src/app/products/page.tsx)) and featured ([components/products.tsx](src/components/products.tsx)) are client components using `api.product.list.useQuery()`; the detail page ([products/[slug]/page.tsx](src/app/products/%5Bslug%5D/page.tsx)) is a dynamic Server Component using the RSC caller, so admin edits show immediately.
+
+[src/lib/products.ts](src/lib/products.ts) keeps the type definitions (`productCategories` const tuple → `ProductCategory` union, and the `Product` shape) and is the **seed source** — [prisma/seed.ts](prisma/seed.ts) maps it into the DB. It is no longer read at runtime by the pages.
 
 ### Design system
 
