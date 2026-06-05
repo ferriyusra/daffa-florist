@@ -206,3 +206,15 @@ model GalleryItem {
 
   @@index([isActive, sortOrder])
 }
+
+model DeliveryArea {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique
+  district     String? // wilayah induk (mis. Pasaman Barat)
+  shippingCost Int      @default(0) // ongkir zona (Rupiah)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive])
+}

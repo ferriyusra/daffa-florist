@@ -23,6 +23,7 @@ async function main() {
 	await prisma.user.deleteMany();
 	await prisma.product.deleteMany();
 	await prisma.galleryItem.deleteMany();
+	await prisma.deliveryArea.deleteMany();
 
 	for (const p of products) {
 		await prisma.product.create({
@@ -123,8 +124,25 @@ async function main() {
 		data: galleryItems.map((g, i) => ({ ...g, sortOrder: i })),
 	});
 
+	// Zona pengiriman + ongkir (Pasaman Barat).
+	const deliveryAreas = [
+		{ name: 'Ampar Putih', shippingCost: 0 },
+		{ name: 'Simpang Empat', shippingCost: 25_000 },
+		{ name: 'Kinali', shippingCost: 35_000 },
+		{ name: 'Talamau', shippingCost: 40_000 },
+		{ name: 'Pasaman', shippingCost: 30_000 },
+		{ name: 'Lembah Melintang', shippingCost: 45_000 },
+		{ name: 'Sasak Ranah Pasisie', shippingCost: 50_000 },
+		{ name: 'Gunung Tuleh', shippingCost: 60_000 },
+		{ name: 'Sungai Beremas', shippingCost: 65_000 },
+		{ name: 'Koto Balingka', shippingCost: 55_000 },
+	];
+	await prisma.deliveryArea.createMany({
+		data: deliveryAreas.map((a) => ({ ...a, district: 'Pasaman Barat' })),
+	});
+
 	console.log(
-		`✓ Seed selesai: ${products.length} produk + ${usersToSeed.length} user + ${galleryItems.length} galeri.`,
+		`✓ Seed selesai: ${products.length} produk + ${usersToSeed.length} user + ${galleryItems.length} galeri + ${deliveryAreas.length} zona.`,
 	);
 	await prisma.$disconnect();
 }

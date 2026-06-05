@@ -11,6 +11,7 @@ import {
 	ImagePlus,
 	LayoutDashboard,
 	LogOut,
+	Map,
 	Menu,
 	Package,
 	Users,
@@ -32,6 +33,11 @@ const navGroups = [
 			{ label: 'Manage Order', href: '/admin/orders', icon: ClipboardList },
 			{ label: 'Manage Produk', href: '/admin/products', icon: Package },
 			{ label: 'Manage Customer', href: '/admin/customers', icon: Users },
+			{
+				label: 'Area Pengiriman',
+				href: '/admin/delivery-areas',
+				icon: Map,
+			},
 		],
 	},
 	{

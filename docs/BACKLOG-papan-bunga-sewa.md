@@ -35,7 +35,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 >
 > **Catatan baseline:** sebagian auth sudah ada di code (NextAuth Credentials, `auth.register`, halaman `/login` & `/register`) dan halaman admin sudah ada sebagai **UI statis** ([admin/products](../src/app/admin/products/), [gallery](../src/app/admin/gallery/), [promos](../src/app/admin/promos/), [customers](../src/app/admin/customers/), [delivery-areas](../src/app/admin/delivery-areas/)). Story berikut ditulis lengkap (end-to-end); bila bagian sudah ada, task tetap mencakup **verifikasi + uji + tutup celah**, bukan menulis ulang.
 >
-> **Update (kerja S0.5):** halaman admin placeholder yang belum diimplementasi — gallery (S0.6), promos (S0.7), delivery-areas (S0.9) — beserta menu & route `reports` **dihapus** dari kode (UI + sidebar) agar dikerjakan ulang bersih saat storinya digarap; dashboard `/admin` dikosongkan sementara (blank page). **Galeri (S0.6) sudah dibangun ulang** (DB-backed, menu kembali); promos (S0.7) & delivery-areas (S0.9) masih menunggu.
+> **Update (kerja S0.5):** halaman admin placeholder yang belum diimplementasi — gallery (S0.6), promos (S0.7), delivery-areas (S0.9) — beserta menu & route `reports` **dihapus** dari kode (UI + sidebar) agar dikerjakan ulang bersih saat storinya digarap; dashboard `/admin` dikosongkan sementara (blank page). **Galeri (S0.6) & delivery-areas (S0.9) sudah dibangun ulang** (DB-backed, menu kembali); promos (S0.7) masih menunggu.
 
 ### Auth
 
@@ -105,9 +105,9 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 #### S0.9 — CRUD Delivery-areas (zona & ongkir)
 **AC:** Admin CRUD zona layanan + ongkir per zona; dipakai validasi alamat & ongkir checkout (lihat S4.3).
 
-- [ ] `S` Model `DeliveryArea` (nama zona, ongkir, aktif) + migrasi.
-- [ ] `S` Router `admin.deliveryArea.*` + zod.
-- [ ] `S` Hubungkan UI [admin/delivery-areas](../src/app/admin/delivery-areas/) ke API. *(S4.3 lalu mereuse data ini.)*
+- [x] `S` Model `DeliveryArea` (nama zona, ongkir, aktif) + migrasi. — [schema.prisma](../prisma/schema.prisma) (`name` unik, `district?`, `shippingCost`, `isActive`); migrasi `delivery_area`; seed 10 zona Pasaman Barat (Ampar Putih … Koto Balingka).
+- [x] `S` Router `admin.deliveryArea.*` + zod. — [routers/admin/delivery-area.ts](../src/server/api/routers/admin/delivery-area.ts) (`list/getById/create/update/delete`, `adminProcedure`, CONFLICT nama ganda). Schema bersama [delivery-area-schema.ts](../src/lib/delivery-area-schema.ts).
+- [x] `S` Hubungkan UI [admin/delivery-areas](../src/app/admin/delivery-areas/) ke API. *(S4.3 lalu mereuse data ini.)* — halaman client (tabel + **modal form** create/edit + dialog hapus + toggle aktif), ongkir pakai `RupiahInput` (≥0), validasi per-field, CONFLICT→field nama. Menu "Area Pengiriman" dikembalikan ke sidebar. Diverifikasi [scripts/test-admin-delivery-area.ts](../scripts/test-admin-delivery-area.ts).
 
 ---
 
