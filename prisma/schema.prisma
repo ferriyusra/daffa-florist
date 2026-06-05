@@ -30,6 +30,7 @@ model User {
   phone          String?
   hashedPassword String
   role           UserRole @default(CUSTOMER)
+  isActive       Boolean  @default(true) // admin bisa nonaktifkan akun (blokir login)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

@@ -254,7 +254,6 @@ function CheckoutScreen() {
 								<input
 									id='deliveryDate'
 									type='date'
-									required
 									min={minDate}
 									value={deliveryDate}
 									onChange={(e) => setDeliveryDate(e.target.value)}

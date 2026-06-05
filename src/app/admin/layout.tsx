@@ -15,7 +15,7 @@ import {
 	Users,
 	X,
 } from 'lucide-react';
-import { useAuth } from '@/hooks';
+import { useAuth, useToast } from '@/hooks';
 import { ConfirmDialog } from '@/components';
 
 const navGroups = [
@@ -41,6 +41,7 @@ export default function AdminLayout({
 	children: React.ReactNode;
 }) {
 	const { user, isLoading, logout } = useAuth();
+	const toast = useToast();
 	const router = useRouter();
 	const pathname = usePathname();
 	const [mobileOpen, setMobileOpen] = useState(false);
@@ -107,7 +108,11 @@ export default function AdminLayout({
 				onClose={() => setConfirmLogout(false)}
 				onConfirm={async () => {
 					setLoggingOut(true);
-					await logout('/login');
+					const ok = await logout('/login');
+					if (!ok) {
+						setLoggingOut(false);
+						toast.error('Gagal keluar. Coba lagi.');
+					}
 				}}
 				icon={LogOut}
 				title='Keluar dari akun?'

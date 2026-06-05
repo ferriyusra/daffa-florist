@@ -17,6 +17,7 @@ export function ConfirmDialog({
 	title,
 	description,
 	icon: Icon = Trash2,
+	tone = 'danger',
 	confirmLabel = 'Hapus',
 	cancelLabel = 'Batal',
 	loadingLabel = 'Menghapus...',
@@ -29,12 +30,15 @@ export function ConfirmDialog({
 	title: string;
 	description?: ReactNode;
 	icon?: LucideIcon;
+	/** Warna aksi: `danger` (merah, default) atau `primary`. */
+	tone?: 'danger' | 'primary';
 	confirmLabel?: string;
 	cancelLabel?: string;
 	loadingLabel?: string;
 	loading?: boolean;
 	error?: string;
 }) {
+	const accent = tone === 'primary' ? 'var(--primary)' : 'var(--destructive)';
 	useEffect(() => {
 		if (!open) return;
 		const onKey = (e: KeyboardEvent) => {
@@ -69,10 +73,9 @@ export function ConfirmDialog({
 						<div
 							className='mx-auto mb-4 flex items-center justify-center w-14 h-14 rounded-full'
 							style={{
-								background:
-									'color-mix(in srgb, var(--destructive) 12%, transparent)',
+								background: `color-mix(in srgb, ${accent} 12%, transparent)`,
 							}}>
-							<Icon size={26} style={{ color: 'var(--destructive)' }} />
+							<Icon size={26} style={{ color: accent }} />
 						</div>
 
 						<h3 className='font-serif text-lg font-semibold mb-2'>{title}</h3>
@@ -105,7 +108,7 @@ export function ConfirmDialog({
 								onClick={onConfirm}
 								disabled={loading}
 								className='inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer disabled:opacity-60'
-								style={{ background: 'var(--destructive)' }}>
+								style={{ background: accent }}>
 								<Icon size={15} />
 								{loading ? loadingLabel : confirmLabel}
 							</button>

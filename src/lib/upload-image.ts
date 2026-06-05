@@ -37,6 +37,10 @@ export function uploadImage(
 		};
 
 		xhr.onerror = () => reject(new Error('Upload gagal.'));
+		// Cegah upload menggantung selamanya bila koneksi stall.
+		xhr.timeout = 30_000;
+		xhr.ontimeout = () =>
+			reject(new Error('Upload melebihi batas waktu. Coba lagi.'));
 		xhr.send(body);
 	});
 }

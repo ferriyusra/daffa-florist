@@ -3,9 +3,19 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import {
+	AlertCircle,
+	ArrowLeft,
+	Eye,
+	EyeOff,
+	Mail,
+	Lock,
+	User,
+	Phone,
+} from 'lucide-react';
 import { Footer, Navbar } from '@/components';
 import { api } from '@/trpc/react';
+import { registerFields } from '@/lib/auth-schema';
 
 export default function RegisterPage() {
 	return (
@@ -19,6 +29,22 @@ export default function RegisterPage() {
 	);
 }
 
+function Asterisk() {
+	return <span style={{ color: 'var(--destructive)' }}> *</span>;
+}
+
+function FieldError({ msg }: { msg?: string }) {
+	if (!msg) return null;
+	return (
+		<p className='mt-1.5 text-xs' style={{ color: 'var(--destructive)' }}>
+			{msg}
+		</p>
+	);
+}
+
+const inputBase =
+	'w-full pl-10 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors';
+
 function RegisterForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -28,7 +54,8 @@ function RegisterForm() {
 	const [password, setPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
-	const [error, setError] = useState('');
+	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+	const [formError, setFormError] = useState('');
 
 	const redirectTo = searchParams.get('redirect') ?? '/';
 
@@ -40,20 +67,46 @@ function RegisterForm() {
 			router.push(`/login?${query.toString()}`);
 		},
 		onError: (err) => {
-			setError(err.message);
+			// Email bentrok dari server → tampilkan di field email.
+			if (err.data?.code === 'CONFLICT') {
+				setFieldErrors((p) => ({ ...p, email: err.message }));
+			} else {
+				setFormError(err.message);
+			}
 		},
 	});
 
+	const clearErr = (field: string) =>
+		setFieldErrors((p) => {
+			if (!p[field]) return p;
+			const next = { ...p };
+			delete next[field];
+			return next;
+		});
+
 	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setError('');
+		setFormError('');
 
+		// Validasi client dengan schema zod yang sama seperti server.
+		const parsed = registerFields.safeParse({ name, email, phone, password });
+		const errs: Record<string, string> = {};
+		if (!parsed.success) {
+			for (const issue of parsed.error.issues) {
+				const key = String(issue.path[0]);
+				if (key && !errs[key]) errs[key] = issue.message;
+			}
+		}
 		if (password !== confirmPassword) {
-			setError('Password dan konfirmasi password tidak cocok.');
+			errs.confirmPassword = 'Konfirmasi password tidak cocok.';
+		}
+		if (!parsed.success || Object.keys(errs).length) {
+			setFieldErrors(errs);
 			return;
 		}
 
-		register.mutate({ name, email, phone, password });
+		setFieldErrors({});
+		register.mutate(parsed.data);
 	};
 
 	return (
@@ -76,19 +129,16 @@ function RegisterForm() {
 						<h1 className='font-serif text-2xl sm:text-3xl font-bold mb-2'>
 							Daftar Akun
 						</h1>
-						<p
-							className='text-sm'
-							style={{ color: 'var(--text-secondary)' }}>
+						<p className='text-sm' style={{ color: 'var(--text-secondary)' }}>
 							Buat akun untuk mempermudah pemesanan papan bunga Anda.
 						</p>
 					</div>
 
-					<form onSubmit={handleSubmit} className='p-8 space-y-5'>
+					<form onSubmit={handleSubmit} className='p-8 space-y-5' noValidate>
 						<div>
-							<label
-								htmlFor='name'
-								className='block text-sm font-medium mb-2'>
+							<label htmlFor='name' className='block text-sm font-medium mb-2'>
 								Nama Lengkap
+								<Asterisk />
 							</label>
 							<div className='relative'>
 								<User
@@ -99,13 +149,21 @@ function RegisterForm() {
 								<input
 									id='name'
 									type='text'
-									required
 									value={name}
-									onChange={(e) => setName(e.target.value)}
+									onChange={(e) => {
+										setName(e.target.value);
+										clearErr('name');
+									}}
 									placeholder='Nama Anda'
-									className='w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									className={`${inputBase} pr-4`}
+									style={{
+										borderColor: fieldErrors.name
+											? 'var(--destructive)'
+											: undefined,
+									}}
 								/>
 							</div>
+							<FieldError msg={fieldErrors.name} />
 						</div>
 
 						<div>
@@ -113,6 +171,7 @@ function RegisterForm() {
 								htmlFor='email'
 								className='block text-sm font-medium mb-2'>
 								Email
+								<Asterisk />
 							</label>
 							<div className='relative'>
 								<Mail
@@ -123,13 +182,21 @@ function RegisterForm() {
 								<input
 									id='email'
 									type='email'
-									required
 									value={email}
-									onChange={(e) => setEmail(e.target.value)}
+									onChange={(e) => {
+										setEmail(e.target.value);
+										clearErr('email');
+									}}
 									placeholder='nama@email.com'
-									className='w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									className={`${inputBase} pr-4`}
+									style={{
+										borderColor: fieldErrors.email
+											? 'var(--destructive)'
+											: undefined,
+									}}
 								/>
 							</div>
+							<FieldError msg={fieldErrors.email} />
 						</div>
 
 						<div>
@@ -137,6 +204,7 @@ function RegisterForm() {
 								htmlFor='phone'
 								className='block text-sm font-medium mb-2'>
 								Nomor WhatsApp
+								<Asterisk />
 							</label>
 							<div className='relative'>
 								<Phone
@@ -147,13 +215,21 @@ function RegisterForm() {
 								<input
 									id='phone'
 									type='tel'
-									required
 									value={phone}
-									onChange={(e) => setPhone(e.target.value)}
+									onChange={(e) => {
+										setPhone(e.target.value);
+										clearErr('phone');
+									}}
 									placeholder='08xxxxxxxxxx'
-									className='w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									className={`${inputBase} pr-4`}
+									style={{
+										borderColor: fieldErrors.phone
+											? 'var(--destructive)'
+											: undefined,
+									}}
 								/>
 							</div>
+							<FieldError msg={fieldErrors.phone} />
 						</div>
 
 						<div>
@@ -161,6 +237,7 @@ function RegisterForm() {
 								htmlFor='password'
 								className='block text-sm font-medium mb-2'>
 								Password
+								<Asterisk />
 							</label>
 							<div className='relative'>
 								<Lock
@@ -171,12 +248,19 @@ function RegisterForm() {
 								<input
 									id='password'
 									type={showPassword ? 'text' : 'password'}
-									required
-									minLength={6}
 									value={password}
-									onChange={(e) => setPassword(e.target.value)}
+									onChange={(e) => {
+										setPassword(e.target.value);
+										clearErr('password');
+										clearErr('confirmPassword');
+									}}
 									placeholder='Minimal 6 karakter'
-									className='w-full pl-10 pr-10 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									className={`${inputBase} pr-10`}
+									style={{
+										borderColor: fieldErrors.password
+											? 'var(--destructive)'
+											: undefined,
+									}}
 								/>
 								<button
 									type='button'
@@ -191,6 +275,7 @@ function RegisterForm() {
 									{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
 								</button>
 							</div>
+							<FieldError msg={fieldErrors.password} />
 						</div>
 
 						<div>
@@ -198,6 +283,7 @@ function RegisterForm() {
 								htmlFor='confirmPassword'
 								className='block text-sm font-medium mb-2'>
 								Konfirmasi Password
+								<Asterisk />
 							</label>
 							<div className='relative'>
 								<Lock
@@ -208,25 +294,35 @@ function RegisterForm() {
 								<input
 									id='confirmPassword'
 									type={showPassword ? 'text' : 'password'}
-									required
-									minLength={6}
 									value={confirmPassword}
-									onChange={(e) => setConfirmPassword(e.target.value)}
+									onChange={(e) => {
+										setConfirmPassword(e.target.value);
+										clearErr('confirmPassword');
+									}}
 									placeholder='Ulangi password'
-									className='w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									className={`${inputBase} pr-4`}
+									style={{
+										borderColor: fieldErrors.confirmPassword
+											? 'var(--destructive)'
+											: undefined,
+									}}
 								/>
 							</div>
+							<FieldError msg={fieldErrors.confirmPassword} />
 						</div>
 
-						{error && (
-							<p
-								className='text-sm rounded-xl px-4 py-3'
+						{formError && (
+							<div
+								role='alert'
+								className='flex items-center gap-2 text-sm rounded-xl px-4 py-3'
 								style={{
-									background: 'rgba(220, 38, 38, 0.08)',
-									color: '#dc2626',
+									background:
+										'color-mix(in srgb, var(--destructive) 8%, transparent)',
+									color: 'var(--destructive)',
 								}}>
-								{error}
-							</p>
+								<AlertCircle size={16} className='shrink-0' />
+								{formError}
+							</div>
 						)}
 
 						<button

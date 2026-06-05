@@ -28,12 +28,20 @@ export function useAuth() {
 	 * Keluar: bersihkan sesi lalu arahkan (default beranda). `redirect: false`
 	 * agar navigasi ditangani router (tanpa reload penuh); `refresh()` me-revalidate
 	 * server components & middleware dengan sesi yang sudah kosong.
+	 *
+	 * Tak pernah melempar — mengembalikan `true` bila sukses, `false` bila gagal,
+	 * agar pemanggil bisa menangani kegagalan tanpa unhandled rejection.
 	 */
 	const logout = useCallback(
-		async (redirectTo: string = '/') => {
-			await signOut({ redirect: false });
-			router.push(redirectTo);
-			router.refresh();
+		async (redirectTo: string = '/'): Promise<boolean> => {
+			try {
+				await signOut({ redirect: false });
+				router.push(redirectTo);
+				router.refresh();
+				return true;
+			} catch {
+				return false;
+			}
 		},
 		[router],
 	);

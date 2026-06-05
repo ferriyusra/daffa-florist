@@ -96,7 +96,6 @@ function LoginForm() {
 								<input
 									id='email'
 									type='email'
-									required
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
 									placeholder='nama@email.com'
@@ -120,7 +119,6 @@ function LoginForm() {
 								<input
 									id='password'
 									type={showPassword ? 'text' : 'password'}
-									required
 									minLength={6}
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}

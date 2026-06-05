@@ -99,8 +99,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 #### S0.8 — Manajemen Customers
 **AC:** Admin melihat & mengelola pelanggan (daftar, detail, cari, ubah role/nonaktif); tanpa mengekspos password.
 
-- [ ] `S` Router `admin.customer.list/getById/update` (+ ubah role/status), `adminProcedure`, paginasi & pencarian.
-- [ ] `S` Hubungkan UI [admin/customers](../src/app/admin/customers/) — tabel, detail, aksi.
+- [x] `S` Router `admin.customer.list/getById/update` (+ ubah role/status), `adminProcedure`, paginasi & pencarian. — [routers/admin/customer.ts](../src/server/api/routers/admin/customer.ts); `list` (cari nama/email/HP + paginasi + `orderCount`/`totalSpent`), `getById` (+ alamat & pesanan terakhir), `update` peran/`isActive` dengan guard "akun sendiri". Tak pernah ekspos `hashedPassword`. Field baru `User.isActive` (+migrasi) — akun nonaktif **diblokir login** di [config.ts](../src/server/auth/config.ts).
+- [x] `S` Hubungkan UI [admin/customers](../src/app/admin/customers/) — tabel, detail, aksi. — halaman client (data nyata + cari + filter peran + paginasi + badge peran/status), aksi ubah peran & aktif/nonaktif via `ConfirmDialog` (kini punya prop `tone`), + halaman detail [`[id]`](../src/app/admin/customers/) (profil, statistik, alamat, riwayat pesanan). Diverifikasi via [scripts/test-admin-customer.ts](../scripts/test-admin-customer.ts).
 
 #### S0.9 — CRUD Delivery-areas (zona & ongkir)
 **AC:** Admin CRUD zona layanan + ongkir per zona; dipakai validasi alamat & ongkir checkout (lihat S4.3).

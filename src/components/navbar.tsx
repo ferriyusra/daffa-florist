@@ -15,7 +15,7 @@ import {
 	ShieldCheck,
 	User,
 } from 'lucide-react';
-import { useAuth, useCart } from '@/hooks';
+import { useAuth, useCart, useToast } from '@/hooks';
 import { ConfirmDialog } from './confirm-dialog';
 
 const navLinks = [
@@ -32,6 +32,7 @@ export default function Navbar() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const { user, isLoading, logout } = useAuth();
 	const { totalItems } = useCart();
+	const toast = useToast();
 	const [confirmLogout, setConfirmLogout] = useState(false);
 	const [loggingOut, setLoggingOut] = useState(false);
 
@@ -288,7 +289,11 @@ export default function Navbar() {
 				onClose={() => setConfirmLogout(false)}
 				onConfirm={async () => {
 					setLoggingOut(true);
-					await logout();
+					const ok = await logout();
+					if (!ok) {
+						setLoggingOut(false);
+						toast.error('Gagal keluar. Coba lagi.');
+					}
 				}}
 				icon={LogOut}
 				title='Keluar dari akun?'

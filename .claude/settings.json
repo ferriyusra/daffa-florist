@@ -11,7 +11,10 @@
       "Bash(git remote:*)",
       "Bash(grep -h \"<h[1-6]\\\\|<section\\\\|<article\\\\|<nav\\\\|<main\\\\|<header\\\\|<footer\" /Users/ferri/Documents/dev/learning/frontend/nextjs/daffa-florist/src/components/*.tsx /Users/ferri/Documents/dev/learning/frontend/nextjs/daffa-florist/src/app/*.tsx)",
       "Bash(grep -h \"alt=\" /Users/ferri/Documents/dev/learning/frontend/nextjs/daffa-florist/src/components/*.tsx /Users/ferri/Documents/dev/learning/frontend/nextjs/daffa-florist/src/app/*.tsx)",
-      "Bash(./node_modules/.bin/tsx scripts/_uuidcheck.ts)"
+      "Bash(./node_modules/.bin/tsx scripts/_uuidcheck.ts)",
+      "Bash(grep -rn \"^[[:space:]]*required$\" src/app/register/page.tsx src/app/login/page.tsx src/app/confirmation-order/page.tsx src/components/contact.tsx)",
+      "Bash(git -c color.ui=false diff --name-only HEAD)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }

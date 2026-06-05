@@ -26,7 +26,7 @@ export const authConfig = {
 				const user = await prisma.user.findUnique({
 					where: { email: parsed.data.email },
 				});
-				if (!user) return null;
+				if (!user || !user.isActive) return null; // akun nonaktif tak bisa login
 
 				const valid = await compare(
 					parsed.data.password,
