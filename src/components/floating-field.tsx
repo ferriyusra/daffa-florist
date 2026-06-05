@@ -45,6 +45,7 @@ export function FloatingInput({
 	required = false,
 	error,
 	list,
+	min,
 }: {
 	id?: string;
 	label: string;
@@ -54,6 +55,7 @@ export function FloatingInput({
 	required?: boolean;
 	error?: string;
 	list?: string;
+	min?: number;
 }) {
 	return (
 		<div>
@@ -62,6 +64,7 @@ export function FloatingInput({
 					id={id}
 					type={type}
 					list={list}
+					min={min}
 					value={value}
 					placeholder=' '
 					onChange={(e) => onChange(e.target.value)}

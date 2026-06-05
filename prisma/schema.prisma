@@ -193,3 +193,16 @@ model OrderItem {
   @@index([pickupDate])
   @@index([unitId])
 }
+
+model GalleryItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  image     String
+  category  String
+  sortOrder Int      @default(0) // urutan tampil (kecil dulu)
+  isActive  Boolean  @default(true) // sembunyikan dari galeri publik bila false
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}

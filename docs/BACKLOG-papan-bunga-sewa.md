@@ -35,7 +35,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 >
 > **Catatan baseline:** sebagian auth sudah ada di code (NextAuth Credentials, `auth.register`, halaman `/login` & `/register`) dan halaman admin sudah ada sebagai **UI statis** ([admin/products](../src/app/admin/products/), [gallery](../src/app/admin/gallery/), [promos](../src/app/admin/promos/), [customers](../src/app/admin/customers/), [delivery-areas](../src/app/admin/delivery-areas/)). Story berikut ditulis lengkap (end-to-end); bila bagian sudah ada, task tetap mencakup **verifikasi + uji + tutup celah**, bukan menulis ulang.
 >
-> **Update (kerja S0.5):** halaman admin placeholder yang belum diimplementasi — gallery (S0.6), promos (S0.7), delivery-areas (S0.9) — beserta menu & route `reports` **dihapus** dari kode (UI + sidebar) agar dikerjakan ulang bersih saat storinya digarap; dashboard `/admin` dikosongkan sementara (blank page).
+> **Update (kerja S0.5):** halaman admin placeholder yang belum diimplementasi — gallery (S0.6), promos (S0.7), delivery-areas (S0.9) — beserta menu & route `reports` **dihapus** dari kode (UI + sidebar) agar dikerjakan ulang bersih saat storinya digarap; dashboard `/admin` dikosongkan sementara (blank page). **Galeri (S0.6) sudah dibangun ulang** (DB-backed, menu kembali); promos (S0.7) & delivery-areas (S0.9) masih menunggu.
 
 ### Auth
 
@@ -44,7 +44,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **AC:** Form register (nama, email, no HP, password) → `auth.register` membuat `User` dengan password ter-hash (bcrypt), role default `CUSTOMER`; email duplikat ditolak dengan pesan jelas; sukses → auto-login atau arahkan ke `/login`.
 
 - [x] `XS` Verifikasi/lengkapi `auth.register` ([routers/auth.ts](../src/server/api/routers/auth.ts)) — validasi zod (email, panjang password), cek email unik, hash bcrypt. — sudah lengkap, terverifikasi.
-- [x] `S` Form register ([register/page.tsx](../src/app/register/page.tsx)) — validasi client, tampilkan error server, state loading. — sudah ada (cek password match, `onError`, `isPending`).
+- [x] `S` Form register ([register/page.tsx](../src/app/register/page.tsx)) — validasi client, tampilkan error server, state loading. — validasi **per-field** via schema zod bersama [auth-schema.ts](../src/lib/auth-schema.ts) (client `safeParse` + server), asterisk merah + pesan di bawah tiap input, email bentrok (`CONFLICT`) dipetakan ke field email, cek kecocokan password; tanpa atribut `required` HTML.
 - [x] `XS` Setelah sukses: auto sign-in atau redirect `/login` dengan notifikasi. — redirect `/login?registered=1` + banner sukses di halaman login.
 
 #### S0.2 — Login (kredensial) & sesi
@@ -59,15 +59,15 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** pengguna, **agar** keluar dengan aman.
 **AC:** Aksi logout memanggil `signOut`, membersihkan sesi, redirect ke beranda/`/login`; tombol tersedia di navbar (saat login) & dashboard.
 
-- [x] `XS` Implement aksi logout via `signOut` di [use-auth.ts](../src/hooks/use-auth.ts). — `logout(redirectTo='/')` = `signOut` + `router.push`+`refresh`.
-- [x] `XS` Tombol logout di navbar/dashboard (tampil kondisional saat ada sesi). — tombol di [navbar](../src/components/navbar.tsx) (saat login) & sidebar [admin](../src/app/admin/layout.tsx); navbar juga muncul di dashboard.
+- [x] `XS` Implement aksi logout via `signOut` di [use-auth.ts](../src/hooks/use-auth.ts). — `logout(redirectTo='/')` = `signOut` + `router.push`+`refresh`; **tak pernah reject** (try/catch → `Promise<boolean>`) agar kegagalan ditangani pemanggil (toast + reset state).
+- [x] `XS` Tombol logout di navbar/dashboard (tampil kondisional saat ada sesi). — tombol di [navbar](../src/components/navbar.tsx) (saat login) & sidebar [admin](../src/app/admin/layout.tsx); keduanya minta **konfirmasi** lewat `ConfirmDialog` (ikon LogOut) sebelum keluar; navbar juga muncul di dashboard.
 
 #### S0.4 — Role, proteksi route & guard server
 **Sebagai** sistem, **agar** hanya peran berwenang mengakses area tertentu.
 **AC:** `protectedProcedure` (butuh sesi) & `adminProcedure` (role `ADMIN`) tersedia; route `/dashboard/*` butuh login; route `/admin/*` butuh role `ADMIN` (redirect bila tidak); akses langsung URL admin oleh non-admin ditolak.
 
 - [x] `S` Verifikasi/lengkapi `protectedProcedure` & `adminProcedure` di [trpc.ts](../src/server/api/trpc.ts) (UNAUTHORIZED/FORBIDDEN). *(menggantikan task guard di S3.1.)* — terverifikasi.
-- [x] `S` Proteksi server-side `/admin/*` (cek role di [admin/layout.tsx](../src/app/admin/layout.tsx) atau middleware) + `/dashboard/*` butuh sesi. — [proxy.ts](../src/proxy.ts) (konvensi middleware Next 16) + config edge [config.edge.ts](../src/server/auth/config.edge.ts); admin layout cek role sebagai defense-in-depth.
+- [x] `S` Proteksi server-side `/admin/*` (cek role di [admin/layout.tsx](../src/app/admin/layout.tsx) atau middleware) + `/dashboard/*` butuh sesi. — [proxy.ts](../src/proxy.ts) (konvensi middleware Next 16) + config edge [config.edge.ts](../src/server/auth/config.edge.ts); admin layout cek role sebagai defense-in-depth. Halaman `/login` & `/register` mengalihkan user yang sudah login keluar; admin diblok dari `/dashboard` (khusus CUSTOMER).
 - [x] `XS` Sembunyikan tautan admin dari UI untuk non-admin. — tautan "Admin" di navbar hanya tampil bila `role === 'ADMIN'`.
 
 ### CRUD Admin
@@ -85,9 +85,9 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 #### S0.6 — CRUD Gallery
 **AC:** Admin CRUD item galeri (gambar, judul, kategori, urutan); tampil di galeri publik.
 
-- [ ] `S` Model `GalleryItem` (bila belum ada) + migrasi.
-- [ ] `S` Router `admin.gallery.*` + zod.
-- [ ] `S` Hubungkan UI [admin/gallery](../src/app/admin/gallery/) ke API (tabel + form + hapus).
+- [x] `S` Model `GalleryItem` (bila belum ada) + migrasi. — [schema.prisma](../prisma/schema.prisma) (`title/image/category/sortOrder/isActive`, `@@index([isActive, sortOrder])`); migrasi `gallery_item`; seed 6 item dari galeri statis lama.
+- [x] `S` Router `admin.gallery.*` + zod. — [routers/admin/gallery.ts](../src/server/api/routers/admin/gallery.ts) (`list/getById/create/update/delete`, `adminProcedure`) + router publik [gallery.ts](../src/server/api/routers/gallery.ts) (`list` item aktif, terurut). Schema bersama [gallery-schema.ts](../src/lib/gallery-schema.ts).
+- [x] `S` Hubungkan UI [admin/gallery](../src/app/admin/gallery/) ke API (tabel + form + hapus). — halaman client (grid + **modal form** create/edit + dialog hapus + toggle aktif + urutan), validasi per-field, reuse `ImageUpload`/`ConfirmDialog`. **Galeri publik** [gallery.tsx](../src/components/gallery.tsx) kini dari DB (`gallery.list`, kategori diturunkan, lightbox). Menu "Galeri" dikembalikan ke sidebar. Diverifikasi [scripts/test-admin-gallery.ts](../scripts/test-admin-gallery.ts).
 
 #### S0.7 — CRUD Promo/diskon
 **AC:** Admin CRUD promo (kode, tipe diskon %/nominal, periode aktif, status); siap dipakai di checkout (E4).

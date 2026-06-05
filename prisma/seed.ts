@@ -22,6 +22,7 @@ async function main() {
 	await prisma.order.deleteMany();
 	await prisma.user.deleteMany();
 	await prisma.product.deleteMany();
+	await prisma.galleryItem.deleteMany();
 
 	for (const p of products) {
 		await prisma.product.create({
@@ -85,8 +86,45 @@ async function main() {
 		});
 	}
 
+	// Item galeri (hasil jadi) untuk section galeri publik.
+	const galleryItems = [
+		{
+			title: 'Happy Wedding — Dafa Florist',
+			image: '/product/papan-bunga-5.PNG',
+			category: 'Papan Bunga',
+		},
+		{
+			title: 'Selamat & Sukses — Papan Ucapan',
+			image: '/product/papan-bunga-4.PNG',
+			category: 'Papan Bunga',
+		},
+		{
+			title: 'Happy Wedding — Biru Elegan',
+			image: '/product/papan-bunga-3.PNG',
+			category: 'Papan Bunga',
+		},
+		{
+			title: 'Dekorasi Mobil Pengantin',
+			image: '/product/mobil-pengantin-1.PNG',
+			category: 'Mobil Pengantin',
+		},
+		{
+			title: 'Happy Wedding — Pink Rose',
+			image: '/product/papan-bunga-2.PNG',
+			category: 'Papan Bunga',
+		},
+		{
+			title: 'Happy Wedding — Abu Elegan',
+			image: '/product/papan-bunga-1.PNG',
+			category: 'Papan Bunga',
+		},
+	];
+	await prisma.galleryItem.createMany({
+		data: galleryItems.map((g, i) => ({ ...g, sortOrder: i })),
+	});
+
 	console.log(
-		`✓ Seed selesai: ${products.length} produk + ${usersToSeed.length} user (CUSTOMER + ADMIN).`,
+		`✓ Seed selesai: ${products.length} produk + ${usersToSeed.length} user + ${galleryItems.length} galeri.`,
 	);
 	await prisma.$disconnect();
 }

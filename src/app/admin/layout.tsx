@@ -8,6 +8,7 @@ import {
 	ChevronLeft,
 	ClipboardList,
 	Flower2,
+	ImagePlus,
 	LayoutDashboard,
 	LogOut,
 	Menu,
@@ -32,6 +33,10 @@ const navGroups = [
 			{ label: 'Manage Produk', href: '/admin/products', icon: Package },
 			{ label: 'Manage Customer', href: '/admin/customers', icon: Users },
 		],
+	},
+	{
+		title: 'Konten',
+		items: [{ label: 'Galeri', href: '/admin/gallery', icon: ImagePlus }],
 	},
 ];
 
