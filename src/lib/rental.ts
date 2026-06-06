@@ -7,7 +7,7 @@ import { RENTAL_BUFFER_DAYS } from './constant';
  * "Inti Logika Sewa".
  */
 
-const MS_PER_DAY = 86_400_000;
+export const MS_PER_DAY = 86_400_000;
 
 /**
  * Menambahkan `days` hari ke sebuah tanggal dan mengembalikan Date BARU
@@ -18,6 +18,18 @@ const MS_PER_DAY = 86_400_000;
  */
 export const addDays = (date: Date, days: number): Date =>
 	new Date(date.getTime() + days * MS_PER_DAY);
+
+/**
+ * Membulatkan sebuah tanggal ke TENGAH MALAM UTC (00:00:00.000Z) pada hari
+ * kalendernya — membuang komponen jam. Dipakai di batas API agar domain sewa
+ * yang bersifat date-only tidak bergeser hari akibat komponen waktu yang
+ * dikirim klien, dan agar langkah harian {@link computeBookedDates} jatuh tepat
+ * pada batas hari.
+ *
+ * @param date tanggal acuan (tidak dimutasi)
+ */
+export const floorToUtcDay = (date: Date): Date =>
+	new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 
 /**
  * Menghitung tanggal bongkar (pickup) dari tanggal pasang dan durasi sewa.
@@ -155,4 +167,75 @@ export const computeAvailability = (
 		pickupDate: request.pickupDate,
 		nextAvailableDate: nextAvailableMs === undefined ? null : new Date(nextAvailableMs),
 	};
+};
+
+/**
+ * Batas keras jumlah hari yang boleh diiterasi {@link computeBookedDates} agar
+ * tidak terjadi loop patologis bila rentang yang diminta terlalu lebar. Rentang
+ * yang melebihi ini membuat {@link computeBookedDates} melempar `RangeError` —
+ * BUKAN dipotong diam-diam — supaya hasil terpotong tak pernah lolos tanpa
+ * disadari. Pemanggil (mis. router) memvalidasi lebih dulu & menolak dengan
+ * `BAD_REQUEST`.
+ */
+export const MAX_BOOKED_RANGE_DAYS = 366;
+
+/**
+ * Mengembalikan daftar hari kalender dalam rentang inklusif `[from, to]` di mana
+ * sebuah (produk + ukuran) berstatus PENUH — yakni jumlah booking aktif yang
+ * menempati hari tersebut `>= unitCount` (sehingga `remainingUnits === 0`).
+ *
+ * Sebuah hari `d` dianggap ditempati oleh booking bila `d` jatuh di dalam
+ * periode booking yang diperlebar `bufferDays` pada kedua ujungnya — semantik
+ * buffer SAMA dengan {@link blocksPeriod}. Implementasi: iterasi hari demi hari
+ * (granularitas {@link MS_PER_DAY}), bangun `Period {installDate: d, pickupDate: d}`
+ * satu hari, lalu pakai ulang {@link countOverlapping}; hari masuk daftar bila
+ * `unitCount - count <= 0`.
+ *
+ * MURNI & deterministik: `from`/`to` diberikan eksplisit (tidak ada `Date` tanpa
+ * argumen). Basis hari = epoch-ms; pemanggil bertanggung jawab atas basis
+ * tanggal (lihat router/server yang memakai basis UTC date-only).
+ *
+ * Penjaga (guard): bila `unitCount <= 0` semua hari dalam rentang dianggap penuh;
+ * bila `from > to` kembalikan `[]`; bila rentang melebihi
+ * {@link MAX_BOOKED_RANGE_DAYS} hari, melempar `RangeError` (gagal keras, bukan
+ * pangkas diam-diam) untuk mencegah loop patologis & hasil terpotong senyap.
+ *
+ * @param existing daftar periode booking aktif yang sudah ada
+ * @param unitCount jumlah unit fisik tersedia
+ * @param from tanggal awal rentang (inklusif)
+ * @param to tanggal akhir rentang (inklusif)
+ * @param bufferDays jeda hari (default {@link RENTAL_BUFFER_DAYS})
+ */
+export const computeBookedDates = (
+	existing: readonly Period[],
+	unitCount: number,
+	from: Date,
+	to: Date,
+	bufferDays: number = RENTAL_BUFFER_DAYS,
+): Date[] => {
+	const fromMs = from.getTime();
+	const toMs = to.getTime();
+	if (fromMs > toMs) return [];
+
+	// Gagal KERAS bila rentang melebihi batas — jangan potong diam-diam, agar
+	// pemanggil tak pernah menerima hasil terpotong tanpa sadar.
+	const spanDays = Math.floor((toMs - fromMs) / MS_PER_DAY) + 1;
+	if (spanDays > MAX_BOOKED_RANGE_DAYS) {
+		throw new RangeError(
+			`computeBookedDates: rentang ${spanDays} hari melebihi batas ${MAX_BOOKED_RANGE_DAYS} hari.`,
+		);
+	}
+
+	const booked: Date[] = [];
+	for (let dayMs = fromMs; dayMs <= toMs; dayMs += MS_PER_DAY) {
+		if (unitCount <= 0) {
+			booked.push(new Date(dayMs));
+			continue;
+		}
+		const day = new Date(dayMs);
+		const dayPeriod: Period = { installDate: day, pickupDate: day };
+		const count = countOverlapping(dayPeriod, existing, bufferDays);
+		if (unitCount - count <= 0) booked.push(day);
+	}
+	return booked;
 };

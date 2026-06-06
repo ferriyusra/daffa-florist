@@ -161,10 +161,10 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** pelanggan, **agar** tahu ketersediaan real-time saat memilih tanggal.
 **AC:** `rental.checkAvailability` input `{ productId, sizeLabel, installDate, rentalDays }` → `{ available, pickupDate, nextAvailableDate?, remainingUnits }`. `rental.getBookedDates` mengembalikan tanggal penuh per produk-ukuran.
 
-- [ ] `XS` Buat router `rental` di [src/server/api/routers/](../src/server/api/routers/) + daftarkan di [root.ts](../src/server/api/root.ts).
-- [ ] `S` Implement `checkAvailability` (public query) memakai helper S2.1; validasi input dengan zod.
-- [ ] `S` Implement `getBookedDates` (public query) untuk disable tanggal di kalender.
-- [ ] `XS` Tambah unit-test manual/contoh input-output di doc (belum ada test runner).
+- [x] `XS` Buat router `rental` di [src/server/api/routers/](../src/server/api/routers/) + daftarkan di [root.ts](../src/server/api/root.ts).
+- [x] `S` Implement `checkAvailability` (public query) memakai helper S2.1; validasi input dengan zod (UUID, durasi ≤ 366, tanggal dibulatkan ke hari UTC).
+- [x] `S` Implement `getBookedDates` (public query) untuk disable tanggal di kalender (rentang ≤ 366 hari, helper murni `computeBookedDates`).
+- [x] `XS` Test DB-backed idempoten [scripts/test-rental-booked-dates.ts](../scripts/test-rental-booked-dates.ts) (5 assert: penuh/bebas, pickupDate, booked-dates) — LULUS.
 
 ### S2.3 — Komponen pemilihan periode di detail produk
 **Sebagai** pelanggan, **agar** memilih tanggal pasang & durasi.
