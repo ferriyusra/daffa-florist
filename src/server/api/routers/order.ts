@@ -163,7 +163,21 @@ export const orderRouter = createTRPCRouter({
 	createRental: protectedProcedure
 		.input(
 			z.object({
+				// Pakai SALAH SATU: `addressId` (alamat tersimpan milik user) ATAU
+				// `address` (lokasi acara baru) — `address` dibuat DI DALAM transaksi
+				// agar ikut rollback bila order gagal (mis. CONFLICT) → tak ada alamat
+				// yatim.
 				addressId: z.string().uuid().optional(),
+				address: z
+					.object({
+						recipientName: z.string().min(1),
+						phone: z.string().min(1),
+						fullAddress: z.string().min(1),
+						city: z.string().min(1),
+						province: z.string().optional(),
+						postalCode: z.string().optional(),
+					})
+					.optional(),
 				notes: z.string().optional(),
 				shippingCost: z.number().int().nonnegative().default(0),
 				eventDate: z.coerce.date().optional(),
@@ -317,7 +331,20 @@ export const orderRouter = createTRPCRouter({
 					}
 				}
 
-				// (6) Buat order. subtotal = Σ(price*qty); total = subtotal +
+				// (6) Resolusi alamat. Bila `address` inline diberikan, BUAT di
+				// dalam transaksi ini (rollback bila order gagal). Ketersediaan
+				// sudah lolos di atas, jadi alamat hanya dibuat saat order pasti
+				// berlanjut.
+				let resolvedAddressId = input.addressId;
+				if (!resolvedAddressId && input.address) {
+					const created = await tx.address.create({
+						data: { ...input.address, userId: ctx.session.user.id },
+						select: { id: true },
+					});
+					resolvedAddressId = created.id;
+				}
+
+				// (7) Buat order. subtotal = Σ(price*qty); total = subtotal +
 				// shippingCost (TANPA deposit). Status default PENDING.
 				const subtotal = prepared.reduce(
 					(sum, p) => sum + p.price * p.input.quantity,
@@ -328,8 +355,8 @@ export const orderRouter = createTRPCRouter({
 				const data = (orderNumber: string): Prisma.OrderCreateInput => ({
 					orderNumber,
 					user: { connect: { id: ctx.session.user.id } },
-					...(input.addressId
-						? { address: { connect: { id: input.addressId } } }
+					...(resolvedAddressId
+						? { address: { connect: { id: resolvedAddressId } } }
 						: {}),
 					subtotal,
 					shippingCost: input.shippingCost,

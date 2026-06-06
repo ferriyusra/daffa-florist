@@ -188,11 +188,13 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** pelanggan, **agar** menyewa beberapa item dengan periode berbeda dan melihat rincian biaya.
 **AC:** Keranjang menyimpan `installDate`+`rentalDays` per item; checkout menampilkan ringkasan periode (pasang→pickup, jumlah hari) & rincian biaya (subtotal+add-on+ongkir−diskon); form lokasi acara & penerima.
 
-- [ ] `S` Perluas `useCart` ([use-cart.ts](../src/hooks/use-cart.ts)) untuk simpan periode sewa per item (ikuti pola localStorage+event).
-- [ ] `S` Ringkasan periode di keranjang (pasang→pickup, hari).
-- [ ] `M` Form checkout: lokasi acara, penerima, no HP, patokan, waktu acara, catatan papan (§5.1 F3).
-- [ ] `S` Rincian biaya checkout termasuk diskon (ongkir manual untuk M2).
-- [ ] `S` Pilih metode pembayaran (transfer/DP) + unggah/konfirmasi bukti.
+- [x] `S` Perluas `useCart` ([use-cart.ts](../src/hooks/use-cart.ts)): item bawa `productId/sizeLabel/installDate(ISO)/rentalDays/opsi`; `cartId` ikut periode; validasi item saat read (buang cart lama). Pola localStorage+event dipertahankan.
+- [x] `S` Ringkasan periode di keranjang/checkout (pasang→bongkar, jumlah hari, basis UTC).
+- [x] `M` Form checkout: penerima, no HP, alamat acara, kota, waktu acara, catatan papan (§5.1 F3) — validasi JS (tanpa atribut `required`). _Patokan/landmark belum ada di skema Address → folded/diabaikan M2._
+- [x] `S` Rincian biaya checkout (subtotal − diskon; ongkir & diskon = Rp 0 M2, ongkir "dikonfirmasi admin").
+- [~] `S` Pilih metode pembayaran (transfer/DP) — pilihan ditangkap & dilipat ke `notes`; instruksi transfer di success. _Unggah/konfirmasi bukti **ditunda**: butuh model `Payment`._
+
+> **Backend pendukung:** router `address` (`create`/`listMine`); `order.createRental` diperluas terima `address` inline (dibuat **di dalam transaksi** → rollback anti-orphan, anti double-submit via ref guard). Test 12 assert (+ inline address & rollback) LULUS.
 
 ### S2.6 — tRPC `order.createRental` transaksional
 **Sebagai** sistem, **agar** mencegah double-booking saat membuat pesanan.
@@ -201,8 +203,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 - [x] `M` Implement `order.createRental` (protected mutation) dengan `prisma.$transaction` + **advisory lock** per (produk,ukuran); re-cek ketersediaan di dalam transaksi. Harga/denormalisasi diturunkan dari DB (anti-tamper); cek kepemilikan `addressId` (anti-IDOR).
 - [x] `S` Generate `orderNumber` unik (retry P2002 pada target `orderNumber`) + hitung `pickupDate` server-side (helper kanonik).
 - [x] `S` Validasi lead time minimum (H-1, konfigurasi) & input zod (uuid, durasi ≤ 366). Test DB-backed [scripts/test-create-rental.ts](../scripts/test-create-rental.ts): happy/lead-time/**konkurensi**/IDOR — 10 assert LULUS.
-- [ ] `S` Halaman konfirmasi + nomor pesanan ([confirmation-order](../src/app/confirmation-order/)). _(UI — menyusul bersama S2.3–S2.5)_
-- [~] `S` `order.listMine` (✅ backend) + tampilkan riwayat di [dashboard/orders](../src/app/dashboard/orders/) dengan status sewa _(UI — menyusul)_.
+- [x] `S` Halaman konfirmasi + nomor pesanan ([confirmation-order](../src/app/confirmation-order/)) — success screen tampilkan `orderNumber` + total server + instruksi transfer (S2.5).
+- [x] `S` `order.listMine` + riwayat di [dashboard/orders](../src/app/dashboard/orders/) dengan badge status sewa (8 status), periode per item, alamat (S2.5).
 
 ---
 

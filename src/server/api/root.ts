@@ -7,6 +7,7 @@ import { productRouter } from '@/server/api/routers/product';
 import { orderRouter } from '@/server/api/routers/order';
 import { rentalRouter } from '@/server/api/routers/rental';
 import { galleryRouter } from '@/server/api/routers/gallery';
+import { addressRouter } from '@/server/api/routers/address';
 import { adminRouter } from '@/server/api/routers/admin';
 
 export const appRouter = createTRPCRouter({
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
 	order: orderRouter,
 	rental: rentalRouter,
 	gallery: galleryRouter,
+	address: addressRouter,
 	admin: adminRouter,
 });
 

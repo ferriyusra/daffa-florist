@@ -1,13 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
 import ProductImage from './product-image';
 import { RentalBadge } from './rental-badge';
-import { useRouter } from 'next/navigation';
 import { motion, useInView } from 'framer-motion';
-import { ArrowRight, Check, ShoppingCart } from 'lucide-react';
-import { useAuth, useCart } from '@/hooks';
+import { ArrowRight, CalendarDays } from 'lucide-react';
 import { type Product } from '@/lib';
 import { api } from '@/trpc/react';
 
@@ -30,37 +28,12 @@ const cardVariants = {
 export default function Products() {
 	const ref = useRef(null);
 	const inView = useInView(ref, { once: true, margin: '-80px' });
-	const { user } = useAuth();
-	const { addItem } = useCart();
-	const router = useRouter();
-	const [addedId, setAddedId] = useState<string | null>(null);
 
 	const { data: allProducts = [] } = api.product.list.useQuery();
-	const featuredProducts = allProducts.slice(0, 4);
+	const featuredProducts: Product[] = allProducts.slice(0, 4);
 
-	const toCartItem = (product: Product) => ({
-		id: product.slug,
-		title: product.title,
-		price: product.price,
-		priceLabel: product.priceLabel,
-		image: product.image,
-	});
-
-	const handleAddToCart = (product: Product) => {
-		addItem(toCartItem(product));
-		setAddedId(product.slug);
-		setTimeout(() => {
-			setAddedId((id) => (id === product.slug ? null : id));
-		}, 1500);
-	};
-
-	const handleOrderNow = (product: Product) => {
-		addItem(toCartItem(product));
-		const target = '/confirmation-order';
-		router.push(
-			user ? target : `/login?redirect=${encodeURIComponent(target)}`,
-		);
-	};
+	// Sewa butuh pemilihan periode (tanggal pasang + durasi) yang hanya ada di
+	// halaman detail → kartu unggulan mengarahkan ke detail, bukan quick-add.
 
 	return (
 		<section id='product' className='floral-bg'>
@@ -93,7 +66,6 @@ export default function Products() {
 					animate={inView ? 'visible' : 'hidden'}
 					className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
 					{featuredProducts.map((product) => {
-						const isAdded = addedId === product.slug;
 						return (
 							<motion.div
 								key={product.slug}
@@ -135,29 +107,18 @@ export default function Products() {
 									</p>
 
 									<div className='mt-auto flex items-center gap-2'>
-										<button
-											type='button'
-											onClick={() => handleAddToCart(product)}
-											aria-label='Tambah ke keranjang'
+										<Link
+											href={`/products/${product.slug}`}
+											aria-label='Pilih tanggal sewa'
 											className='inline-flex items-center justify-center w-10 h-10 rounded-full border transition-all cursor-pointer shrink-0 hover:scale-[1.05]'
 											style={{
-												borderColor: isAdded
-													? '#16a34a'
-													: 'var(--primary)',
-												color: isAdded ? '#16a34a' : 'var(--primary)',
-												background: isAdded
-													? 'rgba(34, 197, 94, 0.1)'
-													: 'transparent',
+												borderColor: 'var(--primary)',
+												color: 'var(--primary)',
 											}}>
-											{isAdded ? (
-												<Check size={16} />
-											) : (
-												<ShoppingCart size={16} />
-											)}
-										</button>
-										<button
-											type='button'
-											onClick={() => handleOrderNow(product)}
+											<CalendarDays size={16} />
+										</Link>
+										<Link
+											href={`/products/${product.slug}`}
 											className='flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-md cursor-pointer group/cta'
 											style={{
 												background: 'var(--primary)',
@@ -168,7 +129,7 @@ export default function Products() {
 												size={14}
 												className='transition-transform duration-200 group-hover/cta:translate-x-1'
 											/>
-										</button>
+										</Link>
 									</div>
 								</div>
 							</motion.div>

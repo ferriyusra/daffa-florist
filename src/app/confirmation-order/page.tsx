@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+	AlertTriangle,
 	ArrowLeft,
+	CalendarClock,
 	CalendarDays,
 	CheckCircle2,
 	CreditCard,
-	Home,
 	Landmark,
+	MapPin,
 	Minus,
 	Package,
 	Plus,
@@ -18,26 +20,43 @@ import {
 	ShoppingBag,
 	StickyNote,
 	Trash2,
-	Truck,
 	Wallet,
 } from 'lucide-react';
 import { Footer, Navbar } from '@/components';
-import { formatRupiah, useAuth, useCart } from '@/hooks';
+import { formatRupiah, useAuth, useCart, useToast } from '@/hooks';
+import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
+import { MIN_LEAD_TIME_DAYS } from '@/lib/rental-config';
+import { api } from '@/trpc/react';
 
-const SHIPPING_FEE = 25_000;
-
+// Metode bayar untuk M2: hanya menangkap PILIHAN dan dilipat ke `notes`.
+// CATATAN: unggah bukti pembayaran DITUNDA — belum ada model `Payment`/endpoint.
 const paymentMethods = [
-	{ id: 'transfer', label: 'Transfer Bank', sub: 'BCA, BRI, Mandiri', Icon: Landmark },
-	{ id: 'ewallet', label: 'E-Wallet', sub: 'OVO, DANA, GoPay', Icon: Wallet },
-	{ id: 'cod', label: 'Bayar di Tempat (COD)', sub: 'Bayar saat barang sampai', Icon: CreditCard },
+	{
+		id: 'transfer',
+		label: 'Transfer Bank',
+		sub: 'BCA, BRI, Mandiri',
+		Icon: Landmark,
+	},
+	{
+		id: 'dp',
+		label: 'DP (Uang Muka)',
+		sub: 'Bayar sebagian dulu, sisanya saat acara',
+		Icon: Wallet,
+	},
 ] as const;
 
-const dummyAddress = {
-	label: 'Rumah',
-	recipient: 'Pengguna Demo',
-	phone: '0852-7432-0917',
-	full: 'Jl. Melati No. 12, RT 02 / RW 03, Ampar Putih, Pasaman Barat, Sumatera Barat 26566',
-};
+type PaymentMethodId = (typeof paymentMethods)[number]['id'];
+
+/** Format tanggal sewa selalu di zona UTC agar tidak bergeser hari bagi pengguna WIB. */
+function formatRentalDate(date: Date): string {
+	return date.toLocaleDateString('id-ID', {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long',
+		year: 'numeric',
+		timeZone: 'UTC',
+	});
+}
 
 export default function ConfirmationOrderPage() {
 	return (
@@ -51,15 +70,36 @@ export default function ConfirmationOrderPage() {
 
 function CheckoutScreen() {
 	const router = useRouter();
+	const toast = useToast();
 	const { user, isLoading: authLoading } = useAuth();
-	const { items, isLoading: cartLoading, updateQuantity, removeItem, clear, subtotal } = useCart();
+	const {
+		items,
+		isLoading: cartLoading,
+		updateQuantity,
+		removeItem,
+		clear,
+		subtotal,
+	} = useCart();
 
-	const [paymentMethod, setPaymentMethod] = useState<(typeof paymentMethods)[number]['id']>('transfer');
-	const [deliveryDate, setDeliveryDate] = useState('');
-	const [notes, setNotes] = useState('');
+	const [recipientName, setRecipientName] = useState('');
+	const [phone, setPhone] = useState('');
+	const [fullAddress, setFullAddress] = useState('');
+	const [city, setCity] = useState('');
+	const [eventDate, setEventDate] = useState('');
+	const [boardMessage, setBoardMessage] = useState('');
+	const [paymentMethod, setPaymentMethod] =
+		useState<PaymentMethodId>('transfer');
+	const [errors, setErrors] = useState<Record<string, string>>({});
+
 	const [submitted, setSubmitted] = useState(false);
-	const [submitting, setSubmitting] = useState(false);
-	const [orderId, setOrderId] = useState('');
+	const [orderNumber, setOrderNumber] = useState('');
+	const [orderTotal, setOrderTotal] = useState(0);
+
+	const createRental = api.order.createRental.useMutation();
+	const submitting = createRental.isPending;
+	// Guard re-entrancy SINKRON (sebelum await) — `submitting` baru update setelah
+	// re-render, jadi ref ini menutup celah klik-ganda / Enter.
+	const submitGuard = useRef(false);
 
 	useEffect(() => {
 		if (!authLoading && !user) {
@@ -67,27 +107,104 @@ function CheckoutScreen() {
 		}
 	}, [authLoading, user, router]);
 
-	const shipping = items.length > 0 ? SHIPPING_FEE : 0;
-	const total = subtotal + shipping;
+	// Ongkir M2 = Rp 0 (dikonfirmasi admin), diskon M2 = Rp 0 (belum ada apply promo).
+	const shipping = 0;
+	const discount = 0;
+	const total = subtotal + shipping - discount;
 
-	const minDate = useMemo(() => {
-		const d = new Date();
-		d.setDate(d.getDate() + 1);
-		return d.toISOString().split('T')[0];
-	}, []);
+	// Pre-flight lead time: tanggal pasang yang dipilih bisa sudah lewat batas
+	// saat checkout (item lama di keranjang). Tandai item kedaluwarsa & blokir
+	// submit dengan jalur perbaikan jelas, sebelum kena tolak server.
+	const minInstall = useMemo(
+		() => addDays(floorToUtcDay(new Date()), MIN_LEAD_TIME_DAYS),
+		[],
+	);
+	const staleIds = useMemo(
+		() =>
+			new Set(
+				items
+					.filter(
+						(i) => new Date(i.installDate).getTime() < minInstall.getTime(),
+					)
+					.map((i) => i.id),
+			),
+		[items, minInstall],
+	);
+	const hasStale = staleIds.size > 0;
 
-	const handlePlaceOrder = (e: React.FormEvent<HTMLFormElement>) => {
+	const validate = () => {
+		const next: Record<string, string> = {};
+		if (!recipientName.trim()) next.recipientName = 'Nama penerima wajib diisi.';
+		if (!phone.trim()) next.phone = 'Nomor telepon wajib diisi.';
+		if (!fullAddress.trim()) next.fullAddress = 'Alamat acara wajib diisi.';
+		if (!city.trim()) next.city = 'Kota wajib diisi.';
+		if (!eventDate) next.eventDate = 'Tanggal & jam acara wajib diisi.';
+		setErrors(next);
+		return Object.keys(next).length === 0;
+	};
+
+	const handlePlaceOrder = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setSubmitting(true);
-		setTimeout(() => {
-			const id = `DF-${new Date().getFullYear()}-${String(
-				Math.floor(Math.random() * 9000) + 1000,
-			)}`;
-			setOrderId(id);
+		if (submitGuard.current || submitting) return;
+		if (!validate()) return;
+		if (hasStale) {
+			toast.error(
+				'Ada item dengan tanggal pasang yang sudah lewat batas pemesanan. Pilih ulang periodenya.',
+			);
+			return;
+		}
+		submitGuard.current = true;
+
+		const methodLabel =
+			paymentMethods.find((m) => m.id === paymentMethod)?.label ?? '';
+		// Pesan papan dilipat ke notes (belum ada field boardMessage per item di M2).
+		const composedNotes = [
+			`Metode bayar: ${methodLabel}`,
+			boardMessage.trim() ? `Pesan papan: ${boardMessage.trim()}` : '',
+		]
+			.filter(Boolean)
+			.join('\n');
+
+		try {
+			// Alamat acara dibuat DI DALAM transaksi createRental (rollback bila
+			// order gagal) → satu mutation, tak ada alamat yatim / dobel saat retry.
+			const order = await createRental.mutateAsync({
+				address: {
+					recipientName: recipientName.trim(),
+					phone: phone.trim(),
+					fullAddress: fullAddress.trim(),
+					city: city.trim(),
+				},
+				eventDate: new Date(eventDate),
+				shippingCost: 0,
+				notes: composedNotes,
+				items: items.map((i) => ({
+					productId: i.productId,
+					sizeLabel: i.sizeLabel,
+					quantity: i.quantity,
+					installDate: new Date(i.installDate),
+					rentalDays: i.rentalDays,
+					designTemplateName: i.designTemplateName,
+					themeColorName: i.themeColorName,
+					addonNames: i.addonNames,
+				})),
+			});
+
+			setOrderNumber(order.orderNumber);
+			setOrderTotal(order.total);
 			setSubmitted(true);
 			clear();
-			setSubmitting(false);
-		}, 800);
+		} catch (err) {
+			// Jangan kosongkan keranjang — pengguna mungkin perlu memperbaiki tanggal
+			// (mis. periode penuh / lead time kurang).
+			const message =
+				err instanceof Error
+					? err.message
+					: 'Gagal membuat pesanan. Silakan coba lagi.';
+			toast.error(message);
+		} finally {
+			submitGuard.current = false;
+		}
 	};
 
 	if (authLoading || !user || cartLoading) {
@@ -95,7 +212,7 @@ function CheckoutScreen() {
 	}
 
 	if (submitted) {
-		return <SuccessScreen orderId={orderId} />;
+		return <SuccessScreen orderNumber={orderNumber} total={orderTotal} />;
 	}
 
 	if (items.length === 0) {
@@ -106,11 +223,11 @@ function CheckoutScreen() {
 		<main className='floral-bg min-h-[70vh]'>
 			<div className='mx-auto max-w-[1100px] px-6 py-12'>
 				<Link
-					href='/#product'
+					href='/products'
 					className='inline-flex items-center gap-2 text-sm font-medium mb-6 transition-colors'
 					style={{ color: 'var(--primary)' }}>
 					<ArrowLeft size={16} />
-					Lanjut Belanja
+					Lanjut Sewa
 				</Link>
 
 				<div className='mb-8'>
@@ -128,7 +245,7 @@ function CheckoutScreen() {
 					<p
 						className='text-sm sm:text-base'
 						style={{ color: 'var(--text-secondary)' }}>
-						Periksa kembali pesanan Anda dan lengkapi detail pengiriman.
+						Periksa kembali periode sewa Anda dan lengkapi lokasi acara.
 					</p>
 				</div>
 
@@ -139,127 +256,195 @@ function CheckoutScreen() {
 						<Section
 							icon={ShoppingBag}
 							title='Pesanan Anda'
-							subtitle={`${items.length} produk dalam keranjang`}>
+							subtitle={`${items.length} item dalam keranjang`}>
 							<div className='divide-y divide-[var(--border)]'>
-								{items.map((item) => (
-									<div
-										key={item.id}
-										className='flex gap-4 py-4 first:pt-0 last:pb-0'>
-										<div className='relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-[var(--border)] shrink-0'>
-											<Image
-												src={item.image}
-												alt={item.title}
-												fill
-												className='object-cover'
-												sizes='96px'
+								{items.map((item) => {
+									const install = new Date(item.installDate);
+									const pickup = computePickupDate(install, item.rentalDays);
+									const isStale = staleIds.has(item.id);
+									return (
+										<div
+											key={item.id}
+											className='flex gap-4 py-4 first:pt-0 last:pb-0'>
+											<div className='relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-[var(--border)] shrink-0'>
+												<Image
+													src={item.image}
+													alt={item.title}
+													fill
+													className='object-cover'
+													sizes='96px'
+												/>
+											</div>
+											<div className='flex-1 min-w-0 flex flex-col gap-2'>
+												<div className='flex items-start justify-between gap-3'>
+													<div className='min-w-0'>
+														<h3 className='font-serif text-base font-semibold truncate'>
+															{item.title}
+														</h3>
+														<p
+															className='text-xs mt-0.5'
+															style={{ color: 'var(--text-secondary)' }}>
+															{item.sizeLabel} · {formatRupiah(item.price)} /
+															item
+														</p>
+													</div>
+													<button
+														type='button'
+														onClick={() => removeItem(item.id)}
+														aria-label={`Hapus ${item.title}`}
+														className='inline-flex items-center justify-center w-8 h-8 rounded-full border border-[var(--border)] hover:border-[#dc2626] transition-colors cursor-pointer'
+														style={{ color: 'var(--text-muted)' }}>
+														<Trash2 size={13} />
+													</button>
+												</div>
+												<p
+													className='inline-flex items-start gap-1.5 text-[11px] leading-relaxed'
+													style={{ color: 'var(--text-secondary)' }}>
+													<CalendarClock
+														size={12}
+														className='mt-0.5 shrink-0'
+														style={{ color: 'var(--primary)' }}
+													/>
+													<span>
+														Pasang {formatRentalDate(install)} → Bongkar{' '}
+														{formatRentalDate(pickup)} · {item.rentalDays} hari
+													</span>
+												</p>
+												{isStale && (
+													<div
+														className='flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-[11px]'
+														style={{
+															background: 'rgba(220, 38, 38, 0.06)',
+															color: '#dc2626',
+														}}>
+														<AlertTriangle
+															size={13}
+															className='mt-0.5 shrink-0'
+														/>
+														<span>
+															Tanggal pasang sudah lewat batas pemesanan.{' '}
+															<Link
+																href={`/products/${item.slug}`}
+																className='font-semibold underline'>
+																Pilih ulang periode
+															</Link>
+															.
+														</span>
+													</div>
+												)}
+												<div className='flex items-center justify-between'>
+													<QuantityStepper
+														value={item.quantity}
+														onChange={(q) => updateQuantity(item.id, q)}
+													/>
+													<span
+														className='text-sm font-semibold'
+														style={{ color: 'var(--primary)' }}>
+														{formatRupiah(item.price * item.quantity)}
+													</span>
+												</div>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</Section>
+
+						<Section
+							icon={MapPin}
+							title='Lokasi Acara & Penerima'
+							subtitle='Alamat pemasangan papan bunga'>
+							<div className='space-y-4'>
+								<div className='grid sm:grid-cols-2 gap-4'>
+									<Field
+										id='recipientName'
+										label='Nama Penerima'
+										value={recipientName}
+										onChange={setRecipientName}
+										placeholder='Nama penerima di lokasi'
+										error={errors.recipientName}
+									/>
+									<Field
+										id='phone'
+										label='Nomor Telepon'
+										value={phone}
+										onChange={setPhone}
+										placeholder='08xxxxxxxxxx'
+										error={errors.phone}
+									/>
+								</div>
+								<Field
+									id='fullAddress'
+									label='Alamat Lengkap Acara'
+									value={fullAddress}
+									onChange={setFullAddress}
+									placeholder='Nama gedung / jalan, nomor, kelurahan, kecamatan'
+									error={errors.fullAddress}
+									textarea
+								/>
+								<div className='grid sm:grid-cols-2 gap-4'>
+									<Field
+										id='city'
+										label='Kota / Kabupaten'
+										value={city}
+										onChange={setCity}
+										placeholder='mis. Pasaman Barat'
+										error={errors.city}
+									/>
+									<div>
+										<label
+											className='block text-xs font-medium mb-2'
+											htmlFor='eventDate'>
+											Tanggal &amp; Jam Acara
+										</label>
+										<div className='relative'>
+											<CalendarDays
+												size={16}
+												className='absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none'
+												style={{ color: 'var(--text-muted)' }}
+											/>
+											<input
+												id='eventDate'
+												type='datetime-local'
+												value={eventDate}
+												onChange={(e) => setEventDate(e.target.value)}
+												className='w-full pl-10 pr-4 py-3 rounded-xl border bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+												style={{
+													borderColor: errors.eventDate
+														? 'var(--destructive)'
+														: 'var(--border)',
+												}}
 											/>
 										</div>
-										<div className='flex-1 min-w-0 flex flex-col gap-2'>
-											<div className='flex items-start justify-between gap-3'>
-												<div className='min-w-0'>
-													<h3 className='font-serif text-base font-semibold truncate'>
-														{item.title}
-													</h3>
-													<p
-														className='text-xs mt-0.5'
-														style={{ color: 'var(--text-secondary)' }}>
-														{formatRupiah(item.price)} / item
-													</p>
-												</div>
-												<button
-													type='button'
-													onClick={() => removeItem(item.id)}
-													aria-label={`Hapus ${item.title}`}
-													className='inline-flex items-center justify-center w-8 h-8 rounded-full border border-[var(--border)] hover:border-[#dc2626] transition-colors cursor-pointer'
-													style={{ color: 'var(--text-muted)' }}>
-													<Trash2 size={13} />
-												</button>
-											</div>
-											<div className='flex items-center justify-between'>
-												<QuantityStepper
-													value={item.quantity}
-													onChange={(q) => updateQuantity(item.id, q)}
-												/>
-												<span
-													className='text-sm font-semibold'
-													style={{ color: 'var(--primary)' }}>
-													{formatRupiah(item.price * item.quantity)}
-												</span>
-											</div>
-										</div>
+										{errors.eventDate && (
+											<p
+												className='text-[11px] mt-1.5'
+												style={{ color: 'var(--destructive)' }}>
+												{errors.eventDate}
+											</p>
+										)}
 									</div>
-								))}
-							</div>
-						</Section>
-
-						<Section
-							icon={Home}
-							title='Alamat Pengiriman'
-							subtitle='Alamat utama Anda'
-							action={
-								<Link
-									href='/dashboard/addresses'
-									className='text-xs font-semibold transition-colors'
-									style={{ color: 'var(--primary)' }}>
-									Ubah
-								</Link>
-							}>
-							<div
-								className='rounded-xl p-4 border-2'
-								style={{
-									borderColor: 'var(--primary)',
-									background: 'rgba(157, 23, 77, 0.04)',
-								}}>
-								<div className='flex items-center gap-2 mb-2'>
-									<span
-										className='inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider'
-										style={{
-											background: 'var(--primary)',
-											color: 'white',
-										}}>
-										{dummyAddress.label}
-									</span>
-									<span className='text-sm font-semibold'>
-										{dummyAddress.recipient}
-									</span>
-									<span
-										className='text-xs'
-										style={{ color: 'var(--text-secondary)' }}>
-										· {dummyAddress.phone}
-									</span>
 								</div>
-								<p
-									className='text-sm leading-relaxed'
-									style={{ color: 'var(--text-secondary)' }}>
-									{dummyAddress.full}
-								</p>
 							</div>
 						</Section>
 
 						<Section
-							icon={Truck}
-							title='Detail Pengiriman'
-							subtitle='Pilih tanggal pengantaran'>
-							<label
-								className='block text-xs font-medium mb-2'
-								htmlFor='deliveryDate'>
-								Tanggal Pengantaran
-							</label>
-							<div className='relative'>
-								<CalendarDays
-									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
-									style={{ color: 'var(--text-muted)' }}
-								/>
-								<input
-									id='deliveryDate'
-									type='date'
-									min={minDate}
-									value={deliveryDate}
-									onChange={(e) => setDeliveryDate(e.target.value)}
-									className='w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
-								/>
-							</div>
+							icon={StickyNote}
+							title='Catatan Papan / Pesan'
+							subtitle='Opsional — teks pada papan bunga atau permintaan khusus'>
+							<textarea
+								value={boardMessage}
+								onChange={(e) => setBoardMessage(e.target.value)}
+								rows={3}
+								maxLength={300}
+								placeholder='Contoh: Tulisan papan "Selamat & Sukses" untuk Bapak Andi...'
+								className='w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors resize-none'
+							/>
+							<p
+								className='text-[11px] mt-1.5 text-right'
+								style={{ color: 'var(--text-muted)' }}>
+								{boardMessage.length} / 300
+							</p>
 						</Section>
 
 						<Section
@@ -327,25 +512,6 @@ function CheckoutScreen() {
 								})}
 							</div>
 						</Section>
-
-						<Section
-							icon={StickyNote}
-							title='Catatan'
-							subtitle='Opsional — pesan untuk penerima atau permintaan khusus'>
-							<textarea
-								value={notes}
-								onChange={(e) => setNotes(e.target.value)}
-								rows={3}
-								maxLength={200}
-								placeholder='Contoh: Tulisan papan bunga "Selamat & Sukses" untuk Bapak Andi...'
-								className='w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors resize-none'
-							/>
-							<p
-								className='text-[11px] mt-1.5 text-right'
-								style={{ color: 'var(--text-muted)' }}>
-								{notes.length} / 200
-							</p>
-						</Section>
 					</div>
 
 					{/* Sticky summary */}
@@ -356,18 +522,19 @@ function CheckoutScreen() {
 							<div
 								className='px-5 py-4 border-b border-[var(--border)] flex items-center gap-2'
 								style={{ background: 'rgba(157, 23, 77, 0.05)' }}>
-								<Package
-									size={16}
-									style={{ color: 'var(--primary)' }}
-								/>
+								<Package size={16} style={{ color: 'var(--primary)' }} />
 								<h2 className='font-serif text-base font-semibold'>
 									Ringkasan Pesanan
 								</h2>
 							</div>
 
 							<div className='p-5 space-y-3'>
-								<Row label={`Subtotal (${items.length} produk)`} value={formatRupiah(subtotal)} />
-								<Row label='Ongkos Kirim' value={formatRupiah(shipping)} />
+								<Row
+									label={`Subtotal (${items.length} item)`}
+									value={formatRupiah(subtotal)}
+								/>
+								<Row label='Ongkir' value='dikonfirmasi admin' />
+								<Row label='Diskon' value={formatRupiah(discount)} />
 								<div className='pt-3 border-t border-[var(--border)]'>
 									<div className='flex items-center justify-between'>
 										<span className='text-sm font-semibold'>Total</span>
@@ -377,21 +544,37 @@ function CheckoutScreen() {
 											{formatRupiah(total)}
 										</span>
 									</div>
+									<p
+										className='text-[11px] mt-1'
+										style={{ color: 'var(--text-muted)' }}>
+										Ongkir ditetapkan admin sesuai zona, lalu dikonfirmasi
+										sebelum pembayaran.
+									</p>
 								</div>
+
+								{hasStale && (
+									<p
+										className='flex items-start gap-1.5 text-[11px]'
+										style={{ color: '#dc2626' }}>
+										<AlertTriangle size={13} className='mt-0.5 shrink-0' />
+										Ada item dengan tanggal pasang kedaluwarsa — pilih ulang
+										periodenya sebelum melanjutkan.
+									</p>
+								)}
 
 								<button
 									type='submit'
-									disabled={submitting || !deliveryDate}
-									className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100'
+									disabled={submitting || hasStale}
+									className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100'
 									style={{ background: 'var(--primary)' }}>
-									{submitting ? 'Memproses...' : 'Buat Pesanan'}
+									{submitting ? 'Memproses...' : 'Buat Pesanan Sewa'}
 								</button>
 
 								<div
 									className='flex items-center justify-center gap-2 text-[11px] pt-2'
 									style={{ color: 'var(--text-muted)' }}>
 									<ShieldCheck size={12} />
-									Pembayaran aman & terjamin
+									Pesanan aman & terjamin
 								</div>
 							</div>
 						</div>
@@ -409,7 +592,7 @@ function Section({
 	action,
 	children,
 }: {
-	icon: typeof Home;
+	icon: typeof MapPin;
 	title: string;
 	subtitle?: string;
 	action?: React.ReactNode;
@@ -445,6 +628,63 @@ function Section({
 				{action}
 			</div>
 			<div className='p-5'>{children}</div>
+		</div>
+	);
+}
+
+function Field({
+	id,
+	label,
+	value,
+	onChange,
+	placeholder,
+	error,
+	textarea,
+}: {
+	id: string;
+	label: string;
+	value: string;
+	onChange: (next: string) => void;
+	placeholder?: string;
+	error?: string;
+	textarea?: boolean;
+}) {
+	const baseClass =
+		'w-full px-4 py-3 rounded-xl border bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors';
+	const borderColor = error ? 'var(--destructive)' : 'var(--border)';
+	return (
+		<div>
+			<label className='block text-xs font-medium mb-2' htmlFor={id}>
+				{label}
+			</label>
+			{textarea ? (
+				<textarea
+					id={id}
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					rows={2}
+					placeholder={placeholder}
+					className={`${baseClass} resize-none`}
+					style={{ borderColor }}
+				/>
+			) : (
+				<input
+					id={id}
+					type='text'
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={placeholder}
+					className={baseClass}
+					style={{ borderColor }}
+				/>
+			)}
+			{error && (
+				<p
+					className='text-[11px] mt-1.5'
+					style={{ color: 'var(--destructive)' }}>
+					{error}
+				</p>
+			)}
 		</div>
 	);
 }
@@ -502,32 +742,33 @@ function EmptyCartScreen() {
 				<div
 					className='mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-5'
 					style={{ background: 'rgba(157, 23, 77, 0.08)' }}>
-					<ShoppingBag
-						size={32}
-						style={{ color: 'var(--primary)' }}
-					/>
+					<ShoppingBag size={32} style={{ color: 'var(--primary)' }} />
 				</div>
 				<h1 className='font-serif text-2xl font-bold mb-2'>
 					Keranjang Anda Kosong
 				</h1>
-				<p
-					className='text-sm mb-6'
-					style={{ color: 'var(--text-secondary)' }}>
-					Belum ada produk yang Anda tambahkan. Yuk pilih papan bunga favorit
-					Anda!
+				<p className='text-sm mb-6' style={{ color: 'var(--text-secondary)' }}>
+					Belum ada papan bunga yang Anda pilih. Yuk pilih dan tentukan periode
+					sewanya!
 				</p>
 				<Link
-					href='/#product'
+					href='/products'
 					className='inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02]'
 					style={{ background: 'var(--primary)' }}>
-					Mulai Belanja
+					Mulai Sewa
 				</Link>
 			</div>
 		</main>
 	);
 }
 
-function SuccessScreen({ orderId }: { orderId: string }) {
+function SuccessScreen({
+	orderNumber,
+	total,
+}: {
+	orderNumber: string;
+	total: number;
+}) {
 	return (
 		<main className='floral-bg min-h-[70vh] flex items-center justify-center px-6 py-16'>
 			<div
@@ -541,22 +782,50 @@ function SuccessScreen({ orderId }: { orderId: string }) {
 				<h1 className='font-serif text-2xl font-bold mb-2'>
 					Pesanan Berhasil Dibuat!
 				</h1>
-				<p
-					className='text-sm mb-2'
-					style={{ color: 'var(--text-secondary)' }}>
+				<p className='text-sm mb-2' style={{ color: 'var(--text-secondary)' }}>
 					Nomor pesanan Anda
 				</p>
 				<p
-					className='font-mono text-lg font-bold mb-6'
+					className='font-mono text-lg font-bold mb-2'
 					style={{ color: 'var(--primary)' }}>
-					{orderId}
+					{orderNumber}
 				</p>
-				<p
-					className='text-sm mb-6'
-					style={{ color: 'var(--text-secondary)' }}>
-					Tim Dafa Florist akan segera menghubungi Anda untuk konfirmasi
-					pembayaran dan pengiriman.
+				<p className='text-sm mb-6' style={{ color: 'var(--text-secondary)' }}>
+					Total{' '}
+					<span className='font-semibold' style={{ color: 'var(--text)' }}>
+						{formatRupiah(total)}
+					</span>
 				</p>
+
+				<div
+					className='rounded-xl border border-[var(--border)] p-4 mb-6 text-left'
+					style={{ background: 'rgba(157, 23, 77, 0.03)' }}>
+					<p
+						className='text-xs font-semibold uppercase tracking-wider mb-2 inline-flex items-center gap-1.5'
+						style={{ color: 'var(--text-muted)' }}>
+						<Landmark size={12} style={{ color: 'var(--primary)' }} />
+						Instruksi Pembayaran (Transfer Bank)
+					</p>
+					<ul
+						className='space-y-1 text-sm'
+						style={{ color: 'var(--text-secondary)' }}>
+						<li>
+							BCA <span className='font-semibold'>1234567890</span> a.n. Dafa
+							Florist
+						</li>
+						<li>
+							BRI <span className='font-semibold'>0987654321</span> a.n. Dafa
+							Florist
+						</li>
+					</ul>
+					<p
+						className='text-xs mt-2'
+						style={{ color: 'var(--text-secondary)' }}>
+						Tim Dafa Florist akan mengonfirmasi pembayaran &amp; ongkir sesuai
+						zona acara Anda.
+					</p>
+				</div>
+
 				<div className='flex flex-col sm:flex-row gap-2'>
 					<Link
 						href='/dashboard/orders'

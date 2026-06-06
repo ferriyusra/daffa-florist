@@ -141,9 +141,16 @@ export default function ProductDetailClient({
 		availability?.available === true &&
 		!availabilityQuery.isFetching;
 
+	// installIso: tanggal pasang di-floor ke tengah malam UTC lalu di-ISO-kan.
+	// Dipakai sebagai bagian cartId DAN sebagai nilai installDate item keranjang.
+	const installIso =
+		installDate !== null ? floorToUtcDay(installDate).toISOString() : '';
+
+	// cartId kini ikut menyandi periode (installIso + rentalDays) supaya dua tanggal
+	// pasang / durasi berbeda menjadi BARIS TERPISAH (tidak digabung quantity-nya).
 	const cartId = `${product.slug}::${selectedSize.id}::${selectedColor.id}::${
 		selectedTemplate.id
-	}::${[...selectedAddonIds].sort().join(',')}`;
+	}::${[...selectedAddonIds].sort().join(',')}::${installIso}::${rentalDays}`;
 
 	const cartTitleParts = [
 		product.title,
@@ -155,10 +162,18 @@ export default function ProductDetailClient({
 
 	const cartInput = {
 		id: cartId,
+		productId: product.id ?? '',
+		slug: product.slug,
 		title: cartTitle,
+		image: selectedTemplate.image || product.image,
+		sizeLabel: selectedSize.label,
 		price: unitPrice,
 		priceLabel: formatRupiah(unitPrice),
-		image: selectedTemplate.image || product.image,
+		installDate: installIso,
+		rentalDays,
+		designTemplateName: selectedTemplate.name,
+		themeColorName: selectedColor.name,
+		addonNames: selectedAddons.map((a) => a.name),
 	};
 
 	const toggleAddon = (id: string) => {
@@ -168,14 +183,14 @@ export default function ProductDetailClient({
 	};
 
 	const handleAddToCart = () => {
-		if (!canOrder) return;
+		if (!canOrder || installDate === null) return;
 		addItem(cartInput, quantity);
 		setAdded(true);
 		setTimeout(() => setAdded(false), 1800);
 	};
 
 	const handleOrderNow = () => {
-		if (!canOrder) return;
+		if (!canOrder || installDate === null) return;
 		addItem(cartInput, quantity);
 		const target = '/confirmation-order';
 		router.push(

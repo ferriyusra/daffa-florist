@@ -219,6 +219,61 @@ async function main() {
 			idorRejected && idorCode === 'NOT_FOUND',
 		);
 
+		// (e) Inline address (S2.5) — alamat acara dibuat di dalam transaksi &
+		// tertaut ke order. (f) Rollback — createRental yang CONFLICT dgn inline
+		// address TIDAK meninggalkan alamat yatim.
+		const addrBefore = await prisma.address.count({ where: { userId } });
+		const inlineOrder = await caller.order.createRental({
+			address: {
+				recipientName: 'Acara A',
+				phone: '0811',
+				fullAddress: 'Jl. Acara 1',
+				city: 'Kota',
+			},
+			items: [
+				{
+					productId,
+					sizeLabel: SIZE_LABEL,
+					quantity: 1,
+					installDate: new Date(todayMs + 70 * DAY),
+					rentalDays,
+				},
+			],
+		});
+		orderIds.push(inlineOrder.id);
+		assert(
+			'inline address: order tertaut alamat acara baru',
+			inlineOrder.address?.recipientName === 'Acara A',
+		);
+
+		let conflictThrown = false;
+		try {
+			await caller.order.createRental({
+				address: {
+					recipientName: 'Yatim',
+					phone: '0812',
+					fullAddress: 'Jl. Yatim 2',
+					city: 'Kota',
+				},
+				items: [
+					{
+						productId,
+						sizeLabel: SIZE_LABEL,
+						quantity: 1,
+						installDate: install, // periode penuh (dipesan happy-path)
+						rentalDays: 1,
+					},
+				],
+			});
+		} catch (err) {
+			conflictThrown = err instanceof TRPCError && err.code === 'CONFLICT';
+		}
+		const addrAfter = await prisma.address.count({ where: { userId } });
+		assert(
+			'rollback: CONFLICT dgn inline address tak buat alamat yatim',
+			conflictThrown && addrAfter === addrBefore + 1,
+		);
+
 		console.log('\n── Tes order.createRental anti double-booking (S2.6) ──');
 		for (const c of checks) console.log(`  ${c}`);
 		const pass = checks.every((c) => c.endsWith('✓'));
