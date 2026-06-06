@@ -181,8 +181,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** pelanggan, **agar** paham ini sewa (papan diambil kembali).
 **AC:** Badge "Sewa" pada kartu & detail produk; blok ketentuan (durasi default, pasang–ambil). Tanpa emoji, pakai lucide-react.
 
-- [ ] `XS` Komponen `RentalBadge` + tempel di kartu produk ([products](../src/app/products/)).
-- [ ] `S` Blok "Ketentuan Sewa" di halaman detail produk.
+- [x] `XS` Komponen `RentalBadge` (lucide `Repeat`, "Sewa") + tempel di kartu katalog, featured, & related (3 tempat).
+- [x] `S` Blok "Ketentuan Sewa" di halaman detail produk (sewa/diambil kembali, pasang→bongkar, lead time H-1, buffer) — angka dari `rental-config`.
 
 ### S2.5 — Keranjang & checkout dengan periode
 **Sebagai** pelanggan, **agar** menyewa beberapa item dengan periode berbeda dan melihat rincian biaya.

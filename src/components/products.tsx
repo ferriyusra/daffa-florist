@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import ProductImage from './product-image';
+import { RentalBadge } from './rental-badge';
 import { useRouter } from 'next/navigation';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Check, ShoppingCart } from 'lucide-react';
@@ -108,6 +109,9 @@ export default function Products() {
 										className='object-cover transition-transform duration-500 group-hover:scale-105'
 										sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw'
 									/>
+									<div className='absolute top-3 left-3'>
+										<RentalBadge />
+									</div>
 									<div className='absolute top-3 right-3 glass rounded-full px-3 py-1.5'>
 										<p
 											className='text-xs font-semibold'

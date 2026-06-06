@@ -5,14 +5,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
 	ArrowRight,
+	CalendarClock,
 	CalendarDays,
 	Check,
 	ChevronRight,
+	Clock,
+	Info,
 	Loader2,
 	MapPin,
 	Minus,
 	Package,
 	Plus,
+	Repeat,
 	ShieldCheck,
 	ShoppingCart,
 	Truck,
@@ -20,8 +24,13 @@ import {
 import { formatRupiah, useAuth, useCart } from '@/hooks';
 import type { Product } from '@/lib';
 import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
-import { MIN_LEAD_TIME_DAYS } from '@/lib/rental-config';
-import { ProductImage, RentalDatePicker, RentalDurationSelector } from '@/components';
+import { MIN_LEAD_TIME_DAYS, RENTAL_BUFFER_DAYS } from '@/lib/rental-config';
+import {
+	ProductImage,
+	RentalBadge,
+	RentalDatePicker,
+	RentalDurationSelector,
+} from '@/components';
 import { api } from '@/trpc/react';
 
 const MAX_QUANTITY = 10;
@@ -446,6 +455,104 @@ export default function ProductDetailClient({
 								)}
 						</div>
 
+						<div
+							className='mb-5 rounded-xl border border-[var(--border)] p-4'
+							style={{ background: 'rgba(157, 23, 77, 0.03)' }}>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-3 inline-flex items-center gap-1.5'
+								style={{ color: 'var(--text-muted)' }}>
+								<Info size={12} style={{ color: 'var(--primary)' }} />
+								Ketentuan Sewa
+							</p>
+							<ul className='space-y-2.5'>
+								<li className='flex items-start gap-2'>
+									<Repeat
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Papan bunga ini{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											disewa
+										</span>
+										, bukan dibeli — unit akan{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											diambil kembali
+										</span>{' '}
+										setelah masa sewa.
+									</span>
+								</li>
+								<li className='flex items-start gap-2'>
+									<CalendarClock
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Papan dipasang pada{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											tanggal pasang
+										</span>{' '}
+										yang dipilih dan diambil kembali pada{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											tanggal bongkar
+										</span>{' '}
+										(= tanggal pasang + durasi).
+									</span>
+								</li>
+								<li className='flex items-start gap-2'>
+									<Clock
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Pesan minimal{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											H-{MIN_LEAD_TIME_DAYS}
+										</span>{' '}
+										sebelum tanggal pasang.
+									</span>
+								</li>
+								<li className='flex items-start gap-2'>
+									<Truck
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Ada jeda{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											{RENTAL_BUFFER_DAYS} hari
+										</span>{' '}
+										untuk bongkar/pasang antar penyewaan (memengaruhi
+										ketersediaan tanggal).
+									</span>
+								</li>
+							</ul>
+						</div>
+
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -763,6 +870,9 @@ export default function ProductDetailClient({
 											className='object-cover transition-transform duration-500 group-hover:scale-105'
 											sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
 										/>
+										<div className='absolute top-3 left-3'>
+											<RentalBadge />
+										</div>
 										<div className='absolute top-3 right-3 glass rounded-full px-3 py-1.5'>
 											<p
 												className='text-xs font-semibold'

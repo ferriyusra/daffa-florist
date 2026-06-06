@@ -10,7 +10,7 @@ import {
 	SlidersHorizontal,
 	X,
 } from 'lucide-react';
-import { Footer, Navbar, ProductImage } from '@/components';
+import { Footer, Navbar, ProductImage, RentalBadge } from '@/components';
 import { productCategories, type ProductCategory } from '@/lib';
 import { formatRupiah } from '@/hooks';
 import { api } from '@/trpc/react';
@@ -368,7 +368,7 @@ function CatalogScreen() {
 												className='object-cover transition-transform duration-500 group-hover:scale-105'
 												sizes='(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw'
 											/>
-											<div className='absolute top-3 left-3'>
+											<div className='absolute top-3 left-3 flex flex-col items-start gap-1.5'>
 												<span
 													className='inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider'
 													style={{
@@ -377,6 +377,7 @@ function CatalogScreen() {
 													}}>
 													{p.category}
 												</span>
+												<RentalBadge />
 											</div>
 											<div className='absolute top-3 right-3 glass rounded-full px-3 py-1.5'>
 												<p
