@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
 import { adminProcedure, createTRPCRouter } from '@/server/api/trpc';
+import { withUniqueConflict } from '../../util';
 import { deliveryAreaFields } from '@/lib/delivery-area-schema';
 
 /** CRUD zona pengiriman + ongkir (S0.9) — semua `adminProcedure`. */
@@ -33,7 +34,10 @@ export const adminDeliveryAreaRouter = createTRPCRouter({
 					message: 'Nama zona sudah ada.',
 				});
 			}
-			return ctx.prisma.deliveryArea.create({ data: input });
+			return withUniqueConflict(
+				ctx.prisma.deliveryArea.create({ data: input }),
+				'Nama zona sudah ada.',
+			);
 		}),
 
 	update: adminProcedure
@@ -50,7 +54,10 @@ export const adminDeliveryAreaRouter = createTRPCRouter({
 					message: 'Nama zona sudah dipakai zona lain.',
 				});
 			}
-			return ctx.prisma.deliveryArea.update({ where: { id }, data });
+			return withUniqueConflict(
+				ctx.prisma.deliveryArea.update({ where: { id }, data }),
+				'Nama zona sudah dipakai zona lain.',
+			);
 		}),
 
 	delete: adminProcedure

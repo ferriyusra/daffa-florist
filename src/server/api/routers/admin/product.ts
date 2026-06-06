@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
 import { adminProcedure, createTRPCRouter } from '@/server/api/trpc';
+import { withUniqueConflict } from '../../util';
 import { productFields } from '@/lib/product-schema';
 
 const productInclude = {
@@ -54,10 +55,13 @@ export const adminProductRouter = createTRPCRouter({
 			}
 
 			const { sizes, ...rest } = input;
-			return ctx.prisma.product.create({
-				data: { ...rest, sizes: { create: sizes } },
-				include: productInclude,
-			});
+			return withUniqueConflict(
+				ctx.prisma.product.create({
+					data: { ...rest, sizes: { create: sizes } },
+					include: productInclude,
+				}),
+				'Slug sudah dipakai produk lain.',
+			);
 		}),
 
 	update: adminProcedure
@@ -78,11 +82,14 @@ export const adminProductRouter = createTRPCRouter({
 
 			// Ganti ukuran secara menyeluruh (hapus lama, buat baru). Aman karena
 			// OrderItem menyimpan sizeLabel sebagai snapshot string, bukan FK.
-			return ctx.prisma.product.update({
-				where: { id },
-				data: { ...scalar, sizes: { deleteMany: {}, create: sizes } },
-				include: productInclude,
-			});
+			return withUniqueConflict(
+				ctx.prisma.product.update({
+					where: { id },
+					data: { ...scalar, sizes: { deleteMany: {}, create: sizes } },
+					include: productInclude,
+				}),
+				'Slug sudah dipakai produk lain.',
+			);
 		}),
 
 	delete: adminProcedure

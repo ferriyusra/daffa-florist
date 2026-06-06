@@ -24,6 +24,7 @@ async function main() {
 	await prisma.product.deleteMany();
 	await prisma.galleryItem.deleteMany();
 	await prisma.deliveryArea.deleteMany();
+	await prisma.promo.deleteMany();
 
 	for (const p of products) {
 		await prisma.product.create({
@@ -141,8 +142,25 @@ async function main() {
 		data: deliveryAreas.map((a) => ({ ...a, district: 'Pasaman Barat' })),
 	});
 
+	// Promo contoh (dipakai checkout di E4).
+	const promos = [
+		{
+			code: 'WEDDING10',
+			description: 'Diskon 10% papan wedding',
+			type: 'PERCENT' as const,
+			value: 10,
+		},
+		{
+			code: 'ONGKIR25',
+			description: 'Potongan Rp 25.000',
+			type: 'AMOUNT' as const,
+			value: 25_000,
+		},
+	];
+	await prisma.promo.createMany({ data: promos });
+
 	console.log(
-		`✓ Seed selesai: ${products.length} produk + ${usersToSeed.length} user + ${galleryItems.length} galeri + ${deliveryAreas.length} zona.`,
+		`✓ Seed selesai: ${products.length} produk + ${usersToSeed.length} user + ${galleryItems.length} galeri + ${deliveryAreas.length} zona + ${promos.length} promo.`,
 	);
 	await prisma.$disconnect();
 }

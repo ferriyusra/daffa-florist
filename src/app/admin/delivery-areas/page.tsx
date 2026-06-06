@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
 import { api, type RouterOutputs } from '@/trpc/react';
-import { formatRupiah, useToast } from '@/hooks';
+import { formatRupiah, useAdminForm, useToast } from '@/hooks';
 import {
 	ConfirmDialog,
 	FloatingInput,
+	FormModal,
 	ProgressBar,
 	RupiahInput,
+	ToggleSwitch,
 } from '@/components';
 import { deliveryAreaFields } from '@/lib/delivery-area-schema';
 
@@ -37,24 +38,22 @@ export default function AdminDeliveryAreasPage() {
 		isFetching,
 	} = api.admin.deliveryArea.list.useQuery();
 
+	const { form, set, reset, fieldErrors, setError, validate } =
+		useAdminForm<Form>(emptyForm);
 	const [editing, setEditing] = useState<Area | 'new' | null>(null);
-	const [form, setForm] = useState<Form>(emptyForm);
-	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 	const [confirmId, setConfirmId] = useState<string | null>(null);
 
 	const openNew = () => {
-		setForm(emptyForm);
-		setFieldErrors({});
+		reset(emptyForm);
 		setEditing('new');
 	};
 	const openEdit = (a: Area) => {
-		setForm({
+		reset({
 			name: a.name,
 			district: a.district ?? '',
 			shippingCost: a.shippingCost,
 			isActive: a.isActive,
 		});
-		setFieldErrors({});
 		setEditing(a);
 	};
 
@@ -62,27 +61,26 @@ export default function AdminDeliveryAreasPage() {
 		await utils.admin.deliveryArea.list.invalidate();
 		setEditing(null);
 	};
+	const onConflict = (e: {
+		data?: { code?: string } | null;
+		message: string;
+	}) => {
+		if (e.data?.code === 'CONFLICT') setError('name', e.message);
+		toast.error(e.message);
+	};
 	const createMut = api.admin.deliveryArea.create.useMutation({
 		onSuccess: () => {
 			toast.success('Zona ditambahkan.');
 			void onSaved();
 		},
-		onError: (e) => {
-			if (e.data?.code === 'CONFLICT')
-				setFieldErrors((p) => ({ ...p, name: e.message }));
-			toast.error(e.message);
-		},
+		onError: onConflict,
 	});
 	const updateMut = api.admin.deliveryArea.update.useMutation({
 		onSuccess: () => {
 			toast.success('Zona diperbarui.');
 			void onSaved();
 		},
-		onError: (e) => {
-			if (e.data?.code === 'CONFLICT')
-				setFieldErrors((p) => ({ ...p, name: e.message }));
-			toast.error(e.message);
-		},
+		onError: onConflict,
 	});
 	const deleteMut = api.admin.deliveryArea.delete.useMutation({
 		onSuccess: async () => {
@@ -93,36 +91,19 @@ export default function AdminDeliveryAreasPage() {
 		onError: (e) => toast.error(e.message),
 	});
 
-	const set = <K extends keyof Form>(key: K, value: Form[K]) => {
-		setForm((p) => ({ ...p, [key]: value }));
-		setFieldErrors((p) => {
-			if (!p[key as string]) return p;
-			const next = { ...p };
-			delete next[key as string];
-			return next;
-		});
-	};
-
 	const save = () => {
-		const payload = {
+		const data = validate(deliveryAreaFields, {
 			...form,
 			district: form.district.trim() || undefined,
-		};
-		const parsed = deliveryAreaFields.safeParse(payload);
-		if (!parsed.success) {
-			const errs: Record<string, string> = {};
-			for (const issue of parsed.error.issues) {
-				const k = String(issue.path[0]);
-				if (k && !errs[k]) errs[k] = issue.message;
-			}
-			setFieldErrors(errs);
+		});
+		if (!data) {
 			toast.error('Periksa kembali data yang wajib diisi.');
 			return;
 		}
 		if (editing && editing !== 'new') {
-			updateMut.mutate({ id: editing.id, ...parsed.data });
+			updateMut.mutate({ id: editing.id, ...data });
 		} else {
-			createMut.mutate(parsed.data);
+			createMut.mutate(data);
 		}
 	};
 
@@ -258,102 +239,37 @@ export default function AdminDeliveryAreasPage() {
 				</div>
 			</div>
 
-			{/* Modal form create/edit */}
-			<AnimatePresence>
-				{editing && (
-					<motion.div
-						className='fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40'
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						onClick={pending ? undefined : () => setEditing(null)}>
-						<motion.div
-							onClick={(e) => e.stopPropagation()}
-							className='relative w-full max-w-md rounded-2xl p-6'
-							style={{
-								background: 'var(--bg-card)',
-								boxShadow: 'var(--shadow-md)',
-							}}
-							initial={{ opacity: 0, scale: 0.95, y: 8 }}
-							animate={{ opacity: 1, scale: 1, y: 0 }}
-							exit={{ opacity: 0, scale: 0.95, y: 8 }}
-							transition={{ duration: 0.18, ease: 'easeOut' }}>
-							<div className='flex items-center justify-between mb-5'>
-								<h2 className='font-serif text-lg font-semibold'>
-									{editing === 'new' ? 'Tambah Zona' : 'Edit Zona'}
-								</h2>
-								<button
-									type='button'
-									onClick={() => setEditing(null)}
-									aria-label='Tutup'
-									className='inline-flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer'
-									style={{ color: 'var(--text-secondary)' }}>
-									<X size={18} />
-								</button>
-							</div>
-
-							<div className='space-y-4'>
-								<FloatingInput
-									label='Nama zona'
-									required
-									error={fieldErrors.name}
-									value={form.name}
-									onChange={(v) => set('name', v)}
-								/>
-								<FloatingInput
-									label='Wilayah induk'
-									value={form.district}
-									onChange={(v) => set('district', v)}
-								/>
-								<RupiahInput
-									label='Ongkir'
-									required
-									error={fieldErrors.shippingCost}
-									value={form.shippingCost}
-									onChange={(n) => set('shippingCost', n)}
-								/>
-								<button
-									type='button'
-									onClick={() => set('isActive', !form.isActive)}
-									className='inline-flex items-center gap-2 text-sm cursor-pointer'
-									style={{ color: 'var(--text-secondary)' }}>
-									<span
-										className='inline-flex items-center w-9 h-5 rounded-full transition-colors px-0.5'
-										style={{
-											background: form.isActive
-												? 'var(--secondary)'
-												: 'var(--border)',
-											justifyContent: form.isActive
-												? 'flex-end'
-												: 'flex-start',
-										}}>
-										<span className='w-4 h-4 rounded-full bg-white' />
-									</span>
-									{form.isActive ? 'Aktif (dipakai checkout)' : 'Nonaktif'}
-								</button>
-							</div>
-
-							<div className='flex items-center justify-center gap-3 pt-6'>
-								<button
-									type='button'
-									onClick={() => setEditing(null)}
-									className='px-5 py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] cursor-pointer'
-									style={{ color: 'var(--text-secondary)' }}>
-									Batal
-								</button>
-								<button
-									type='button'
-									onClick={save}
-									disabled={pending}
-									className='px-6 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer disabled:opacity-60'
-									style={{ background: 'var(--primary)' }}>
-									{pending ? 'Menyimpan...' : 'Simpan'}
-								</button>
-							</div>
-						</motion.div>
-					</motion.div>
-				)}
-			</AnimatePresence>
+			<FormModal
+				open={editing !== null}
+				title={editing === 'new' ? 'Tambah Zona' : 'Edit Zona'}
+				onClose={() => setEditing(null)}
+				onSubmit={save}
+				pending={pending}>
+				<FloatingInput
+					label='Nama zona'
+					required
+					error={fieldErrors.name}
+					value={form.name}
+					onChange={(v) => set('name', v)}
+				/>
+				<FloatingInput
+					label='Wilayah induk'
+					value={form.district}
+					onChange={(v) => set('district', v)}
+				/>
+				<RupiahInput
+					label='Ongkir'
+					required
+					error={fieldErrors.shippingCost}
+					value={form.shippingCost}
+					onChange={(n) => set('shippingCost', n)}
+				/>
+				<ToggleSwitch
+					checked={form.isActive}
+					onChange={(v) => set('isActive', v)}
+					onLabel='Aktif (dipakai checkout)'
+				/>
+			</FormModal>
 
 			<ConfirmDialog
 				open={confirmArea !== null}

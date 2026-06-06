@@ -35,7 +35,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 >
 > **Catatan baseline:** sebagian auth sudah ada di code (NextAuth Credentials, `auth.register`, halaman `/login` & `/register`) dan halaman admin sudah ada sebagai **UI statis** ([admin/products](../src/app/admin/products/), [gallery](../src/app/admin/gallery/), [promos](../src/app/admin/promos/), [customers](../src/app/admin/customers/), [delivery-areas](../src/app/admin/delivery-areas/)). Story berikut ditulis lengkap (end-to-end); bila bagian sudah ada, task tetap mencakup **verifikasi + uji + tutup celah**, bukan menulis ulang.
 >
-> **Update (kerja S0.5):** halaman admin placeholder yang belum diimplementasi — gallery (S0.6), promos (S0.7), delivery-areas (S0.9) — beserta menu & route `reports` **dihapus** dari kode (UI + sidebar) agar dikerjakan ulang bersih saat storinya digarap; dashboard `/admin` dikosongkan sementara (blank page). **Galeri (S0.6) & delivery-areas (S0.9) sudah dibangun ulang** (DB-backed, menu kembali); promos (S0.7) masih menunggu.
+> **Update (kerja S0.5):** halaman admin placeholder yang belum diimplementasi — gallery (S0.6), promos (S0.7), delivery-areas (S0.9) — beserta menu & route `reports` **dihapus** dari kode (UI + sidebar) agar dikerjakan ulang bersih saat storinya digarap; dashboard `/admin` dikosongkan sementara (blank page). **Galeri (S0.6), delivery-areas (S0.9) & promos (S0.7) sudah dibangun ulang** (DB-backed, menu kembali). Hanya route `reports` (analitik, S5.4/M5) yang tetap dihapus sampai digarap. **E0 CRUD tuntas.**
 
 ### Auth
 
@@ -92,9 +92,9 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 #### S0.7 — CRUD Promo/diskon
 **AC:** Admin CRUD promo (kode, tipe diskon %/nominal, periode aktif, status); siap dipakai di checkout (E4).
 
-- [ ] `S` Model `Promo` + migrasi (kode unik, nilai, tanggal mulai/akhir, aktif).
-- [ ] `S` Router `admin.promo.*` + zod (validasi tanggal & nilai).
-- [ ] `S` Hubungkan UI [admin/promos](../src/app/admin/promos/) ke API.
+- [x] `S` Model `Promo` + migrasi (kode unik, nilai, tanggal mulai/akhir, aktif). — [schema.prisma](../prisma/schema.prisma) (enum `PromoType` PERCENT/AMOUNT, `code` unik, `value`, `startsAt?`/`endsAt?`, `isActive`); migrasi `promo`; seed 2 promo (WEDDING10, ONGKIR25).
+- [x] `S` Router `admin.promo.*` + zod (validasi tanggal & nilai). — [routers/admin/promo.ts](../src/server/api/routers/admin/promo.ts) (CRUD, `adminProcedure`, CONFLICT kode). Schema bersama [promo-schema.ts](../src/lib/promo-schema.ts) dengan **validasi silang** (persen ≤ 100, nominal ≤ 999.999.999, `endsAt` ≥ `startsAt`).
+- [x] `S` Hubungkan UI [admin/promos](../src/app/admin/promos/) ke API. — halaman client (tabel + modal form create/edit + dialog hapus + toggle aktif). Input nilai **adaptif**: `RupiahInput` (AMOUNT) / angka 1-100 (PERCENT); periode via date input; validasi per-field; CONFLICT→field kode. Menu "Manage Promo" dikembalikan. Diverifikasi [scripts/test-admin-promo.ts](../scripts/test-admin-promo.ts).
 
 #### S0.8 — Manajemen Customers
 **AC:** Admin melihat & mengelola pelanggan (daftar, detail, cari, ubah role/nonaktif); tanpa mengekspos password.

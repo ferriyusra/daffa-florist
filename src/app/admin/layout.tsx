@@ -14,6 +14,7 @@ import {
 	Map,
 	Menu,
 	Package,
+	Tag,
 	Users,
 	X,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ const navGroups = [
 				href: '/admin/delivery-areas',
 				icon: Map,
 			},
+			{ label: 'Manage Promo', href: '/admin/promos', icon: Tag },
 		],
 	},
 	{

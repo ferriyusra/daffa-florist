@@ -1,6 +1,7 @@
 export { default as About } from './about';
 export { default as Contact } from './contact';
 export { ConfirmDialog } from './confirm-dialog';
+export { FormModal } from './form-modal';
 export { default as CountUp } from './count-up';
 export {
 	FloatingInput,
@@ -19,4 +20,5 @@ export { default as ProgressBar } from './progress-bar';
 export { default as RupiahInput } from './rupiah-input';
 export { default as SectionDivider } from './section-divider';
 export { TagsInput } from './tags-input';
+export { ToggleSwitch } from './toggle-switch';
 export { default as Testimonials } from './testimonials';
