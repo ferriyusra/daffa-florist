@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
 	ArrowRight,
+	CalendarDays,
 	Check,
 	ChevronRight,
+	Loader2,
 	MapPin,
 	Minus,
 	Package,
@@ -17,7 +19,10 @@ import {
 } from 'lucide-react';
 import { formatRupiah, useAuth, useCart } from '@/hooks';
 import type { Product } from '@/lib';
-import { ProductImage } from '@/components';
+import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
+import { MIN_LEAD_TIME_DAYS } from '@/lib/rental-config';
+import { ProductImage, RentalDatePicker, RentalDurationSelector } from '@/components';
+import { api } from '@/trpc/react';
 
 const MAX_QUANTITY = 10;
 
@@ -43,6 +48,19 @@ export default function ProductDetailClient({
 	);
 	const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
 
+	// Periode sewa (S2.3). installDate null = belum dipilih; durasi default 3 hari.
+	const [installDate, setInstallDate] = useState<Date | null>(null);
+	const [rentalDays, setRentalDays] = useState(3);
+
+	// Batas tanggal dihitung SEKALI (identitas stabil) supaya tidak menjadi input
+	// query yang berubah tiap render → mencegah refetch loop react-query.
+	const [{ minDate, maxDate }] = useState(() => {
+		const today = floorToUtcDay(new Date());
+		const min = addDays(today, MIN_LEAD_TIME_DAYS);
+		// Jendela ~120 hari (dalam batas cap server 366 hari).
+		return { minDate: min, maxDate: addDays(min, 119) };
+	});
+
 	const selectedSize =
 		product.sizes.find((s) => s.id === selectedSizeId) ?? product.sizes[0];
 	const selectedTemplate =
@@ -61,6 +79,58 @@ export default function ProductDetailClient({
 	}, [selectedSize, selectedAddons]);
 
 	const totalPrice = unitPrice * quantity;
+
+	// Saat ukuran berganti, RESET tanggal: hari yang kosong untuk satu ukuran bisa
+	// penuh untuk ukuran lain (ketersediaan dihitung per ukuran).
+	useEffect(() => {
+		setInstallDate(null);
+	}, [selectedSize.label]);
+
+	// Hari penuh (untuk menonaktifkan tanggal di kalender). Re-run saat sizeLabel
+	// berganti (bagian dari input → query key).
+	const productId = product.id ?? '';
+	const bookedDatesQuery = api.rental.getBookedDates.useQuery(
+		{
+			productId,
+			sizeLabel: selectedSize.label,
+			from: minDate,
+			to: maxDate,
+		},
+		{ enabled: productId !== '' },
+	);
+	const bookedDates = bookedDatesQuery.data ?? [];
+
+	// Ketersediaan untuk tanggal+durasi terpilih. enabled hanya saat tanggal diset.
+	const availabilityQuery = api.rental.checkAvailability.useQuery(
+		{
+			productId,
+			sizeLabel: selectedSize.label,
+			installDate: installDate as Date,
+			rentalDays,
+		},
+		{ enabled: installDate !== null && productId !== '' },
+	);
+	const availability = availabilityQuery.data;
+	const checkingAvailability =
+		installDate !== null && availabilityQuery.isFetching;
+
+	const pickupDate =
+		installDate !== null ? computePickupDate(installDate, rentalDays) : null;
+
+	// Saran tanggal kosong berikutnya — hanya berguna bila MASIH di dalam jendela
+	// kalender [minDate, maxDate]; di luar itu kalender tak bisa menampilkannya.
+	const suggestion = availability?.nextAvailableDate
+		? floorToUtcDay(availability.nextAvailableDate)
+		: null;
+	const suggestionInWindow =
+		suggestion !== null && suggestion.getTime() <= maxDate.getTime();
+
+	// Jangan aktifkan order saat masih memeriksa (data lama bisa stale, mis. setelah
+	// ganti durasi) — cegah memesan periode yang sebenarnya penuh.
+	const canOrder =
+		installDate !== null &&
+		availability?.available === true &&
+		!availabilityQuery.isFetching;
 
 	const cartId = `${product.slug}::${selectedSize.id}::${selectedColor.id}::${
 		selectedTemplate.id
@@ -89,12 +159,14 @@ export default function ProductDetailClient({
 	};
 
 	const handleAddToCart = () => {
+		if (!canOrder) return;
 		addItem(cartInput, quantity);
 		setAdded(true);
 		setTimeout(() => setAdded(false), 1800);
 	};
 
 	const handleOrderNow = () => {
+		if (!canOrder) return;
 		addItem(cartInput, quantity);
 		const target = '/confirmation-order';
 		router.push(
@@ -259,6 +331,119 @@ export default function ProductDetailClient({
 									{selectedSize.note}
 								</p>
 							)}
+						</div>
+
+						<div className='mb-5'>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-2 inline-flex items-center gap-1'
+								style={{ color: 'var(--text-muted)' }}>
+								<CalendarDays size={11} />
+								Periode Sewa
+							</p>
+
+							<RentalDatePicker
+								value={installDate}
+								onChange={setInstallDate}
+								bookedDates={bookedDates}
+								minDate={minDate}
+								maxDate={maxDate}
+								loading={bookedDatesQuery.isFetching}
+							/>
+
+							<p
+								className='text-[10px] font-semibold uppercase tracking-wider mt-3 mb-2'
+								style={{ color: 'var(--text-muted)' }}>
+								Durasi
+							</p>
+							<RentalDurationSelector
+								value={rentalDays}
+								onChange={setRentalDays}
+							/>
+
+							{installDate !== null && pickupDate && (
+								<p
+									className='text-[11px] mt-3'
+									style={{ color: 'var(--text-secondary)' }}>
+									Estimasi bongkar:{' '}
+									<span
+										className='font-semibold'
+										style={{ color: 'var(--text)' }}>
+										{pickupDate.toLocaleDateString('id-ID', {
+											weekday: 'long',
+											day: 'numeric',
+											month: 'long',
+											year: 'numeric',
+											timeZone: 'UTC',
+										})}
+									</span>
+								</p>
+							)}
+
+							{checkingAvailability && (
+								<p
+									className='text-xs mt-2 inline-flex items-center gap-1.5'
+									style={{ color: 'var(--text-muted)' }}>
+									<Loader2 size={13} className='animate-spin' />
+									Memeriksa ketersediaan…
+								</p>
+							)}
+
+							{!checkingAvailability &&
+								installDate !== null &&
+								availability?.available === true && (
+									<p
+										className='text-xs font-semibold mt-2 inline-flex items-center gap-1.5'
+										style={{ color: '#16a34a' }}>
+										<Check size={14} />
+										Tersedia · sisa {availability.remainingUnits} unit
+									</p>
+								)}
+
+							{!checkingAvailability &&
+								installDate !== null &&
+								availability?.available === false && (
+									<div className='mt-2 space-y-1.5'>
+										<p
+											className='text-xs font-semibold'
+											style={{ color: '#dc2626' }}>
+											Tanggal penuh
+										</p>
+										{suggestion && suggestionInWindow && (
+											<button
+												type='button'
+												onClick={() => setInstallDate(suggestion)}
+												className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-all'
+												style={{
+													borderColor: 'var(--primary)',
+													color: 'var(--primary)',
+													background: 'rgba(157, 23, 77, 0.04)',
+												}}>
+												<CalendarDays size={13} />
+												Tersedia mulai{' '}
+												{suggestion.toLocaleDateString('id-ID', {
+													day: 'numeric',
+													month: 'long',
+													year: 'numeric',
+													timeZone: 'UTC',
+												})}
+											</button>
+										)}
+										{suggestion && !suggestionInWindow && (
+											<p
+												className='text-[11px]'
+												style={{ color: 'var(--text-muted)' }}>
+												Tersedia mulai{' '}
+												{suggestion.toLocaleDateString('id-ID', {
+													day: 'numeric',
+													month: 'long',
+													year: 'numeric',
+													timeZone: 'UTC',
+												})}{' '}
+												— di luar jangkauan kalender, silakan hubungi kami.
+											</p>
+										)}
+									</div>
+								)}
 						</div>
 
 						<div className='mb-5'>
@@ -472,7 +657,8 @@ export default function ProductDetailClient({
 								<button
 									type='button'
 									onClick={handleAddToCart}
-									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold border-2 transition-all hover:scale-[1.02] cursor-pointer'
+									disabled={!canOrder}
+									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold border-2 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
 									style={{
 										borderColor: added ? '#16a34a' : 'var(--primary)',
 										color: added ? '#16a34a' : 'var(--primary)',
@@ -495,7 +681,8 @@ export default function ProductDetailClient({
 								<button
 									type='button'
 									onClick={handleOrderNow}
-									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-all hover:scale-[1.02] cursor-pointer'
+									disabled={!canOrder}
+									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
 									style={{
 										background: 'var(--primary)',
 										boxShadow: '0 2px 12px rgba(157, 23, 77, 0.25)',
@@ -504,6 +691,14 @@ export default function ProductDetailClient({
 									<ArrowRight size={16} />
 								</button>
 							</div>
+
+							{!canOrder && (
+								<p
+									className='text-[11px] text-center'
+									style={{ color: 'var(--text-muted)' }}>
+									Pilih tanggal &amp; durasi yang tersedia dulu.
+								</p>
+							)}
 
 							<div
 								className='grid grid-cols-3 gap-2 pt-4 border-t border-[var(--border)] text-[11px]'

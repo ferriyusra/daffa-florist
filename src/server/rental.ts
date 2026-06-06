@@ -9,7 +9,7 @@ import {
 	type Availability,
 	type Period,
 } from '@/lib/rental';
-import { RENTAL_BUFFER_DAYS } from '@/lib/constant';
+import { RENTAL_BUFFER_DAYS } from '@/lib/rental-config';
 
 /**
  * Klien DB yang diterima: PrismaClient normal ATAU transaction client, supaya

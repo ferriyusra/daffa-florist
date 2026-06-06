@@ -1,4 +1,4 @@
-import { RENTAL_BUFFER_DAYS } from './constant';
+import { RENTAL_BUFFER_DAYS } from './rental-config';
 
 /**
  * Helper logika ketersediaan sewa — MURNI (pure) & bebas framework (tanpa

@@ -26,6 +26,7 @@ type DbProduct = Prisma.ProductGetPayload<{ include: typeof productInclude }>;
  */
 function mapProduct(p: DbProduct): Product {
 	return {
+		id: p.id,
 		slug: p.slug,
 		title: p.title,
 		shortDescription: p.shortDescription,

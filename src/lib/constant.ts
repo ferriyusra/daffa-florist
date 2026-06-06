@@ -8,15 +8,8 @@ export const IS_DEVELOPMENT = NODE_ENV === 'development';
 export const IS_TEST = NODE_ENV === 'test';
 
 /**
- * Jeda (buffer) bongkar/pasang antar sewa, dalam hari. Periode sewa yang ada
- * "diperlebar" sebesar nilai ini pada kedua ujungnya saat cek ketersediaan,
- * supaya ada waktu pembongkaran unit lama dan pemasangan unit baru (ERD §4).
+ * Re-export konstanta sewa dari sumber tunggal yang isomorfik (`./rental-config`)
+ * demi back-compat — modul ini sendiri TIDAK aman untuk klien (membaca `@/env`),
+ * jadi kode client harus mengimpor langsung dari `@/lib/rental-config`.
  */
-export const RENTAL_BUFFER_DAYS = 1;
-
-/**
- * Lead time minimal pemesanan, dalam hari (minimal H-1). Tanggal pasang yang
- * diminta tidak boleh lebih cepat dari `hari ini + MIN_LEAD_TIME_DAYS`.
- * Dipakai pada validasi pembuatan sewa (S2.6).
- */
-export const MIN_LEAD_TIME_DAYS = 1;
+export { RENTAL_BUFFER_DAYS, MIN_LEAD_TIME_DAYS } from './rental-config';

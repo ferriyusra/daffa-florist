@@ -170,10 +170,12 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** pelanggan, **agar** memilih tanggal pasang & durasi.
 **AC:** Date picker dengan tanggal penuh ter-disable (dari `getBookedDates`), selector durasi (chip 1/3/7 hari) dengan harga dinamis, menampilkan estimasi tanggal ambil & status ketersediaan.
 
-- [ ] `M` Komponen `RentalDatePicker` (kalender, disable tanggal penuh & < lead time) di [src/components/](../src/components/) + barrel.
-- [ ] `S` Komponen `RentalDurationSelector` (chip 1/3/7, harga dinamis).
-- [ ] `S` Integrasi di [products/[slug]](../src/app/products/[slug]/) — panggil `checkAvailability` saat tanggal/durasi berubah; tampilkan estimasi pickup + status.
-- [ ] `S` State "Penuh" → tampilkan `nextAvailableDate` sebagai saran (anti-pattern MASTER.md dipatuhi).
+- [x] `M` Komponen `RentalDatePicker` (kalender UTC mandiri, disable tanggal penuh & < lead time, a11y label) di [src/components/](../src/components/) + barrel.
+- [x] `S` Komponen `RentalDurationSelector` (chip 1/3/7). _Catatan: harga **flat per periode** (backend `createRental` tak mengalikan hari) → durasi memengaruhi pickup & ketersediaan, BUKAN harga. "Harga dinamis" perlu perubahan backend bila diinginkan._
+- [x] `S` Integrasi di [products/[slug]](../src/app/products/[slug]/) — `getBookedDates` + `checkAvailability` saat tanggal/durasi/ukuran berubah; estimasi pickup + status; tombol order di-gate pada ketersediaan (anti-stale via `isFetching`). Expose `Product.id` ke client.
+- [x] `S` State "Penuh" → saran `nextAvailableDate` (hanya bila di jendela kalender; di luar itu pesan "hubungi kami"); kalender ikut pindah bulan saat saran dipilih.
+
+> ⏭️ **Ditunda ke S2.5:** membawa `installDate`/`rentalDays` ke keranjang (cart shape + `cartId` per-periode) — di S2.3 pemilihan baru men-_gate_ order; carry-through ke `createRental` adalah lingkup checkout S2.5.
 
 ### S2.4 — Badge & ketentuan sewa di katalog
 **Sebagai** pelanggan, **agar** paham ini sewa (papan diambil kembali).

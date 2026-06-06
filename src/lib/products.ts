@@ -38,6 +38,13 @@ export type ProductAddon = {
 };
 
 export type Product = {
+	/**
+	 * UUID produk dari DB. OPSIONAL pada tipe karena sumber seed statis di file
+	 * ini membentuk objek `Product` tanpa id (id dibuat DB). Saat runtime,
+	 * `mapProduct` (router) SELALU mengisinya dari baris DB, sehingga konsumen
+	 * sewa (checkAvailability/getBookedDates) bisa mengandalkannya.
+	 */
+	id?: string;
 	slug: string;
 	title: string;
 	shortDescription: string;
