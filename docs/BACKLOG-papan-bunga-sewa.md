@@ -152,10 +152,10 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** sistem, **agar** menghitung bentrok periode secara konsisten.
 **AC:** Fungsi murni menghitung tumpang tindih `[pasang, pickup]` dengan buffer hari, dan `pickupDate = installDate + rentalDays`. Mengembalikan `{ available, remainingUnits, nextAvailableDate? }`.
 
-- [ ] `S` Tulis util hitung `pickupDate` & rentang dengan buffer (konfigurasi buffer hari) di [src/lib/](../src/lib/) + update barrel `index.ts`.
-- [ ] `S` Tulis util cek tumpang tindih: `requestStart <= existingEnd && requestEnd >= existingStart` (§6.3).
-- [ ] `S` Tulis fungsi hitung sisa unit untuk produk+ukuran pada periode (query order aktif, status bukan `CANCELLED`/`COMPLETED`).
-- [ ] `XS` Util cari `nextAvailableDate` terdekat saat penuh.
+- [x] `S` Tulis util hitung `pickupDate` & rentang dengan buffer (konfigurasi buffer hari) di [src/lib/](../src/lib/) + update barrel `index.ts`. — [lib/rental.ts](../src/lib/rental.ts) (murni/bebas framework): `computePickupDate`, `addDays`, `blocksPeriod` (booking diperlebar buffer dua sisi). Buffer & lead time di [lib/constant.ts](../src/lib/constant.ts) (`RENTAL_BUFFER_DAYS=1`, `MIN_LEAD_TIME_DAYS=1`); barrel diperbarui.
+- [x] `S` Tulis util cek tumpang tindih: `requestStart <= existingEnd && requestEnd >= existingStart` (§6.3). — `rangesOverlap` (inklusif) + `countOverlapping`.
+- [x] `S` Tulis fungsi hitung sisa unit untuk produk+ukuran pada periode (query order aktif, status bukan `CANCELLED`/`COMPLETED`). — [server/rental.ts](../src/server/rental.ts) `checkSizeAvailability(db, params)` (`server-only`): muat `ProductSize.unitCount` + OrderItem aktif (Promise.all), delegasi ke `computeAvailability`. `db` terima `PrismaClient | TransactionClient` (reuse di transaksi S2.6).
+- [x] `XS` Util cari `nextAvailableDate` terdekat saat penuh. — di `computeAvailability` (kandidat dari `pickup+buffer` tiap booking, diurut; `null` bila tak ada/`unitCount 0`). Diverifikasi [scripts/test-rental-availability.ts](../scripts/test-rental-availability.ts) (13/13).
 
 ### S2.2 — tRPC `rental.checkAvailability` & `rental.getBookedDates`
 **Sebagai** pelanggan, **agar** tahu ketersediaan real-time saat memilih tanggal.
