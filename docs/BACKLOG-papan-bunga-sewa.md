@@ -136,11 +136,11 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** admin, **agar** ketersediaan dihitung dari jumlah unit fisik.
 **AC:** Model `ProductUnit` (§7.4) ada; pendekatan awal memakai **jumlah unit** (field `unitCount` per produk-ukuran) sesuai catatan PRD (a→b). Opsional `RentalDurationOption` (§7.5).
 
-- [ ] `S` Putuskan pendekatan ketersediaan (a: `unitCount` sederhana vs b: `ProductUnit` individual) — catat keputusan di doc. **Default rekomendasi: mulai (a).**
-- [ ] `XS` Tambah field `unitCount` pada `ProductSize` (atau `Product`) untuk pendekatan (a).
-- [ ] `S` Tambah model `ProductUnit` untuk pendekatan (b) bila diputuskan; relasi ke `Product`.
-- [ ] `XS` Tambah model `RentalDurationOption` (opsional) bila harga per-durasi dipakai.
-- [ ] `XS` Jalankan migrasi + seed contoh stok pada produk yang ada.
+- [x] `S` Putuskan pendekatan ketersediaan (a vs b) — catat keputusan di doc. — **Keputusan: pendekatan (a)** — `unitCount` per `ProductSize` (jumlah unit), cukup untuk M1/M2. Naik ke (b) `ProductUnit` per-aset saat butuh pelacakan kondisi/deposit per unit (PRD §7.4 a→b).
+- [x] `XS` Tambah field `unitCount` pada `ProductSize` (atau `Product`) untuk pendekatan (a). — `ProductSize.unitCount Int @default(1)` ([schema.prisma](../prisma/schema.prisma)); migrasi `product_size_unit_count`; di schema zod bersama (`min 0`), input **"Stok (unit)"** per ukuran di form admin, dan kolom **Stok** di detail produk admin.
+- [ ] `S` Tambah model `ProductUnit` untuk pendekatan (b) bila diputuskan; relasi ke `Product`. — **ditunda** (pakai (a) dulu).
+- [ ] `XS` Tambah model `RentalDurationOption` (opsional) bila harga per-durasi dipakai. — ditunda (harga sewa cukup dari `ProductSize.price`).
+- [x] `XS` Jalankan migrasi + seed contoh stok pada produk yang ada. — migrasi applied; seed `unitCount: 3` per ukuran (8 produk). Diverifikasi [scripts/test-admin-product.ts](../scripts/test-admin-product.ts) (unitCount round-trip).
 
 ---
 

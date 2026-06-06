@@ -233,7 +233,9 @@ export default function AdminGalleryPage() {
 						type='number'
 						min={0}
 						value={String(form.sortOrder)}
-						onChange={(v) => set('sortOrder', Math.max(0, Number(v) || 0))}
+						onChange={(v) =>
+							set('sortOrder', Math.max(0, Math.trunc(Number(v) || 0)))
+						}
 					/>
 				</div>
 

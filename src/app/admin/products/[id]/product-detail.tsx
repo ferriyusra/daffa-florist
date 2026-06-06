@@ -159,6 +159,7 @@ export default function ProductDetail({ productId }: { productId: string }) {
 											}}>
 											<th className='px-4 py-2 font-semibold'>Label</th>
 											<th className='px-4 py-2 font-semibold'>Harga</th>
+											<th className='px-4 py-2 font-semibold'>Stok</th>
 											<th className='px-4 py-2 font-semibold'>Catatan</th>
 										</tr>
 									</thead>
@@ -172,6 +173,9 @@ export default function ProductDetail({ productId }: { productId: string }) {
 													className='px-4 py-2 font-semibold'
 													style={{ color: 'var(--primary)' }}>
 													{formatRupiah(s.price)}
+												</td>
+												<td className='px-4 py-2 font-medium'>
+													{s.unitCount} unit
 												</td>
 												<td
 													className='px-4 py-2'

@@ -345,7 +345,10 @@ export default function AdminPromosPage() {
 							error={fieldErrors.value}
 							value={String(form.value)}
 							onChange={(v) =>
-								set('value', Math.min(100, Math.max(0, Number(v) || 0)))
+								set(
+									'value',
+									Math.min(100, Math.max(0, Math.trunc(Number(v) || 0))),
+								)
 							}
 						/>
 					)}

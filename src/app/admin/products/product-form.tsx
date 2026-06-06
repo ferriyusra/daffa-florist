@@ -16,7 +16,12 @@ import {
 import { useToast } from '@/hooks';
 import { MAX_GALLERY, MAX_SIZES, productFields } from '@/lib/product-schema';
 
-type SizeRow = { label: string; price: number; note: string };
+type SizeRow = {
+	label: string;
+	price: number;
+	unitCount: number;
+	note: string;
+};
 
 type FormState = {
 	slug: string;
@@ -46,7 +51,7 @@ const emptyForm: FormState = {
 	tags: [],
 	serviceAreas: [],
 	// Tampilkan 1 baris ukuran secara default (mode tambah); bisa ditambah/dihapus.
-	sizes: [{ label: '', price: 0, note: '' }],
+	sizes: [{ label: '', price: 0, unitCount: 1, note: '' }],
 };
 
 // Preset ukuran umum (papan bunga sewa). Hanya saran lewat datalist — admin
@@ -126,6 +131,7 @@ export default function ProductForm({
 			sizes: p.sizes.map((s) => ({
 				label: s.label,
 				price: s.price,
+				unitCount: s.unitCount,
 				note: s.note ?? '',
 			})),
 		});
@@ -196,7 +202,10 @@ export default function ProductForm({
 				? prev
 				: {
 						...prev,
-						sizes: [...prev.sizes, { label: '', price: 0, note: '' }],
+						sizes: [
+						...prev.sizes,
+						{ label: '', price: 0, unitCount: 1, note: '' },
+					],
 					},
 		);
 	const removeSize = (i: number) =>
@@ -224,7 +233,7 @@ export default function ProductForm({
 				(l) => !have.has(l.toLowerCase()),
 			)
 				.slice(0, room)
-				.map((label) => ({ label, price: 0, note: '' }));
+				.map((label) => ({ label, price: 0, unitCount: 1, note: '' }));
 			return { ...prev, sizes: [...prev.sizes, ...additions] };
 		});
 
@@ -239,6 +248,7 @@ export default function ProductForm({
 			sizes: form.sizes.map((s) => ({
 				label: s.label.trim(),
 				price: s.price,
+				unitCount: s.unitCount,
 				note: s.note.trim() || undefined,
 			})),
 		};
@@ -392,11 +402,27 @@ export default function ProductForm({
 												onChange={(n) => setSize(i, 'price', n)}
 											/>
 										</div>
-										<FloatingInput
-											label='Catatan (opsional)'
-											value={s.note}
-											onChange={(v) => setSize(i, 'note', v)}
-										/>
+										<div className='grid sm:grid-cols-2 gap-3 pr-9'>
+											<FloatingInput
+												label='Stok (unit)'
+												type='number'
+												min={0}
+												error={fieldErrors[`sizes.${i}.unitCount`]}
+												value={String(s.unitCount)}
+												onChange={(v) =>
+													setSize(
+														i,
+														'unitCount',
+														Math.max(0, Math.trunc(Number(v) || 0)),
+													)
+												}
+											/>
+											<FloatingInput
+												label='Catatan (opsional)'
+												value={s.note}
+												onChange={(v) => setSize(i, 'note', v)}
+											/>
+										</div>
 									</div>
 								))}
 								<div className='flex flex-wrap items-center gap-2'>

@@ -55,14 +55,18 @@ async function main() {
 		basePrice: 333_000,
 		image: '/product/papan-bunga-1.PNG',
 		sizes: [
-			{ label: 'Sedang', price: 350_000, note: 'tinggi 2m' },
-			{ label: 'Besar', price: 500_000 },
+			{ label: 'Sedang', price: 350_000, unitCount: 5, note: 'tinggi 2m' },
+			{ label: 'Besar', price: 500_000, unitCount: 2 },
 		],
 	});
 	checks.push(`Create produk (id ${created.id.slice(0, 8)}…): ✓`);
 	const createSizesOk =
-		created.sizes.length === 2 && created.sizes[0].label === 'Sedang';
-	checks.push(`  └ 2 ukuran tersimpan (ProductSize): ${createSizesOk ? '✓' : '✗'}`);
+		created.sizes.length === 2 &&
+		created.sizes[0].label === 'Sedang' &&
+		created.sizes[0].unitCount === 5; // stok per ukuran (S1.3) tersimpan
+	checks.push(
+		`  └ 2 ukuran + stok tersimpan (ProductSize.unitCount): ${createSizesOk ? '✓' : '✗'}`,
+	);
 
 	const pub = await admin.product.getBySlug({ slug: 'produk-uji-crud' });
 	const pubOk =

@@ -44,6 +44,7 @@ async function main() {
 					create: p.sizes.map((s) => ({
 						label: s.label,
 						price: s.price,
+						unitCount: 3, // stok contoh per ukuran (S1.3) — dasar ketersediaan E2
 						note: s.note,
 					})),
 				},

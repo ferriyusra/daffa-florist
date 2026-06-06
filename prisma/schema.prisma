@@ -87,6 +87,7 @@ model ProductSize {
   productId String  @db.Uuid
   label     String
   price     Int
+  unitCount Int     @default(1) // jumlah unit fisik tersedia untuk disewa (S1.3 pendekatan a)
   note      String?
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)

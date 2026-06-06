@@ -47,6 +47,11 @@ export const productFields = z.object({
 					.int()
 					.min(1, 'Harga ukuran wajib diisi.')
 					.max(MAX_PRICE, 'Harga maksimal Rp 999.999.999.'),
+				unitCount: z
+					.number()
+					.int()
+					.min(0, 'Stok tidak boleh negatif.')
+					.default(1),
 				note: z.string().optional(),
 			}),
 		)
