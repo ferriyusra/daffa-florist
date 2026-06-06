@@ -16,9 +16,9 @@ Berbeda dengan model jual-putus, model sewa memperkenalkan tiga konsep inti yang
 
 1. **Periode sewa** — pelanggan hanya memilih **tanggal pasang** dan **durasi tampil**; tanggal ambil/pickup dihitung otomatis (`tanggal pasang + durasi`).
 2. **Ketersediaan unit fisik** — jumlah papan/rangka terbatas; satu unit tidak bisa disewakan untuk dua acara yang periodenya bertumpang tindih.
-3. **Siklus hidup pasca-acara** — penjadwalan pasang, pengambilan kembali (pickup), pengecekan kondisi, dan pengembalian deposit.
+3. **Siklus hidup pasca-acara** — penjadwalan pasang, pengambilan kembali (pickup), dan pengecekan kondisi unit.
 
-Tujuan rilis ini adalah memungkinkan pelanggan memilih papan bunga, menentukan periode sewa, melihat ketersediaan secara real-time, melakukan pemesanan + pembayaran (DP/deposit), dan menerima konfirmasi — serta memberi admin alat untuk mengelola jadwal pasang/bongkar dan inventaris unit.
+Tujuan rilis ini adalah memungkinkan pelanggan memilih papan bunga, menentukan periode sewa, melihat ketersediaan secara real-time, melakukan pemesanan + pembayaran (DP/transfer manual), dan menerima konfirmasi — serta memberi admin alat untuk mengelola jadwal pasang/bongkar dan inventaris unit.
 
 ---
 
@@ -32,7 +32,7 @@ Papan bunga di Indonesia umumnya bersifat **sewa**: pelanggan membayar untuk ran
 
 - **Saat ini belum ada konsep periode & ketersediaan.** Model data sekarang ([prisma/schema.prisma](../prisma/schema.prisma)) memperlakukan pesanan seperti pembelian satu kali (`Order`, `OrderItem`) tanpa tanggal sewa, durasi, atau pengecekan bentrok jadwal.
 - **Risiko double-booking.** Tanpa pelacakan ketersediaan unit fisik, dua pelanggan bisa memesan papan yang sama untuk tanggal yang sama.
-- **Tidak ada manajemen logistik pasca-acara.** Tidak ada alur pickup/return, pengecekan kondisi, atau deposit.
+- **Tidak ada manajemen logistik pasca-acara.** Tidak ada alur pickup/return atau pengecekan kondisi unit.
 - **Pelanggan tidak bisa memilih tanggal acara** saat memesan.
 
 ### 2.3 Mengapa sekarang
@@ -98,7 +98,7 @@ Tanggal ambil/pickup **tidak diinput pelanggan**; sistem menghitungnya otomatis 
 
 #### F4 — Keranjang & checkout
 - Keranjang mendukung beberapa item dengan periode sewa berbeda.
-- Ringkasan biaya: subtotal sewa + add-on + ongkir + **deposit** (jika berlaku) − diskon.
+- Ringkasan biaya: subtotal sewa + add-on + ongkir − diskon.
 - Pilih metode pembayaran (transfer / DP). Unggah/konfirmasi bukti.
 
 #### F5 — Konfirmasi & pelacakan pesanan
@@ -123,11 +123,10 @@ Tanggal ambil/pickup **tidak diinput pelanggan**; sistem menghitungnya otomatis 
 #### A3 — Jadwal pasang & bongkar (logistik)
 - Daftar tugas **pasang** per hari (alamat, waktu, item).
 - Daftar tugas **ambil/pickup** per hari.
-- Catat kondisi unit saat kembali (untuk pelepasan deposit).
+- Catat kondisi unit saat kembali.
 
-#### A4 — Deposit & penyelesaian
-- Catat deposit diterima & dikembalikan.
-- Tandai pesanan `COMPLETED` setelah unit kembali & deposit beres.
+#### A4 — Penyelesaian pesanan
+- Tandai pesanan `COMPLETED` setelah unit kembali & kondisinya dicek.
 
 ---
 
@@ -142,7 +141,7 @@ Beranda → Katalog → Detail Produk
    → Sistem cek ketersediaan unit untuk periode itu
         ├─ Tersedia  → tampilkan harga + estimasi tanggal ambil → Tambah ke keranjang
         └─ Penuh     → tampilkan tanggal alternatif terdekat
-   → Checkout → isi lokasi acara & penerima → ringkasan biaya (+deposit)
+   → Checkout → isi lokasi acara & penerima → ringkasan biaya
    → Pilih pembayaran (DP/transfer) → konfirmasi
    → Pesanan dibuat (status PENDING) → halaman konfirmasi + nomor pesanan
 ```
@@ -153,8 +152,7 @@ Beranda → Katalog → Detail Produk
 Admin lihat pesanan PENDING → verifikasi pembayaran → set CONFIRMED
    → Pesanan masuk kalender → set jadwal pasang (SCHEDULED)
    → Hari-H: tim pasang → set INSTALLED
-   → Akhir durasi: tim ambil → set PICKED_UP → cek kondisi → RETURNED
-   → Deposit dikembalikan → COMPLETED
+   → Akhir durasi: tim ambil → set PICKED_UP → cek kondisi → RETURNED → COMPLETED
 ```
 
 ### 6.3 Aturan ketersediaan (inti sistem sewa)
@@ -179,7 +177,7 @@ enum OrderStatus {
   INSTALLED      // 🆕 sudah dipasang di lokasi
   PICKED_UP      // 🆕 sudah diambil kembali
   RETURNED       // 🆕 unit kembali & dicek
-  COMPLETED      // 🆕 selesai, deposit beres
+  COMPLETED      // 🆕 selesai, unit kembali & dicek
   CANCELLED
 }
 ```
@@ -189,8 +187,6 @@ enum OrderStatus {
 ```prisma
 model Order {
   // ... field existing (orderNumber, userId, addressId, subtotal, total, dst.)
-  rentalDeposit   Int       @default(0)   // 🆕 nominal deposit
-  depositRefunded Boolean   @default(false) // 🆕
   eventDate       DateTime?                // 🆕 tanggal & jam acara
   discount        Int       @default(0)   // 🆕 potongan harga (lihat ringkasan biaya F4)
   shippingProvider String?                // 🆕 (future M5) MANUAL | JNE | GOSEND | ...
@@ -274,7 +270,7 @@ Mengikuti design system di [design-system/daffa-florist/MASTER.md](../design-sys
 Komponen baru/utama:
 - **Date picker / kalender ketersediaan** pada halaman detail produk — tanggal penuh ter-disable, hover menampilkan status.
 - **Selector durasi sewa** (chip 1/3/7 hari) dengan harga dinamis.
-- **Badge "Sewa"** & blok ketentuan (pasang–ambil, deposit) pada kartu & detail produk.
+- **Badge "Sewa"** & blok ketentuan (pasang–ambil) pada kartu & detail produk.
 - **Ringkasan periode** di keranjang & checkout (pasang → pickup, jumlah hari).
 - **Kalender admin** (bulanan/mingguan) untuk pesanan.
 - **Daftar tugas harian** pasang & ambil untuk tim lapangan.
@@ -287,10 +283,10 @@ Patuhi anti-pattern MASTER.md: tanpa emoji (pakai `lucide-react`), `cursor-point
 
 1. **Lead time minimum** — pemesanan minimal H-1 (atau dapat dikonfigurasi); tanggal yang terlalu dekat di-disable.
 2. **Buffer pasang/bongkar** — unit "terkunci" +1 hari sebelum & sesudah periode tampil (konfigurasi).
-3. **Pembatalan** — kebijakan refund DP/deposit berdasarkan jarak ke tanggal acara (mis. batal H-3 = potongan).
+3. **Pembatalan** — kebijakan refund DP berdasarkan jarak ke tanggal acara (mis. batal H-3 = potongan).
 4. **Race condition** — dua pelanggan memesan unit terakhir bersamaan → hanya satu berhasil (validasi transaksional di server).
 5. **Perpanjangan sewa** — pelanggan minta tambah durasi → cek ketersediaan periode lanjutan.
-6. **Kerusakan/keterlambatan kembali** — denda/potong deposit; status `MAINTENANCE` untuk unit.
+6. **Kerusakan/keterlambatan kembali** — denda keterlambatan; status `MAINTENANCE` untuk unit rusak.
 7. **Duka cita** — sering butuh **cepat/same-day**; pertimbangkan flag "express".
 8. **Zona layanan & ongkir** — batasi alamat acara ke area layanan (Simpang Empat, Talu, Ujung Gading, Kinali, Sasak Ranah Pasisie, Pasaman, dll.). **Rilis awal:** ongkir **diisi manual** oleh admin per zona. **Masa depan (M5):** ongkir dihitung otomatis lewat **integrasi penyedia pengiriman** (API rate kurir) dan nomor resi disimpan untuk pelacakan. Field `Order.shippingProvider`, `Order.shippingService`, dan `Order.trackingNumber` (nullable) disiapkan sejak awal agar integrasi tidak mengubah struktur data.
 
@@ -303,7 +299,7 @@ Patuhi anti-pattern MASTER.md: tanpa emoji (pakai `lucide-react`), `cursor-point
 | **M1 — Fondasi data** | Migrasi schema (status sewa, field periode, unit/stok) | DB & tRPC siap |
 | **M2 — Ketersediaan & pemesanan** | Date picker, cek ketersediaan, `createRental` transaksional, checkout DP manual | Pelanggan bisa sewa end-to-end |
 | **M3 — Admin operasional** | Kalender pesanan, update status, jadwal pasang/pickup, manajemen unit | Operasional tercatat penuh |
-| **M4 — Penyempurnaan** | Deposit, kebijakan batal, zona ongkir, ekspres duka cita | Aturan bisnis lengkap |
+| **M4 — Penyempurnaan** | Penyelesaian pesanan, kebijakan batal, zona ongkir, ekspres duka cita | Aturan bisnis lengkap |
 | **M5 — (Future)** | Payment gateway otomatis, **integrasi penyedia pengiriman (ongkir & resi via API kurir)**, notifikasi WA/email, dashboard analitik | Otomasi & skala |
 
 ---
@@ -324,11 +320,10 @@ Patuhi anti-pattern MASTER.md: tanpa emoji (pakai `lucide-react`), `cursor-point
 
 ## 13. Pertanyaan Terbuka
 
-1. Apakah deposit selalu berlaku, atau hanya untuk produk Premium/ukuran besar?
-2. Durasi tampil standar berapa hari (1/3/7), dan apakah harga per hari atau per paket durasi?
-3. Apakah unit dilacak per aset individual (kode) sejak M1, atau cukup jumlah stok?
-4. Kebijakan refund/pembatalan resmi seperti apa?
-5. Apakah perlu integrasi WhatsApp untuk konfirmasi otomatis pada rilis awal?
+1. Durasi tampil standar berapa hari (1/3/7), dan apakah harga per hari atau per paket durasi?
+2. Apakah unit dilacak per aset individual (kode) sejak M1, atau cukup jumlah stok?
+3. Kebijakan refund/pembatalan resmi seperti apa?
+4. Apakah perlu integrasi WhatsApp untuk konfirmasi otomatis pada rilis awal?
 
 ---
 

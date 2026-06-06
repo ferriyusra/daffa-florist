@@ -130,8 +130,6 @@ erDiagram
         string trackingNumber "🆕 nullable, no. resi dari provider"
         int    discount "🆕 default 0"
         int    total
-        int    rentalDeposit "🆕"
-        boolean depositRefunded "🆕"
         datetime eventDate "🆕 nullable, tanggal & jam acara"
         string notes
         datetime createdAt
@@ -161,7 +159,7 @@ erDiagram
     Payment {
         uuid   id PK "🆕"
         uuid   orderId FK
-        enum   type "DP|FULL|DEPOSIT|DEPOSIT_REFUND"
+        enum   type "DP|FULL|REFUND"
         string method "TRANSFER_BCA|CASH|..."
         int    amount
         enum   status "PENDING|VERIFIED|REJECTED"
@@ -201,7 +199,7 @@ PENDING ──▶ CONFIRMED ──▶ SCHEDULED ──▶ INSTALLED ──▶ PI
 | `INSTALLED` 🆕 | Sudah dipasang di lokasi |
 | `PICKED_UP` 🆕 | Sudah diambil kembali |
 | `RETURNED` 🆕 | Unit kembali & dicek |
-| `COMPLETED` 🆕 | Selesai, deposit beres |
+| `COMPLETED` 🆕 | Selesai, unit kembali & dicek |
 | `CANCELLED` | Dibatalkan |
 
 > Status existing `PROCESSING / SHIPPED / DELIVERED` (model jual-putus) digantikan rangkaian status sewa di atas.
@@ -210,10 +208,9 @@ PENDING ──▶ CONFIRMED ──▶ SCHEDULED ──▶ INSTALLED ──▶ PI
 
 ```prisma
 enum PaymentType {
-  DP             // uang muka
-  FULL           // pelunasan / bayar penuh
-  DEPOSIT        // jaminan
-  DEPOSIT_REFUND // pengembalian deposit
+  DP     // uang muka
+  FULL   // pelunasan / bayar penuh
+  REFUND // pengembalian (mis. pembatalan)
 }
 
 enum PaymentStatus {
@@ -238,7 +235,7 @@ enum PaymentStatus {
 | Order → OrderItem | 1 : N | `onDelete: Cascade` |
 | Product → OrderItem | 1 : N | `onDelete: SetNull` (jaga snapshot historis) |
 | ProductUnit → OrderItem 🆕 | 1 : N (opsional) | `unitId` nullable; diisi saat unit dialokasikan |
-| Order → Payment 🆕 | 1 : N | `onDelete: Cascade`; satu pesanan banyak transaksi (DP, pelunasan, deposit, refund) |
+| Order → Payment 🆕 | 1 : N | `onDelete: Cascade`; satu pesanan banyak transaksi (DP, pelunasan, refund) |
 | User → Payment 🆕 | 1 : N (opsional) | `verifiedBy` nullable; admin yang memverifikasi bukti |
 | Order → OrderStatusHistory 🆕 | 1 : N | `onDelete: Cascade`; audit trail tiap perubahan status |
 | User → OrderStatusHistory 🆕 | 1 : N (opsional) | `changedBy` nullable; aktor perubahan status |
@@ -260,15 +257,15 @@ enum PaymentStatus {
 
 ## 5. Catatan Implementasi
 
-1. **Ketersediaan dua pendekatan** (PRD §7.4): mulai dari berbasis **jumlah unit** (`unitCount` di `Product`/`ProductSize`) yang lebih sederhana, lalu naik ke **`ProductUnit` per aset** saat butuh pelacakan kondisi & deposit per unit.
+1. **Ketersediaan dua pendekatan** (PRD §7.4): mulai dari berbasis **jumlah unit** (`unitCount` di `Product`/`ProductSize`) yang lebih sederhana, lalu naik ke **`ProductUnit` per aset** saat butuh pelacakan kondisi per unit.
 2. `pickupDate` **disimpan** (bukan dihitung saat query) demi kecepatan query kalender/ketersediaan; sumber kebenaran tetap `installDate + rentalDays`.
 3. `RentalDurationOption` bersifat **opsional** — bila harga sewa cukup di-derive dari `basePrice`/`ProductSize`, model ini bisa ditunda.
-4. Pertanyaan terbuka PRD §13 (deposit selalu/khusus premium, pelacakan per aset sejak M1?) memengaruhi apakah `ProductUnit` & `rentalDeposit` wajib di M1.
-5. **`Payment`** memisahkan transaksi dari pesanan: satu `Order` bisa punya DP → pelunasan → deposit → refund. Status pembayaran pesanan diturunkan dari agregasi `Payment` yang `VERIFIED` (mis. `CONFIRMED` saat DP terverifikasi). Flag `Order.depositRefunded` cukup jadi ringkasan opsional dari ada-tidaknya `Payment` bertipe `DEPOSIT_REFUND`.
+4. Pertanyaan terbuka PRD §13 (pelacakan per aset sejak M1?) memengaruhi apakah `ProductUnit` wajib di M1.
+5. **`Payment`** memisahkan transaksi dari pesanan: satu `Order` bisa punya DP → pelunasan → (refund bila batal). Status pembayaran pesanan diturunkan dari agregasi `Payment` yang `VERIFIED` (mis. `CONFIRMED` saat DP terverifikasi).
 6. **`OrderStatusHistory`** dicatat otomatis di setiap `admin.order.updateStatus` (server) — bukan diinput manual. Berguna untuk audit (§5.2 A2) & menghitung metrik G4 (waktu pesan → konfirmasi).
 7. **`OrderItem.boardMessage`** (§5.1 F3) — teks yang dicetak di papan, per item (tiap papan bisa beda). Berbeda dari `Order.notes` yang merupakan catatan umum pesanan.
 8. **`Address.landmark`** & **`Order.eventDate`** (datetime, memuat jam) menutup form acara §5.1 F3 dan kebutuhan waktu di daftar tugas tim lapangan §5.2 A3.
-9. **`Order.discount`** melengkapi ringkasan biaya §5.1 F4: `total = subtotal + shippingCost + rentalDeposit − discount`.
+9. **`Order.discount`** melengkapi ringkasan biaya §5.1 F4: `total = subtotal + shippingCost − discount`.
 
 ### Pengiriman (integrasi penyedia di masa depan)
 

@@ -19,7 +19,7 @@ enum OrderStatus {
   INSTALLED // sudah dipasang di lokasi acara
   PICKED_UP // sudah diambil kembali
   RETURNED // unit kembali & dicek kondisinya
-  COMPLETED // selesai, deposit beres
+  COMPLETED // selesai, unit kembali & dicek
   CANCELLED // dibatalkan
 }
 
@@ -143,12 +143,10 @@ model Order {
   shippingService  String? // jenis layanan provider
   trackingNumber   String? // no. resi dari provider
 
-  // Sewa & ringkasan biaya: total = subtotal + shippingCost + rentalDeposit - discount
-  discount        Int       @default(0) // potongan harga
-  rentalDeposit   Int       @default(0) // nominal deposit jaminan
-  depositRefunded Boolean   @default(false) // deposit sudah dikembalikan?
-  total           Int
-  eventDate       DateTime? // tanggal & jam acara
+  // Sewa & ringkasan biaya: total = subtotal + shippingCost - discount
+  discount  Int       @default(0) // potongan harga
+  total     Int
+  eventDate DateTime? // tanggal & jam acara
 
   notes     String?
   createdAt DateTime @default(now())

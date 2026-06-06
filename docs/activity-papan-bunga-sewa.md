@@ -10,7 +10,7 @@
 
 ## 1. Alur Utama — Pemesanan Sewa (Pelanggan → Admin)
 
-Dari awal pelanggan memilih produk sampai unit dikembalikan & deposit beres. Kolom (swimlane) menunjukkan siapa aktornya.
+Dari awal pelanggan memilih produk sampai unit dikembalikan & pesanan selesai. Kolom (swimlane) menunjukkan siapa aktornya.
 
 ```mermaid
 flowchart TD
@@ -26,10 +26,10 @@ flowchart TD
     MoreItem -- Ya --> Browse
     MoreItem -- Tidak --> Checkout[Isi alamat acara + eventDate]
 
-    Checkout --> Summary["Ringkasan biaya:<br/>total = subtotal + shippingCost<br/>+ rentalDeposit − discount"]
+    Checkout --> Summary["Ringkasan biaya:<br/>total = subtotal + shippingCost<br/>− discount"]
     Summary --> CreateOrder["Server: createRental<br/>Order status = PENDING<br/>alokasi ProductUnit (opsional)"]
 
-    CreateOrder --> PayDP[Pelanggan: bayar DP/penuh + deposit<br/>unggah bukti transfer]
+    CreateOrder --> PayDP[Pelanggan: bayar DP/penuh<br/>unggah bukti transfer]
     PayDP --> PendingVerif["Payment status = PENDING"]
 
     PendingVerif --> AdminVerif{Admin verifikasi bukti}
@@ -42,11 +42,10 @@ flowchart TD
     Display --> Pickup[Tim ambil kembali unit<br/>Order → PICKED_UP]
     Pickup --> Inspect{Cek kondisi unit}
 
-    Inspect -- Rusak --> Claim[Potong/klaim dari deposit] --> Returned
+    Inspect -- Rusak --> Damaged[Tandai unit MAINTENANCE<br/>catat kondisi] --> Returned
     Inspect -- Baik --> Returned["Unit kembali<br/>ProductUnit → AVAILABLE<br/>Order → RETURNED"]
 
-    Returned --> Refund[Kembalikan deposit<br/>Payment DEPOSIT_REFUND<br/>depositRefunded = true]
-    Refund --> Complete["Order → COMPLETED"]
+    Returned --> Complete["Order → COMPLETED"]
     Complete --> End([Selesai])
 ```
 

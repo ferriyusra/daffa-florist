@@ -24,7 +24,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 | E1 — Fondasi Data & Skema | M1 | S1.1–S1.3 | Migrasi Prisma, enum status, model unit |
 | E2 — Ketersediaan & Pemesanan | M2 | S2.1–S2.6 | Date picker, cek ketersediaan, createRental transaksional, checkout DP |
 | E3 — Admin Operasional | M3 | S3.1–S3.5 | Kalender pesanan, update status, jadwal pasang/pickup, unit |
-| E4 — Penyempurnaan Bisnis | M4 | S4.1–S4.4 | Deposit, pembatalan, zona ongkir, ekspres duka cita |
+| E4 — Penyempurnaan Bisnis | M4 | S4.1–S4.4 | Penyelesaian pesanan, pembatalan, zona ongkir, ekspres duka cita |
 | E5 — Otomasi (Future) | M5 | S5.1–S5.4 | Payment gateway, integrasi kurir, notifikasi WA/email, analitik |
 
 ---
@@ -124,8 +124,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 - [x] `XS` Audit pemakaian status lama di kode (`PROCESSING/SHIPPED/DELIVERED`) dan sesuaikan. — tak ada kode yang memakai enum Prisma; [admin/orders](../src/app/admin/orders/page.tsx) & [dashboard/orders](../src/app/dashboard/orders/page.tsx) memakai label Indonesia lokal (data statis), bukan enum DB.
 
 ### S1.2 — Tambah field sewa pada Order & OrderItem
-**Sebagai** sistem, **agar** menyimpan periode sewa, deposit, dan tanggal acara.
-**AC:** `Order` punya `rentalDeposit, depositRefunded, eventDate, discount, shippingProvider?, shippingService?, trackingNumber?`; `OrderItem` punya `installDate, rentalDays, pickupDate, unitId?` (§7.2–7.3). `pickupDate` = turunan server.
+**Sebagai** sistem, **agar** menyimpan periode sewa dan tanggal acara.
+**AC:** `Order` punya `eventDate, discount, shippingProvider?, shippingService?, trackingNumber?`; `OrderItem` punya `installDate, rentalDays, pickupDate, unitId?` (§7.2–7.3). `pickupDate` = turunan server.
 
 - [x] `XS` Tambah field sewa di model `Order` ([schema.prisma](../prisma/schema.prisma)).
 - [x] `XS` Tambah field periode di model `OrderItem` (`installDate`, `rentalDays`, `pickupDate`, `unitId?`). — install/rental/pickup wajib (NOT NULL); `unitId` nullable (relasi `ProductUnit` menyusul di S1.3).
@@ -136,7 +136,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** admin, **agar** ketersediaan dihitung dari jumlah unit fisik.
 **AC:** Model `ProductUnit` (§7.4) ada; pendekatan awal memakai **jumlah unit** (field `unitCount` per produk-ukuran) sesuai catatan PRD (a→b). Opsional `RentalDurationOption` (§7.5).
 
-- [x] `S` Putuskan pendekatan ketersediaan (a vs b) — catat keputusan di doc. — **Keputusan: pendekatan (a)** — `unitCount` per `ProductSize` (jumlah unit), cukup untuk M1/M2. Naik ke (b) `ProductUnit` per-aset saat butuh pelacakan kondisi/deposit per unit (PRD §7.4 a→b).
+- [x] `S` Putuskan pendekatan ketersediaan (a vs b) — catat keputusan di doc. — **Keputusan: pendekatan (a)** — `unitCount` per `ProductSize` (jumlah unit), cukup untuk M1/M2. Naik ke (b) `ProductUnit` per-aset saat butuh pelacakan kondisi per unit (PRD §7.4 a→b).
 - [x] `XS` Tambah field `unitCount` pada `ProductSize` (atau `Product`) untuk pendekatan (a). — `ProductSize.unitCount Int @default(1)` ([schema.prisma](../prisma/schema.prisma)); migrasi `product_size_unit_count`; di schema zod bersama (`min 0`), input **"Stok (unit)"** per ukuran di form admin, dan kolom **Stok** di detail produk admin.
 - [ ] `S` Tambah model `ProductUnit` untuk pendekatan (b) bila diputuskan; relasi ke `Product`. — **ditunda** (pakai (a) dulu).
 - [ ] `XS` Tambah model `RentalDurationOption` (opsional) bila harga per-durasi dipakai. — ditunda (harga sewa cukup dari `ProductSize.price`).
@@ -177,19 +177,19 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 
 ### S2.4 — Badge & ketentuan sewa di katalog
 **Sebagai** pelanggan, **agar** paham ini sewa (papan diambil kembali).
-**AC:** Badge "Sewa" pada kartu & detail produk; blok ketentuan (durasi default, pasang–ambil, deposit). Tanpa emoji, pakai lucide-react.
+**AC:** Badge "Sewa" pada kartu & detail produk; blok ketentuan (durasi default, pasang–ambil). Tanpa emoji, pakai lucide-react.
 
 - [ ] `XS` Komponen `RentalBadge` + tempel di kartu produk ([products](../src/app/products/)).
 - [ ] `S` Blok "Ketentuan Sewa" di halaman detail produk.
 
-### S2.5 — Keranjang & checkout dengan periode + deposit
+### S2.5 — Keranjang & checkout dengan periode
 **Sebagai** pelanggan, **agar** menyewa beberapa item dengan periode berbeda dan melihat rincian biaya.
-**AC:** Keranjang menyimpan `installDate`+`rentalDays` per item; checkout menampilkan ringkasan periode (pasang→pickup, jumlah hari) & rincian biaya (subtotal+add-on+ongkir+deposit−diskon); form lokasi acara & penerima.
+**AC:** Keranjang menyimpan `installDate`+`rentalDays` per item; checkout menampilkan ringkasan periode (pasang→pickup, jumlah hari) & rincian biaya (subtotal+add-on+ongkir−diskon); form lokasi acara & penerima.
 
 - [ ] `S` Perluas `useCart` ([use-cart.ts](../src/hooks/use-cart.ts)) untuk simpan periode sewa per item (ikuti pola localStorage+event).
 - [ ] `S` Ringkasan periode di keranjang (pasang→pickup, hari).
 - [ ] `M` Form checkout: lokasi acara, penerima, no HP, patokan, waktu acara, catatan papan (§5.1 F3).
-- [ ] `S` Rincian biaya checkout termasuk deposit & diskon (ongkir manual untuk M2).
+- [ ] `S` Rincian biaya checkout termasuk diskon (ongkir manual untuk M2).
 - [ ] `S` Pilih metode pembayaran (transfer/DP) + unggah/konfirmasi bukti.
 
 ### S2.6 — tRPC `order.createRental` transaksional
@@ -248,14 +248,13 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 
 > Output: aturan bisnis lengkap. **Dependensi: E3.**
 
-### S4.1 — Deposit & penyelesaian pesanan
-**AC:** Catat deposit diterima & dikembalikan; tandai `COMPLETED` setelah unit kembali (`RETURNED`) & deposit beres (§5.2 A4).
+### S4.1 — Penyelesaian pesanan
+**AC:** Tandai `COMPLETED` setelah unit kembali (`RETURNED`) & kondisinya dicek (§5.2 A4).
 
-- [ ] `S` Aksi catat deposit & pelepasan (`depositRefunded`) di admin.
 - [ ] `S` Alur status PICKED_UP→RETURNED→COMPLETED + catat kondisi unit (status `MAINTENANCE` bila rusak, §10.6).
 
 ### S4.2 — Kebijakan pembatalan & refund
-**AC:** Pembatalan dengan kebijakan refund DP/deposit berdasarkan jarak ke tanggal acara (§10.3).
+**AC:** Pembatalan dengan kebijakan refund DP berdasarkan jarak ke tanggal acara (§10.3).
 
 - [ ] `XS` Definisikan aturan refund (mis. H-3 potongan) — konfigurasi konstanta.
 - [ ] `S` Mutation batal pesanan (customer/admin) + hitung refund + bebaskan unit.
@@ -296,7 +295,6 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 
 ## Pertanyaan Terbuka (blokir keputusan, dari §13 PRD)
 
-- [ ] Deposit selalu berlaku atau hanya Premium/ukuran besar? → memengaruhi S2.5, S4.1.
 - [ ] Durasi standar (1/3/7) & harga per-hari vs per-paket? → memengaruhi S1.3 (`RentalDurationOption`), S2.3.
 - [ ] Unit dilacak per aset (kode) sejak M1 atau cukup jumlah stok? → memengaruhi S1.3 (a vs b).
 - [ ] Kebijakan refund/pembatalan resmi? → memengaruhi S4.2.
