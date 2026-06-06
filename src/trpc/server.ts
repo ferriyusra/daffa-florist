@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { cache } from 'react';
 
 import { createCaller } from '@/server/api/root';
-import { createTRPCContext } from '@/server/api/trpc';
+import { createTRPCContext } from '@/server/api/context';
 
 const createContext = cache(async () => {
 	const heads = new Headers(await headers());

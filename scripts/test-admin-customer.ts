@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/generated/prisma';
 import { createCaller } from '@/server/api/root';
-import type { createTRPCContext } from '@/server/api/trpc';
+import type { createTRPCContext } from '@/server/api/context';
 
 /**
  * Tes manual manajemen customer admin (S0.8) — guard, list (tanpa password),

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/generated/prisma';
 import { createCaller } from '@/server/api/root';
-import type { createTRPCContext } from '@/server/api/trpc';
+import type { createTRPCContext } from '@/server/api/context';
 
 /**
  * Tes manual CRUD galeri admin (S0.6) — guard, create → baca di galeri publik →

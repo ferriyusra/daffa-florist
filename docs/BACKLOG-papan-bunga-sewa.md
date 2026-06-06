@@ -196,11 +196,11 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** sistem, **agar** mencegah double-booking saat membuat pesanan.
 **AC:** `createRental` **memvalidasi ulang ketersediaan dalam satu transaksi DB** sebelum commit; hitung `pickupDate` di server; buat `Order`(PENDING)+`OrderItem`; nomor pesanan unik. Dua request bersamaan untuk unit terakhir → hanya satu sukses (§8 aturan kritis, §10.4).
 
-- [ ] `M` Implement `order.createRental` (protected mutation) dengan `prisma.$transaction`; re-cek ketersediaan di dalam transaksi.
-- [ ] `S` Generate `orderNumber` unik + hitung `pickupDate` server-side.
-- [ ] `S` Validasi lead time minimum (H-1, konfigurasi) & input zod.
-- [ ] `S` Halaman konfirmasi + nomor pesanan ([confirmation-order](../src/app/confirmation-order/)).
-- [ ] `S` `order.listMine` + tampilkan riwayat di [dashboard/orders](../src/app/dashboard/orders/) dengan status sewa.
+- [x] `M` Implement `order.createRental` (protected mutation) dengan `prisma.$transaction` + **advisory lock** per (produk,ukuran); re-cek ketersediaan di dalam transaksi. Harga/denormalisasi diturunkan dari DB (anti-tamper); cek kepemilikan `addressId` (anti-IDOR).
+- [x] `S` Generate `orderNumber` unik (retry P2002 pada target `orderNumber`) + hitung `pickupDate` server-side (helper kanonik).
+- [x] `S` Validasi lead time minimum (H-1, konfigurasi) & input zod (uuid, durasi ≤ 366). Test DB-backed [scripts/test-create-rental.ts](../scripts/test-create-rental.ts): happy/lead-time/**konkurensi**/IDOR — 10 assert LULUS.
+- [ ] `S` Halaman konfirmasi + nomor pesanan ([confirmation-order](../src/app/confirmation-order/)). _(UI — menyusul bersama S2.3–S2.5)_
+- [~] `S` `order.listMine` (✅ backend) + tampilkan riwayat di [dashboard/orders](../src/app/dashboard/orders/) dengan status sewa _(UI — menyusul)_.
 
 ---
 

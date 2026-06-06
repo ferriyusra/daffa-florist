@@ -3,7 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/generated/prisma';
 import { products } from '@/lib/products';
 import { createCaller } from '@/server/api/root';
-import type { createTRPCContext } from '@/server/api/trpc';
+import type { createTRPCContext } from '@/server/api/context';
 
 /**
  * Tes manual alur data sewa (S1.2) — menjalankan mutation `order.create` SUNGGUHAN

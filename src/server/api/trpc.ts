@@ -2,17 +2,9 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 
-import { auth } from '@/server/auth';
-import { prisma } from '@/lib/prisma';
-
-export const createTRPCContext = async (opts: { headers: Headers }) => {
-	const session = await auth();
-	return {
-		session,
-		prisma,
-		...opts,
-	};
-};
+// Hanya TIPE konteks yang diimpor di sini (type-only → tanpa edge runtime),
+// sehingga graf impor router/`createCaller` tetap bebas dari `@/server/auth`.
+import type { createTRPCContext } from '@/server/api/context';
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
 	transformer: superjson,
