@@ -112,6 +112,15 @@ export default function ProductForm({
 		{ enabled: isEdit },
 	);
 
+	// Area layanan dipilih dari data DeliveryArea (CRUD admin), bukan ketik bebas.
+	const deliveryAreas = api.admin.deliveryArea.list.useQuery();
+	const activeAreas = (deliveryAreas.data ?? []).filter((a) => a.isActive);
+	// Opsi = area aktif ∪ area yang sudah terpilih (agar nama lama/nonaktif yang
+	// pernah dipilih tetap tampil & bisa dilepas).
+	const areaOptions = Array.from(
+		new Set([...activeAreas.map((a) => a.name), ...form.serviceAreas]),
+	);
+
 	// Isi form dari data DB saat mode edit.
 	useEffect(() => {
 		const p = existing.data;
@@ -195,6 +204,14 @@ export default function ProductForm({
 		setForm((prev) => ({ ...prev, [key]: value }));
 		clearFieldError(key as string); // hapus error field saat diubah
 	};
+
+	const toggleArea = (name: string) =>
+		set(
+			'serviceAreas',
+			form.serviceAreas.includes(name)
+				? form.serviceAreas.filter((a) => a !== name)
+				: [...form.serviceAreas, name],
+		);
 
 	const addSize = () =>
 		setForm((prev) =>
@@ -482,12 +499,50 @@ export default function ProductForm({
 							onChange={(v) => set('tags', v)}
 							placeholder='Ketik tag lalu Enter…'
 						/>
-						<TagsInput
-							label='Area layanan'
-							value={form.serviceAreas}
-							onChange={(v) => set('serviceAreas', v)}
-							placeholder='Ketik area lalu Enter…'
-						/>
+						<Field label='Area layanan'>
+							{deliveryAreas.isLoading ? (
+								<p
+									className='text-xs'
+									style={{ color: 'var(--text-muted)' }}>
+									Memuat area…
+								</p>
+							) : areaOptions.length === 0 ? (
+								<p
+									className='text-xs'
+									style={{ color: 'var(--text-muted)' }}>
+									Belum ada area pengiriman. Tambahkan dulu di menu{' '}
+									<span className='font-medium'>Area Pengiriman</span>.
+								</p>
+							) : (
+								<div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
+									{areaOptions.map((name) => {
+										const active = form.serviceAreas.includes(name);
+										return (
+											<label
+												key={name}
+												className='flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors'
+												style={{
+													borderColor: active
+														? 'var(--primary)'
+														: 'var(--border)',
+													background: active
+														? 'rgba(157, 23, 77, 0.04)'
+														: 'var(--bg-surface)',
+												}}>
+												<input
+													type='checkbox'
+													checked={active}
+													onChange={() => toggleArea(name)}
+													className='w-4 h-4 rounded cursor-pointer shrink-0'
+													style={{ accentColor: 'var(--primary)' }}
+												/>
+												<span className='truncate'>{name}</span>
+											</label>
+										);
+									})}
+								</div>
+							)}
+						</Field>
 
 						<div className='flex items-center justify-center gap-3 pt-4'>
 							<button
