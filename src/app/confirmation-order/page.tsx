@@ -8,7 +8,6 @@ import {
 	AlertTriangle,
 	ArrowLeft,
 	CalendarClock,
-	CalendarDays,
 	CheckCircle2,
 	CreditCard,
 	Landmark,
@@ -23,6 +22,7 @@ import {
 	Wallet,
 } from 'lucide-react';
 import { Footer, Navbar } from '@/components';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { formatRupiah, useAuth, useCart, useToast } from '@/hooks';
 import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
 import { MIN_LEAD_TIME_DAYS } from '@/lib/rental-config';
@@ -85,7 +85,7 @@ function CheckoutScreen() {
 	const [phone, setPhone] = useState('');
 	const [fullAddress, setFullAddress] = useState('');
 	const [city, setCity] = useState('');
-	const [eventDate, setEventDate] = useState('');
+	const [eventAt, setEventAt] = useState<Date | undefined>(undefined);
 	const [boardMessage, setBoardMessage] = useState('');
 	const [paymentMethod, setPaymentMethod] =
 		useState<PaymentMethodId>('transfer');
@@ -138,7 +138,7 @@ function CheckoutScreen() {
 		if (!phone.trim()) next.phone = 'Nomor telepon wajib diisi.';
 		if (!fullAddress.trim()) next.fullAddress = 'Alamat acara wajib diisi.';
 		if (!city.trim()) next.city = 'Kota wajib diisi.';
-		if (!eventDate) next.eventDate = 'Tanggal & jam acara wajib diisi.';
+		if (!eventAt) next.eventDate = 'Tanggal & jam acara wajib diisi.';
 		setErrors(next);
 		return Object.keys(next).length === 0;
 	};
@@ -175,7 +175,7 @@ function CheckoutScreen() {
 					fullAddress: fullAddress.trim(),
 					city: city.trim(),
 				},
-				eventDate: new Date(eventDate),
+				eventDate: eventAt!,
 				shippingCost: 0,
 				notes: composedNotes,
 				items: items.map((i) => ({
@@ -397,25 +397,12 @@ function CheckoutScreen() {
 											htmlFor='eventDate'>
 											Tanggal &amp; Jam Acara
 										</label>
-										<div className='relative'>
-											<CalendarDays
-												size={16}
-												className='absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none'
-												style={{ color: 'var(--text-muted)' }}
-											/>
-											<input
-												id='eventDate'
-												type='datetime-local'
-												value={eventDate}
-												onChange={(e) => setEventDate(e.target.value)}
-												className='w-full pl-10 pr-4 py-3 rounded-xl border bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
-												style={{
-													borderColor: errors.eventDate
-														? 'var(--destructive)'
-														: 'var(--border)',
-												}}
-											/>
-										</div>
+										<DateTimePicker
+											date={eventAt}
+											onChange={setEventAt}
+											minDate={floorToUtcDay(new Date())}
+											placeholder='Pilih tanggal & jam acara'
+										/>
 										{errors.eventDate && (
 											<p
 												className='text-[11px] mt-1.5'

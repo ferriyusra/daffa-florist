@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+@import "tw-animate-css";
 
 :root {
   /* Florist Color Palette — Warm Blush + Sage Green + Gold */
@@ -33,6 +34,24 @@
   --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.08);
   --shadow-lg: 0 8px 30px rgba(28, 25, 23, 0.1);
   --shadow-glow: 0 0 20px rgba(157, 23, 77, 0.12);
+
+  /* shadcn/ui tokens — mapped onto the florist palette (additive).
+     NOTE: the gold `--accent` above is left untouched; shadcn's "accent"
+     (a muted hover surface) is exposed as `--surface-accent` and wired into
+     `--color-accent` in the @theme block below. */
+  --card: var(--bg-card);
+  --card-foreground: var(--text);
+  --popover: var(--bg-card);
+  --popover-foreground: var(--text);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --muted: var(--bg-surface);
+  --muted-foreground: var(--text-muted);
+  --surface-accent: rgba(157, 23, 77, 0.06);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --ring: var(--primary);
+  --radius: 0.625rem;
 }
 
 @theme inline {
@@ -40,6 +59,30 @@
   --color-foreground: var(--text);
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
+
+  /* shadcn/ui color + radius scale (additive) */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--surface-accent);
+  --color-accent-foreground: var(--primary);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 * { box-sizing: border-box; }

@@ -1,8 +1,10 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+
 /**
- * Pemilih durasi sewa (S2.3) — chip `${n} Hari`. Durasi MENENTUKAN tanggal
- * bongkar (pickup) & jendela ketersediaan, BUKAN harga.
+ * Pemilih durasi sewa (S2.3) — chip `${n} Hari` di atas shadcn `Button`. Durasi
+ * MENENTUKAN tanggal bongkar (pickup) & jendela ketersediaan, BUKAN harga.
  *
  * CATATAN HARGA (penting, jangan sampai UI bertentangan dgn backend):
  * `order.createRental` mengenakan harga FLAT per ukuran per periode sewa — harga
@@ -20,25 +22,16 @@ export function RentalDurationSelector({
 }) {
 	return (
 		<div className='flex flex-wrap gap-2'>
-			{options.map((n) => {
-				const active = n === value;
-				return (
-					<button
-						key={n}
-						type='button'
-						onClick={() => onChange(n)}
-						className='px-4 py-2 rounded-xl border-2 text-sm font-semibold cursor-pointer transition-all'
-						style={{
-							borderColor: active ? 'var(--primary)' : 'var(--border)',
-							background: active
-								? 'rgba(157, 23, 77, 0.06)'
-								: 'var(--bg-surface)',
-							color: active ? 'var(--primary)' : 'var(--text)',
-						}}>
-						{n} Hari
-					</button>
-				);
-			})}
+			{options.map((n) => (
+				<Button
+					key={n}
+					type='button'
+					variant={n === value ? 'default' : 'outline'}
+					size='sm'
+					onClick={() => onChange(n)}>
+					{n} Hari
+				</Button>
+			))}
 		</div>
 	);
 }
