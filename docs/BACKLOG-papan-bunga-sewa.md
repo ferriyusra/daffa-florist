@@ -116,8 +116,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 > Output: DB & tRPC siap menampung konsep sewa. Tidak ada perubahan UI fungsional.
 
 ### S1.1 — Perbarui enum status pesanan untuk siklus sewa
-**Sebagai** sistem, **agar** status pesanan mencerminkan siklus sewa (pasang→ambil→kembali).
-**AC:** `OrderStatus` punya `PENDING, CONFIRMED, SCHEDULED, INSTALLED, PICKED_UP, RETURNED, COMPLETED, CANCELLED`; nilai lama yang tak dipakai (`PROCESSING/SHIPPED/DELIVERED`) ditangani (migrasi/mapping). Build & generate Prisma lolos.
+**Sebagai** sistem, **agar** status pesanan mencerminkan siklus sewa (pasang→selesai).
+**AC:** `OrderStatus` punya `PENDING, CONFIRMED, SCHEDULED, INSTALLED, COMPLETED, CANCELLED`; nilai lama yang tak dipakai (`PROCESSING/SHIPPED/DELIVERED`) ditangani (migrasi/mapping). Build & generate Prisma lolos. _(`PICKED_UP`/`RETURNED` sempat ada lalu dihapus saat siklus disederhanakan — lihat catatan S3.3/S4.1.)_
 
 - [x] `XS` Ubah enum `OrderStatus` di [schema.prisma](../prisma/schema.prisma) sesuai §7.1 PRD.
 - [x] `XS` Petakan/migrasikan data status lama bila ada (PROCESSING→CONFIRMED, SHIPPED→INSTALLED, DELIVERED→COMPLETED) di file migrasi. — mapping `CASE` tahan-data di migrasi `rental_foundation` (no-op pada DB dev kosong).
@@ -204,7 +204,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 - [x] `S` Generate `orderNumber` unik (retry P2002 pada target `orderNumber`) + hitung `pickupDate` server-side (helper kanonik).
 - [x] `S` Validasi lead time minimum (H-1, konfigurasi) & input zod (uuid, durasi ≤ 366). Test DB-backed [scripts/test-create-rental.ts](../scripts/test-create-rental.ts): happy/lead-time/**konkurensi**/IDOR — 10 assert LULUS.
 - [x] `S` Halaman konfirmasi + nomor pesanan ([confirmation-order](../src/app/confirmation-order/)) — success screen tampilkan `orderNumber` + total server + instruksi transfer (S2.5).
-- [x] `S` `order.listMine` + riwayat di [dashboard/orders](../src/app/dashboard/orders/) dengan badge status sewa (8 status), periode per item, alamat (S2.5).
+- [x] `S` `order.listMine` + riwayat di [dashboard/orders](../src/app/dashboard/orders/) dengan badge status sewa (6 status), periode per item, alamat (S2.5).
 
 > **Catatan teknis (lintas-story, dari sesi testing manual):**
 > - **shadcn/ui diadopsi** — `ui/{button,popover,calendar,select,date-time-picker}`, util `cn`, `components.json`; token shadcn dipetakan ke design system existing di [globals.css](../src/app/globals.css). Dipakai untuk `DateTimePicker` checkout (S2.5) & migrasi pickers sewa (S2.3). Komponen UI lain belum dimigrasi.
@@ -227,17 +227,18 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **AC:** `admin.order.list` dengan filter status/rentang tanggal/kategori; halaman [admin/orders](../src/app/admin/orders/) terhubung data nyata.
 
 - [x] `S` `admin.order.list` — filter status/kategori/rentang tanggal (WIB, inklusif)/search + pagination; `getById` detail.
-- [x] `M` UI [admin/orders](../src/app/admin/orders/) terhubung data nyata — tabel + filter (status, kategori, tanggal, search) + pagination, badge 8 status.
+- [x] `M` UI [admin/orders](../src/app/admin/orders/) terhubung data nyata — tabel + filter (status, kategori, tanggal, search) + pagination, badge 6 status.
 - [x] `S` Halaman detail pesanan admin [admin/orders/[id]](../src/app/admin/orders/) — item+periode, pelanggan, lokasi, biaya, catatan (metode bayar/pesan papan). Read-only (aksi status di S3.3).
 
 ### S3.3 — Update status & jadwal pasang/pickup
 **AC:** `admin.order.updateStatus` mengubah status mengikuti alur §6.2 dan menetapkan jadwal pasang; verifikasi pembayaran → CONFIRMED.
 
 - [x] `S` `admin.order.updateStatus` — validasi transisi via peta bersama [order-status.ts](../src/lib/order-status.ts) (dipakai server & UI), **compare-and-swap** anti-race (CONFLICT bila status sudah berubah). Aksi disisipkan di [detail order admin](../src/app/admin/orders/).
-- [x] `S` Aksi "Verifikasi Pembayaran" (PENDING→CONFIRMED) + tombol aksi lain (Tetapkan Jadwal, Tandai Terpasang/Dibongkar/Dikembalikan, Selesaikan, Batalkan) via `ConfirmDialog`; hanya transisi valid yang muncul.
+- [x] `S` Aksi "Verifikasi Pembayaran" (PENDING→CONFIRMED) + tombol aksi lain (Tetapkan Jadwal, Tandai Terpasang, Selesaikan, Batalkan) via `ConfirmDialog`; hanya transisi valid yang muncul.
 - [x] `S` Set jadwal pasang = transisi →SCHEDULED (tanggal pasang dari `OrderItem.installDate` pelanggan). _Alokasi `unitId` N/A — pakai pendekatan (a) `unitCount`._
 
 > _Audit `OrderStatusHistory` ditunda (model belum diimplement; `TODO` di router)._
+> _Status `PICKED_UP`/`RETURNED` dihapus untuk menyederhanakan siklus sewa → kini 6 status (PENDING→CONFIRMED→SCHEDULED→INSTALLED→COMPLETED, +CANCELLED). Data lama dipetakan ke COMPLETED via migrasi `remove_pickup_return_status`._
 
 ### S3.4 — Kalender pesanan admin
 **AC:** `admin.calendar` mengembalikan pesanan untuk rentang tanggal; tampilan kalender bulanan/mingguan berdasarkan tanggal pasang & pickup.
@@ -259,9 +260,9 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 > Output: aturan bisnis lengkap. **Dependensi: E3.**
 
 ### S4.1 — Penyelesaian pesanan
-**AC:** Tandai `COMPLETED` setelah unit kembali (`RETURNED`) & kondisinya dicek (§5.2 A4).
+**AC:** Tandai `COMPLETED` setelah masa sewa selesai (transisi INSTALLED→COMPLETED).
 
-- [ ] `S` Alur status PICKED_UP→RETURNED→COMPLETED + catat kondisi unit (status `MAINTENANCE` bila rusak, §10.6).
+- [ ] `S` Alur status INSTALLED→COMPLETED. _Pelacakan pickup/return/kondisi unit dihapus saat siklus disederhanakan (status `PICKED_UP`/`RETURNED` dibuang); bila perlu, status unit `MAINTENANCE` (§10.6) ditangani terpisah._
 
 ### S4.2 — Kebijakan pembatalan & refund
 **AC:** Pembatalan dengan kebijakan refund DP berdasarkan jarak ke tanggal acara (§10.3).

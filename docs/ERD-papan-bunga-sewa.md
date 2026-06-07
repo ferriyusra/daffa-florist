@@ -186,8 +186,8 @@ erDiagram
 ## 2. Enum OrderStatus (🆕 disesuaikan)
 
 ```
-PENDING ──▶ CONFIRMED ──▶ SCHEDULED ──▶ INSTALLED ──▶ PICKED_UP ──▶ RETURNED ──▶ COMPLETED
-   │                                                                                   
+PENDING ──▶ CONFIRMED ──▶ SCHEDULED ──▶ INSTALLED ──▶ COMPLETED
+   │                                                          
    └──────────────────────────────▶ CANCELLED (bisa dari status mana pun sebelum selesai)
 ```
 
@@ -197,9 +197,7 @@ PENDING ──▶ CONFIRMED ──▶ SCHEDULED ──▶ INSTALLED ──▶ PI
 | `CONFIRMED` | Pembayaran (DP/lunas) terverifikasi | Admin memverifikasi bukti pembayaran |
 | `SCHEDULED` 🆕 | Jadwal pemasangan papan ditetapkan | Admin menetapkan tanggal/slot tim pasang |
 | `INSTALLED` 🆕 | Papan sudah terpasang di lokasi acara | Tim lapangan menandai setelah memasang |
-| `PICKED_UP` 🆕 | Masa sewa habis, papan diambil/dibongkar dari lokasi | Tim lapangan mengangkut papan kembali |
-| `RETURNED` 🆕 | Papan kembali ke gudang & kondisinya diperiksa | Tim/admin mengecek unit (bila rusak → `MAINTENANCE`) |
-| `COMPLETED` 🆕 | Pesanan tuntas — pembayaran lunas & unit sudah kembali dengan baik | Admin menutup pesanan |
+| `COMPLETED` 🆕 | Pesanan tuntas | Admin menutup pesanan setelah masa sewa selesai |
 | `CANCELLED` | Pesanan dibatalkan (dari status mana pun sebelum selesai) | Pelanggan/admin membatalkan |
 
 > Hanya `CANCELLED` & `COMPLETED` yang dianggap **tidak aktif** (tak lagi menahan unit) saat cek ketersediaan (lihat §4). Status lain masih "memegang" unit pada periodenya.

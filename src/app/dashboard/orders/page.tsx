@@ -15,7 +15,7 @@ import { api } from '@/trpc/react';
 type Order = RouterOutputs['order']['listMine'][number];
 type OrderStatus = Order['status'];
 
-// Semua 8 status sewa → label Indonesia + warna (token/inline).
+// Semua 6 status sewa → label Indonesia + warna (token/inline).
 const statusMeta: Record<
 	OrderStatus,
 	{ label: string; bg: string; color: string }
@@ -39,16 +39,6 @@ const statusMeta: Record<
 		label: 'Terpasang',
 		bg: 'rgba(20, 184, 166, 0.14)',
 		color: '#0d9488',
-	},
-	PICKED_UP: {
-		label: 'Dibongkar',
-		bg: 'rgba(139, 92, 246, 0.14)',
-		color: '#7c3aed',
-	},
-	RETURNED: {
-		label: 'Dikembalikan',
-		bg: 'rgba(100, 116, 139, 0.14)',
-		color: '#475569',
 	},
 	COMPLETED: {
 		label: 'Selesai',

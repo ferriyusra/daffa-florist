@@ -103,7 +103,7 @@ Tanggal ambil/pickup **tidak diinput pelanggan**; sistem menghitungnya otomatis 
 
 #### F5 — Konfirmasi & pelacakan pesanan
 - Nomor pesanan unik.
-- Halaman status pesanan: `PENDING → CONFIRMED → SCHEDULED → INSTALLED → PICKED_UP → RETURNED → COMPLETED` (atau `CANCELLED`).
+- Halaman status pesanan: `PENDING → CONFIRMED → SCHEDULED → INSTALLED → COMPLETED` (atau `CANCELLED`).
 - Riwayat pesanan di dashboard pelanggan ([src/app/dashboard/](../src/app/dashboard/)).
 
 #### F6 — Akun & alamat
@@ -152,7 +152,7 @@ Beranda → Katalog → Detail Produk
 Admin lihat pesanan PENDING → verifikasi pembayaran → set CONFIRMED
    → Pesanan masuk kalender → set jadwal pasang (SCHEDULED)
    → Hari-H: tim pasang → set INSTALLED
-   → Akhir durasi: tim ambil → set PICKED_UP → cek kondisi → RETURNED → COMPLETED
+   → Setelah masa sewa selesai → set COMPLETED
 ```
 
 ### 6.3 Aturan ketersediaan (inti sistem sewa)
@@ -175,9 +175,7 @@ enum OrderStatus {
   CONFIRMED      // pembayaran terverifikasi
   SCHEDULED      // 🆕 jadwal pasang ditetapkan
   INSTALLED      // 🆕 sudah dipasang di lokasi
-  PICKED_UP      // 🆕 sudah diambil kembali
-  RETURNED       // 🆕 unit kembali & dicek
-  COMPLETED      // 🆕 selesai, unit kembali & dicek
+  COMPLETED      // 🆕 pesanan tuntas
   CANCELLED
 }
 ```

@@ -16,10 +16,8 @@ enum OrderStatus {
   PENDING // menunggu pembayaran/verifikasi
   CONFIRMED // pembayaran terverifikasi
   SCHEDULED // jadwal pasang ditetapkan
-  INSTALLED // sudah dipasang di lokasi acara
-  PICKED_UP // sudah diambil kembali
-  RETURNED // unit kembali & dicek kondisinya
-  COMPLETED // pesanan tuntas — pembayaran lunas & unit kembali dengan baik
+  INSTALLED // sudah dipasang di lokasi
+  COMPLETED // pesanan tuntas
   CANCELLED // dibatalkan
 }
 

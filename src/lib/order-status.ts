@@ -7,14 +7,12 @@
  * membandingkan keduanya.
  */
 
-/** 8 status sewa (mirror enum `OrderStatus` Prisma). */
+/** 6 status sewa (mirror enum `OrderStatus` Prisma). */
 export const ORDER_STATUSES = [
 	'PENDING',
 	'CONFIRMED',
 	'SCHEDULED',
 	'INSTALLED',
-	'PICKED_UP',
-	'RETURNED',
 	'COMPLETED',
 	'CANCELLED',
 ] as const;
@@ -26,9 +24,7 @@ export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 	PENDING: ['CONFIRMED', 'CANCELLED'],
 	CONFIRMED: ['SCHEDULED', 'CANCELLED'],
 	SCHEDULED: ['INSTALLED', 'CANCELLED'],
-	INSTALLED: ['PICKED_UP', 'CANCELLED'],
-	PICKED_UP: ['RETURNED'],
-	RETURNED: ['COMPLETED'],
+	INSTALLED: ['COMPLETED', 'CANCELLED'],
 	COMPLETED: [],
 	CANCELLED: [],
 };
@@ -39,8 +35,6 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 	CONFIRMED: 'Dikonfirmasi',
 	SCHEDULED: 'Dijadwalkan',
 	INSTALLED: 'Terpasang',
-	PICKED_UP: 'Dibongkar',
-	RETURNED: 'Dikembalikan',
 	COMPLETED: 'Selesai',
 	CANCELLED: 'Dibatalkan',
 };
@@ -51,8 +45,6 @@ export const ACTION_LABEL: Record<OrderStatus, string> = {
 	CONFIRMED: 'Verifikasi Pembayaran',
 	SCHEDULED: 'Tetapkan Jadwal',
 	INSTALLED: 'Tandai Terpasang',
-	PICKED_UP: 'Tandai Dibongkar',
-	RETURNED: 'Tandai Dikembalikan',
 	COMPLETED: 'Selesaikan',
 	CANCELLED: 'Batalkan',
 };

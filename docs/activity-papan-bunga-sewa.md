@@ -39,13 +39,7 @@ flowchart TD
     Confirmed --> Schedule[Admin tetapkan jadwal pasang<br/>Order → SCHEDULED]
     Schedule --> Install[Tim lapangan pasang di lokasi<br/>Order → INSTALLED]
     Install --> Display[Papan tampil selama rentalDays]
-    Display --> Pickup[Tim ambil kembali unit<br/>Order → PICKED_UP]
-    Pickup --> Inspect{Cek kondisi unit}
-
-    Inspect -- Rusak --> Damaged[Tandai unit MAINTENANCE<br/>catat kondisi] --> Returned
-    Inspect -- Baik --> Returned["Unit kembali<br/>ProductUnit → AVAILABLE<br/>Order → RETURNED"]
-
-    Returned --> Complete["Order → COMPLETED"]
+    Display --> Complete["Masa sewa selesai<br/>Order → COMPLETED"]
     Complete --> End([Selesai])
 ```
 
@@ -74,7 +68,7 @@ flowchart TD
 flowchart LR
     subgraph Status["Alur status pesanan"]
         direction LR
-        P[PENDING] --> C[CONFIRMED] --> S[SCHEDULED] --> I[INSTALLED] --> PU[PICKED_UP] --> R[RETURNED] --> CO[COMPLETED]
+        P[PENDING] --> C[CONFIRMED] --> S[SCHEDULED] --> I[INSTALLED] --> CO[COMPLETED]
         P -. batal .-> X[CANCELLED]
         C -. batal .-> X
         S -. batal .-> X

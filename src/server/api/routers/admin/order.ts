@@ -15,8 +15,6 @@ const statusFilter = z.enum([
 	'CONFIRMED',
 	'SCHEDULED',
 	'INSTALLED',
-	'PICKED_UP',
-	'RETURNED',
 	'COMPLETED',
 	'CANCELLED',
 ]);

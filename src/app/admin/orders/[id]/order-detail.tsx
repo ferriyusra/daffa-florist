@@ -36,8 +36,6 @@ const statusColors: Record<OrderStatus, { bg: string; color: string }> = {
 	CONFIRMED: { bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
 	SCHEDULED: { bg: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5' },
 	INSTALLED: { bg: 'rgba(20, 184, 166, 0.14)', color: '#0d9488' },
-	PICKED_UP: { bg: 'rgba(139, 92, 246, 0.14)', color: '#7c3aed' },
-	RETURNED: { bg: 'rgba(100, 116, 139, 0.14)', color: '#475569' },
 	COMPLETED: { bg: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' },
 	CANCELLED: { bg: 'rgba(220, 38, 38, 0.12)', color: '#dc2626' },
 };
@@ -49,8 +47,6 @@ const STEPPER_FLOW: OrderStatus[] = [
 	'CONFIRMED',
 	'SCHEDULED',
 	'INSTALLED',
-	'PICKED_UP',
-	'RETURNED',
 	'COMPLETED',
 ];
 
@@ -59,8 +55,6 @@ const confirmCopy: Partial<Record<OrderStatus, string>> = {
 	CONFIRMED: 'Verifikasi pembayaran pesanan ini?',
 	SCHEDULED: 'Tetapkan jadwal pasang sesuai tanggal yang dipilih pelanggan?',
 	INSTALLED: 'Tandai pesanan sebagai Terpasang?',
-	PICKED_UP: 'Tandai pesanan sebagai Dibongkar?',
-	RETURNED: 'Tandai pesanan sebagai Dikembalikan?',
 	COMPLETED: 'Selesaikan pesanan ini?',
 	CANCELLED: 'Batalkan pesanan ini? Tindakan ini tak bisa dibatalkan.',
 };
