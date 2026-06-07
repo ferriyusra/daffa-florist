@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 
 import { adminProcedure, createTRPCRouter } from '@/server/api/trpc';
+import {
+	ORDER_STATUSES,
+	ORDER_STATUS_LABEL,
+	canTransition,
+} from '@/lib/order-status';
 
 /** Semua status sewa (ERD §4) + sentinel `ALL` untuk filter. */
 const statusFilter = z.enum([
@@ -177,5 +182,47 @@ export const adminOrderRouter = createTRPCRouter({
 			});
 			if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
 			return order;
+		}),
+
+	/**
+	 * Mengubah status pesanan dengan memvalidasi transisi (ERD §2). Transisi
+	 * divalidasi di server — tak mempercayai klien — memakai peta bersama
+	 * `@/lib/order-status`. CANCELLED/COMPLETED sudah dianggap tidak aktif oleh
+	 * `checkSizeAvailability` (unit otomatis bebas), jadi tak perlu kerja ekstra.
+	 *
+	 * TODO: catat riwayat perubahan (OrderStatusHistory) bila modelnya sudah ada
+	 * (direncanakan di ERD, belum diimplementasikan).
+	 */
+	updateStatus: adminProcedure
+		.input(
+			z.object({ id: z.string().min(1), status: z.enum(ORDER_STATUSES) }),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const order = await ctx.prisma.order.findUnique({
+				where: { id: input.id },
+				select: { id: true, status: true },
+			});
+			if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
+
+			if (!canTransition(order.status, input.status)) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: `Transisi status tidak valid: ${ORDER_STATUS_LABEL[order.status]} → ${ORDER_STATUS_LABEL[input.status]}.`,
+				});
+			}
+
+			// Compare-and-swap: tulis hanya bila status masih sama dengan yang
+			// divalidasi → cegah race dua admin (last-write tak menimpa diam-diam).
+			const res = await ctx.prisma.order.updateMany({
+				where: { id: input.id, status: order.status },
+				data: { status: input.status },
+			});
+			if (res.count === 0) {
+				throw new TRPCError({
+					code: 'CONFLICT',
+					message: 'Status pesanan sudah berubah. Muat ulang halaman.',
+				});
+			}
+			return { id: input.id, status: input.status };
 		}),
 });

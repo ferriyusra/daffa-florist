@@ -233,9 +233,11 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 ### S3.3 — Update status & jadwal pasang/pickup
 **AC:** `admin.order.updateStatus` mengubah status mengikuti alur §6.2 dan menetapkan jadwal pasang; verifikasi pembayaran → CONFIRMED.
 
-- [ ] `S` Implement `admin.order.updateStatus` (validasi transisi status yang valid).
-- [ ] `S` Aksi "Verifikasi pembayaran" (PENDING→CONFIRMED) di UI admin.
-- [ ] `S` Aksi set jadwal pasang (→SCHEDULED) + alokasi unit (`unitId`) bila pendekatan (b).
+- [x] `S` `admin.order.updateStatus` — validasi transisi via peta bersama [order-status.ts](../src/lib/order-status.ts) (dipakai server & UI), **compare-and-swap** anti-race (CONFLICT bila status sudah berubah). Aksi disisipkan di [detail order admin](../src/app/admin/orders/).
+- [x] `S` Aksi "Verifikasi Pembayaran" (PENDING→CONFIRMED) + tombol aksi lain (Tetapkan Jadwal, Tandai Terpasang/Dibongkar/Dikembalikan, Selesaikan, Batalkan) via `ConfirmDialog`; hanya transisi valid yang muncul.
+- [x] `S` Set jadwal pasang = transisi →SCHEDULED (tanggal pasang dari `OrderItem.installDate` pelanggan). _Alokasi `unitId` N/A — pakai pendekatan (a) `unitCount`._
+
+> _Audit `OrderStatusHistory` ditunda (model belum diimplement; `TODO` di router)._
 
 ### S3.4 — Kalender pesanan admin
 **AC:** `admin.calendar` mengembalikan pesanan untuk rentang tanggal; tampilan kalender bulanan/mingguan berdasarkan tanggal pasang & pickup.

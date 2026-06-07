@@ -7,6 +7,7 @@ import { api, type RouterOutputs } from '@/trpc/react';
 import { formatRupiah } from '@/hooks';
 import { ProgressBar } from '@/components';
 import { productCategories } from '@/lib';
+import { ORDER_STATUS_LABEL } from '@/lib/order-status';
 
 /** Zona waktu bisnis (Pasaman Barat = WIB, UTC+7) untuk batas filter tanggal. */
 const WIB_OFFSET = '+07:00';
@@ -21,51 +22,16 @@ const prettyCategory = (slug: string) =>
 type OrderStatus =
 	RouterOutputs['admin']['order']['list']['items'][number]['status'];
 
-// Semua 8 status sewa → label Indonesia + warna (token/inline).
-const statusStyles: Record<
-	OrderStatus,
-	{ label: string; bg: string; color: string }
-> = {
-	PENDING: {
-		label: 'Menunggu Konfirmasi',
-		bg: 'rgba(234, 179, 8, 0.15)',
-		color: '#a16207',
-	},
-	CONFIRMED: {
-		label: 'Dikonfirmasi',
-		bg: 'rgba(59, 130, 246, 0.12)',
-		color: '#2563eb',
-	},
-	SCHEDULED: {
-		label: 'Dijadwalkan',
-		bg: 'rgba(99, 102, 241, 0.12)',
-		color: '#4f46e5',
-	},
-	INSTALLED: {
-		label: 'Terpasang',
-		bg: 'rgba(20, 184, 166, 0.14)',
-		color: '#0d9488',
-	},
-	PICKED_UP: {
-		label: 'Dibongkar',
-		bg: 'rgba(139, 92, 246, 0.14)',
-		color: '#7c3aed',
-	},
-	RETURNED: {
-		label: 'Dikembalikan',
-		bg: 'rgba(100, 116, 139, 0.14)',
-		color: '#475569',
-	},
-	COMPLETED: {
-		label: 'Selesai',
-		bg: 'rgba(34, 197, 94, 0.12)',
-		color: '#16a34a',
-	},
-	CANCELLED: {
-		label: 'Dibatalkan',
-		bg: 'rgba(220, 38, 38, 0.12)',
-		color: '#dc2626',
-	},
+// Warna badge status (UI-only). Label dari modul bersama `@/lib/order-status`.
+const statusColors: Record<OrderStatus, { bg: string; color: string }> = {
+	PENDING: { bg: 'rgba(234, 179, 8, 0.15)', color: '#a16207' },
+	CONFIRMED: { bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
+	SCHEDULED: { bg: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5' },
+	INSTALLED: { bg: 'rgba(20, 184, 166, 0.14)', color: '#0d9488' },
+	PICKED_UP: { bg: 'rgba(139, 92, 246, 0.14)', color: '#7c3aed' },
+	RETURNED: { bg: 'rgba(100, 116, 139, 0.14)', color: '#475569' },
+	COMPLETED: { bg: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' },
+	CANCELLED: { bg: 'rgba(220, 38, 38, 0.12)', color: '#dc2626' },
 };
 
 const statusFilters = [
@@ -82,14 +48,7 @@ const statusFilters = [
 
 const statusFilterLabel: Record<(typeof statusFilters)[number], string> = {
 	ALL: 'Semua',
-	PENDING: 'Menunggu Konfirmasi',
-	CONFIRMED: 'Dikonfirmasi',
-	SCHEDULED: 'Dijadwalkan',
-	INSTALLED: 'Terpasang',
-	PICKED_UP: 'Dibongkar',
-	RETURNED: 'Dikembalikan',
-	COMPLETED: 'Selesai',
-	CANCELLED: 'Dibatalkan',
+	...ORDER_STATUS_LABEL,
 };
 
 const formatDate = (d: Date) =>
@@ -264,7 +223,7 @@ export default function AdminOrdersPage() {
 								</tr>
 							) : (
 								items.map((o) => {
-									const style = statusStyles[o.status];
+									const color = statusColors[o.status];
 									return (
 										<tr
 											key={o.id}
@@ -303,8 +262,8 @@ export default function AdminOrdersPage() {
 											<td className='px-6 py-4'>
 												<span
 													className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap'
-													style={{ background: style.bg, color: style.color }}>
-													{style.label}
+													style={{ background: color.bg, color: color.color }}>
+													{ORDER_STATUS_LABEL[o.status]}
 												</span>
 											</td>
 											<td
