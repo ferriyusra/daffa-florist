@@ -185,6 +185,20 @@ export const orderRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			// (0) Pastikan user sesi masih ada (JWT bisa basi mis. setelah DB
+			// di-reset) — beri pesan jelas, bukan FK violation mentah saat
+			// membuat Address/Order yang mereferensikan userId.
+			const sessionUser = await ctx.prisma.user.findUnique({
+				where: { id: ctx.session.user.id },
+				select: { id: true },
+			});
+			if (!sessionUser) {
+				throw new TRPCError({
+					code: 'UNAUTHORIZED',
+					message: 'Sesi tidak valid. Silakan keluar lalu masuk kembali.',
+				});
+			}
+
 			// (1) Validasi lead time SEBELUM transaksi. Di sini `new Date()`
 			// boleh dipakai (bukan helper murni). Normalisasi tanggal pasang
 			// ke tengah malam UTC agar konsisten dengan domain date-only.
@@ -252,9 +266,12 @@ export const orderRouter = createTRPCRouter({
 				const prepared: PreparedItem[] = items.map((item) => {
 					const product = productById.get(item.productId);
 					if (!product) {
+						// Jangan bocorkan UUID ke pengguna; item keranjang mungkin basi
+						// (produk dihapus/diperbarui sejak ditambahkan).
 						throw new TRPCError({
 							code: 'NOT_FOUND',
-							message: `Produk ${item.productId} tidak ditemukan.`,
+							message:
+								'Salah satu produk di keranjang sudah tidak tersedia. Hapus item tersebut lalu tambahkan ulang dari halaman produk.',
 						});
 					}
 					const size = product.sizes.find(
@@ -263,7 +280,7 @@ export const orderRouter = createTRPCRouter({
 					if (!size) {
 						throw new TRPCError({
 							code: 'NOT_FOUND',
-							message: `Ukuran "${item.sizeLabel}" tidak ditemukan untuk produk ${product.title}.`,
+							message: `Ukuran "${item.sizeLabel}" untuk "${product.title}" sudah tidak tersedia. Pilih ulang ukurannya.`,
 						});
 					}
 					// Harga sewa per UKURAN (bukan basePrice) + total addon terpilih.

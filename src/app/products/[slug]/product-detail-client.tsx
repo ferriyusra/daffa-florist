@@ -48,12 +48,15 @@ export default function ProductDetailClient({
 	const [quantity, setQuantity] = useState(1);
 	const [activeImage, setActiveImage] = useState(product.image);
 	const [added, setAdded] = useState(false);
-	const [selectedSizeId, setSelectedSizeId] = useState(product.sizes[0].id);
+	// Produk bisa saja belum punya ukuran/template/warna → akses aman (opsional).
+	const [selectedSizeId, setSelectedSizeId] = useState(
+		product.sizes[0]?.id ?? '',
+	);
 	const [selectedTemplateId, setSelectedTemplateId] = useState(
-		product.designTemplates[0].id,
+		product.designTemplates[0]?.id ?? '',
 	);
 	const [selectedColorId, setSelectedColorId] = useState(
-		product.themeColors[0].id,
+		product.themeColors[0]?.id ?? '',
 	);
 	const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
 
@@ -70,6 +73,7 @@ export default function ProductDetailClient({
 		return { minDate: min, maxDate: addDays(min, 119) };
 	});
 
+	// Bisa undefined bila produk belum punya ukuran/template/warna.
 	const selectedSize =
 		product.sizes.find((s) => s.id === selectedSizeId) ?? product.sizes[0];
 	const selectedTemplate =
@@ -82,9 +86,12 @@ export default function ProductDetailClient({
 		selectedAddonIds.includes(a.id),
 	);
 
+	// Sewa wajib punya ukuran (ketersediaan & harga per ukuran).
+	const hasSize = Boolean(selectedSize);
+
 	const unitPrice = useMemo(() => {
 		const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
-		return selectedSize.price + addonsTotal;
+		return (selectedSize?.price ?? 0) + addonsTotal;
 	}, [selectedSize, selectedAddons]);
 
 	const totalPrice = unitPrice * quantity;
@@ -93,7 +100,7 @@ export default function ProductDetailClient({
 	// penuh untuk ukuran lain (ketersediaan dihitung per ukuran).
 	useEffect(() => {
 		setInstallDate(null);
-	}, [selectedSize.label]);
+	}, [selectedSize?.label]);
 
 	// Hari penuh (untuk menonaktifkan tanggal di kalender). Re-run saat sizeLabel
 	// berganti (bagian dari input → query key).
@@ -101,11 +108,11 @@ export default function ProductDetailClient({
 	const bookedDatesQuery = api.rental.getBookedDates.useQuery(
 		{
 			productId,
-			sizeLabel: selectedSize.label,
+			sizeLabel: selectedSize?.label ?? '',
 			from: minDate,
 			to: maxDate,
 		},
-		{ enabled: productId !== '' },
+		{ enabled: productId !== '' && hasSize },
 	);
 	const bookedDates = bookedDatesQuery.data ?? [];
 
@@ -113,11 +120,11 @@ export default function ProductDetailClient({
 	const availabilityQuery = api.rental.checkAvailability.useQuery(
 		{
 			productId,
-			sizeLabel: selectedSize.label,
+			sizeLabel: selectedSize?.label ?? '',
 			installDate: installDate as Date,
 			rentalDays,
 		},
-		{ enabled: installDate !== null && productId !== '' },
+		{ enabled: installDate !== null && productId !== '' && hasSize },
 	);
 	const availability = availabilityQuery.data;
 	const checkingAvailability =
@@ -137,6 +144,7 @@ export default function ProductDetailClient({
 	// Jangan aktifkan order saat masih memeriksa (data lama bisa stale, mis. setelah
 	// ganti durasi) — cegah memesan periode yang sebenarnya penuh.
 	const canOrder =
+		hasSize &&
 		installDate !== null &&
 		availability?.available === true &&
 		!availabilityQuery.isFetching;
@@ -148,14 +156,16 @@ export default function ProductDetailClient({
 
 	// cartId kini ikut menyandi periode (installIso + rentalDays) supaya dua tanggal
 	// pasang / durasi berbeda menjadi BARIS TERPISAH (tidak digabung quantity-nya).
-	const cartId = `${product.slug}::${selectedSize.id}::${selectedColor.id}::${
-		selectedTemplate.id
-	}::${[...selectedAddonIds].sort().join(',')}::${installIso}::${rentalDays}`;
+	const cartId = `${product.slug}::${selectedSize?.id ?? ''}::${
+		selectedColor?.id ?? ''
+	}::${selectedTemplate?.id ?? ''}::${[...selectedAddonIds]
+		.sort()
+		.join(',')}::${installIso}::${rentalDays}`;
 
 	const cartTitleParts = [
 		product.title,
-		`(${selectedSize.label}`,
-		selectedColor.name ? `· ${selectedColor.name}` : '',
+		`(${selectedSize?.label ?? ''}`,
+		selectedColor?.name ? `· ${selectedColor.name}` : '',
 		`)`,
 	];
 	const cartTitle = cartTitleParts.join(' ').replace(/\s+\)/, ')');
@@ -165,14 +175,14 @@ export default function ProductDetailClient({
 		productId: product.id ?? '',
 		slug: product.slug,
 		title: cartTitle,
-		image: selectedTemplate.image || product.image,
-		sizeLabel: selectedSize.label,
+		image: selectedTemplate?.image || product.image,
+		sizeLabel: selectedSize?.label ?? '',
 		price: unitPrice,
 		priceLabel: formatRupiah(unitPrice),
 		installDate: installIso,
 		rentalDays,
-		designTemplateName: selectedTemplate.name,
-		themeColorName: selectedColor.name,
+		designTemplateName: selectedTemplate?.name,
+		themeColorName: selectedColor?.name,
 		addonNames: selectedAddons.map((a) => a.name),
 	};
 
@@ -316,39 +326,48 @@ export default function ProductDetailClient({
 								style={{ color: 'var(--text-muted)' }}>
 								Ukuran
 							</p>
-							<div className='flex flex-wrap gap-2'>
-								{product.sizes.map((size) => {
-									const active = size.id === selectedSizeId;
-									return (
-										<button
-											key={size.id}
-											type='button'
-											onClick={() => setSelectedSizeId(size.id)}
-											className='inline-flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl border-2 text-sm font-semibold cursor-pointer transition-all'
-											style={{
-												borderColor: active
-													? 'var(--primary)'
-													: 'var(--border)',
-												background: active
-													? 'rgba(157, 23, 77, 0.06)'
-													: 'var(--bg-surface)',
-												color: active ? 'var(--primary)' : 'var(--text)',
-											}}>
-											<span>{size.label}</span>
-											<span
-												className='text-[10px] font-medium'
+							{hasSize ? (
+								<div className='flex flex-wrap gap-2'>
+									{product.sizes.map((size) => {
+										const active = size.id === selectedSizeId;
+										return (
+											<button
+												key={size.id}
+												type='button'
+												onClick={() => setSelectedSizeId(size.id)}
+												className='inline-flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl border-2 text-sm font-semibold cursor-pointer transition-all'
 												style={{
-													color: active
+													borderColor: active
 														? 'var(--primary)'
-														: 'var(--text-muted)',
+														: 'var(--border)',
+													background: active
+														? 'rgba(157, 23, 77, 0.06)'
+														: 'var(--bg-surface)',
+													color: active ? 'var(--primary)' : 'var(--text)',
 												}}>
-												{size.priceLabel}
-											</span>
-										</button>
-									);
-								})}
-							</div>
-							{selectedSize.note && (
+												<span>{size.label}</span>
+												<span
+													className='text-[10px] font-medium'
+													style={{
+														color: active
+															? 'var(--primary)'
+															: 'var(--text-muted)',
+													}}>
+													{size.priceLabel}
+												</span>
+											</button>
+										);
+									})}
+								</div>
+							) : (
+								<p
+									className='text-xs'
+									style={{ color: 'var(--text-muted)' }}>
+									Ukuran belum tersedia untuk produk ini — pemesanan belum bisa
+									dilakukan.
+								</p>
+							)}
+							{selectedSize?.note && (
 								<p
 									className='text-[11px] mt-2'
 									style={{ color: 'var(--text-muted)' }}>
@@ -568,6 +587,7 @@ export default function ProductDetailClient({
 							</ul>
 						</div>
 
+						{product.designTemplates.length > 0 && (
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -615,14 +635,16 @@ export default function ProductDetailClient({
 								})}
 							</div>
 						</div>
+						)}
 
+						{product.themeColors.length > 0 && (
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
 								style={{ color: 'var(--text-muted)' }}>
 								Warna Tema:{' '}
 								<span style={{ color: 'var(--text)' }}>
-									{selectedColor.name}
+									{selectedColor?.name}
 								</span>
 							</p>
 							<div className='flex flex-wrap gap-2'>
@@ -660,7 +682,9 @@ export default function ProductDetailClient({
 								})}
 							</div>
 						</div>
+						)}
 
+						{product.addons.length > 0 && (
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -706,6 +730,7 @@ export default function ProductDetailClient({
 								})}
 							</div>
 						</div>
+						)}
 
 						<div className='mb-5'>
 							<p
