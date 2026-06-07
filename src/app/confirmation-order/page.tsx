@@ -22,7 +22,13 @@ import {
 	Wallet,
 } from 'lucide-react';
 import { Footer, Navbar } from '@/components';
-import { DateTimePicker } from '@/components/ui/date-time-picker';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { formatRupiah, useAuth, useCart, useToast } from '@/hooks';
 import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
 import { MIN_LEAD_TIME_DAYS } from '@/lib/rental-config';
@@ -46,6 +52,17 @@ const paymentMethods = [
 ] as const;
 
 type PaymentMethodId = (typeof paymentMethods)[number]['id'];
+
+/** Slot jam acara 07:00–22:00 tiap 30 menit. */
+const TIME_SLOTS: string[] = (() => {
+	const slots: string[] = [];
+	for (let m = 7 * 60; m <= 22 * 60; m += 30) {
+		const hh = String(Math.floor(m / 60)).padStart(2, '0');
+		const mm = String(m % 60).padStart(2, '0');
+		slots.push(`${hh}:${mm}`);
+	}
+	return slots;
+})();
 
 /** Format tanggal sewa selalu di zona UTC agar tidak bergeser hari bagi pengguna WIB. */
 function formatRentalDate(date: Date): string {
@@ -85,7 +102,7 @@ function CheckoutScreen() {
 	const [phone, setPhone] = useState('');
 	const [fullAddress, setFullAddress] = useState('');
 	const [city, setCity] = useState('');
-	const [eventAt, setEventAt] = useState<Date | undefined>(undefined);
+	const [eventTime, setEventTime] = useState('');
 	const [boardMessage, setBoardMessage] = useState('');
 	const [paymentMethod, setPaymentMethod] =
 		useState<PaymentMethodId>('transfer');
@@ -132,13 +149,23 @@ function CheckoutScreen() {
 	);
 	const hasStale = staleIds.size > 0;
 
+	// Tanggal acara MENGIKUTI tanggal pasang (dipilih di detail produk, sudah lewat
+	// cek ketersediaan) — pakai yang paling awal bila item berbeda tanggal. Di
+	// checkout pelanggan hanya memilih JAM, tak memilih tanggal lagi (anti-duplikat).
+	const eventBaseIso = items.length
+		? items.reduce(
+				(min, i) => (i.installDate < min ? i.installDate : min),
+				items[0]!.installDate,
+			)
+		: '';
+
 	const validate = () => {
 		const next: Record<string, string> = {};
 		if (!recipientName.trim()) next.recipientName = 'Nama penerima wajib diisi.';
 		if (!phone.trim()) next.phone = 'Nomor telepon wajib diisi.';
 		if (!fullAddress.trim()) next.fullAddress = 'Alamat acara wajib diisi.';
 		if (!city.trim()) next.city = 'Kota wajib diisi.';
-		if (!eventAt) next.eventDate = 'Tanggal & jam acara wajib diisi.';
+		if (!eventTime) next.eventDate = 'Jam acara wajib dipilih.';
 		setErrors(next);
 		return Object.keys(next).length === 0;
 	};
@@ -175,7 +202,8 @@ function CheckoutScreen() {
 					fullAddress: fullAddress.trim(),
 					city: city.trim(),
 				},
-				eventDate: eventAt!,
+				// Tanggal acara = tanggal pasang (dari keranjang) + jam dipilih, di WIB.
+				eventDate: new Date(`${eventBaseIso.slice(0, 10)}T${eventTime}:00+07:00`),
 				shippingCost: 0,
 				notes: composedNotes,
 				items: items.map((i) => ({
@@ -382,7 +410,7 @@ function CheckoutScreen() {
 									error={errors.fullAddress}
 									textarea
 								/>
-								<div className='grid sm:grid-cols-2 gap-4'>
+								<div className='space-y-4'>
 									<Field
 										id='city'
 										label='Kota / Kabupaten'
@@ -394,18 +422,55 @@ function CheckoutScreen() {
 									<div>
 										<label
 											className='block text-xs font-medium mb-2'
-											htmlFor='eventDate'>
+											htmlFor='eventTime'>
 											Tanggal &amp; Jam Acara
 										</label>
-										<DateTimePicker
-											date={eventAt}
-											onChange={setEventAt}
-											minDate={floorToUtcDay(new Date())}
-											placeholder='Pilih tanggal & jam acara'
-										/>
+										<div className='grid grid-cols-2 gap-2'>
+											{/* Tanggal = tanggal pasang (read-only, dari keranjang) */}
+											<div
+												className='inline-flex items-center gap-2 h-auto px-4 py-3 rounded-xl border text-sm'
+												style={{
+													borderColor: 'var(--border)',
+													background: 'var(--bg-surface)',
+													color: 'var(--text-secondary)',
+												}}>
+												<CalendarClock
+													size={15}
+													className='shrink-0'
+													style={{ color: 'var(--primary)' }}
+												/>
+												<span className='truncate'>
+													{eventBaseIso
+														? formatRentalDate(new Date(eventBaseIso))
+														: '—'}
+												</span>
+											</div>
+											<Select
+												value={eventTime || undefined}
+												onValueChange={setEventTime}>
+												<SelectTrigger
+													id='eventTime'
+													className='h-auto w-full rounded-xl bg-muted px-4 py-3'
+													aria-label='Jam acara'>
+													<SelectValue placeholder='Pilih jam' />
+												</SelectTrigger>
+												<SelectContent className='max-h-64'>
+													{TIME_SLOTS.map((t) => (
+														<SelectItem key={t} value={t}>
+															{t}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+										<p
+											className='text-[11px] mt-1.5'
+											style={{ color: 'var(--text-muted)' }}>
+											Tanggal mengikuti tanggal pasang yang dipilih — pilih jam acara.
+										</p>
 										{errors.eventDate && (
 											<p
-												className='text-[11px] mt-1.5'
+												className='text-[11px] mt-1'
 												style={{ color: 'var(--destructive)' }}>
 												{errors.eventDate}
 											</p>
