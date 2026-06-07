@@ -367,7 +367,7 @@ export default function AdminCustomersPage() {
 				</div>
 			</div>
 
-			{!isLoading && totalPages > 1 && (
+			{!isLoading && items.length > 0 && (
 				<div className='flex items-center justify-center gap-1.5'>
 					<button
 						type='button'
@@ -378,9 +378,23 @@ export default function AdminCustomersPage() {
 						style={{ color: 'var(--text-secondary)' }}>
 						<ChevronLeft size={16} />
 					</button>
-					<span className='px-3 text-sm' style={{ color: 'var(--text-secondary)' }}>
-						{page} / {totalPages}
-					</span>
+					{Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => {
+						const active = n === page;
+						return (
+							<button
+								type='button'
+								key={n}
+								onClick={() => setPage(n)}
+								className='inline-flex items-center justify-center min-w-9 h-9 px-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors'
+								style={{
+									background: active ? 'var(--primary)' : 'transparent',
+									color: active ? 'white' : 'var(--text-secondary)',
+									borderColor: active ? 'var(--primary)' : 'var(--border)',
+								}}>
+								{n}
+							</button>
+						);
+					})}
 					<button
 						type='button'
 						onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

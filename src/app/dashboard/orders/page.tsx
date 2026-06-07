@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
 	CalendarClock,
 	CalendarDays,
+	ChevronLeft,
+	ChevronRight,
 	MapPin,
 	Package,
 } from 'lucide-react';
@@ -70,8 +73,20 @@ function formatCreatedAt(date: Date): string {
 	});
 }
 
+const PAGE_SIZE = 5;
+
 export default function OrdersPage() {
 	const { data: orders, isLoading } = api.order.listMine.useQuery();
+	const [page, setPage] = useState(1);
+
+	const total = orders?.length ?? 0;
+	const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+	const paged = (orders ?? []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+	// Jaga halaman tetap dalam rentang saat jumlah data berubah.
+	useEffect(() => {
+		setPage((p) => Math.min(p, totalPages));
+	}, [totalPages]);
 
 	return (
 		<section>
@@ -91,11 +106,53 @@ export default function OrdersPage() {
 			) : !orders || orders.length === 0 ? (
 				<EmptyState />
 			) : (
-				<div className='space-y-4'>
-					{orders.map((order) => (
-						<OrderCard key={order.id} order={order} />
-					))}
-				</div>
+				<>
+					<div className='space-y-4'>
+						{paged.map((order) => (
+							<OrderCard key={order.id} order={order} />
+						))}
+					</div>
+
+					{total > 0 && (
+						<div className='flex items-center justify-center gap-1.5 pt-6'>
+							<button
+								type='button'
+								onClick={() => setPage((p) => Math.max(1, p - 1))}
+								disabled={page === 1}
+								aria-label='Halaman sebelumnya'
+								className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+								style={{ color: 'var(--text-secondary)' }}>
+								<ChevronLeft size={16} />
+							</button>
+							{Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => {
+								const active = n === page;
+								return (
+									<button
+										type='button'
+										key={n}
+										onClick={() => setPage(n)}
+										className='inline-flex items-center justify-center min-w-9 h-9 px-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors'
+										style={{
+											background: active ? 'var(--primary)' : 'transparent',
+											color: active ? 'white' : 'var(--text-secondary)',
+											borderColor: active ? 'var(--primary)' : 'var(--border)',
+										}}>
+										{n}
+									</button>
+								);
+							})}
+							<button
+								type='button'
+								onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+								disabled={page === totalPages}
+								aria-label='Halaman berikutnya'
+								className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+								style={{ color: 'var(--text-secondary)' }}>
+								<ChevronRight size={16} />
+							</button>
+						</div>
+					)}
+				</>
 			)}
 		</section>
 	);
