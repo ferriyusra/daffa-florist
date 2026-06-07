@@ -1,167 +1,230 @@
-import { Eye, Filter, Search } from 'lucide-react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, Eye, Package, Search } from 'lucide-react';
+import { api, type RouterOutputs } from '@/trpc/react';
+import { formatRupiah } from '@/hooks';
+import { ProgressBar } from '@/components';
+import { productCategories } from '@/lib';
+
+/** Zona waktu bisnis (Pasaman Barat = WIB, UTC+7) untuk batas filter tanggal. */
+const WIB_OFFSET = '+07:00';
+/** `YYYY-MM-DD` → instant awal hari WIB. */
+const startOfDayWib = (s: string) => new Date(`${s}T00:00:00.000${WIB_OFFSET}`);
+/** `YYYY-MM-DD` → instant akhir hari WIB (inklusif). */
+const endOfDayWib = (s: string) => new Date(`${s}T23:59:59.999${WIB_OFFSET}`);
+/** Slug kategori → label rapi (mis. `papan-bunga` → `Papan Bunga`). */
+const prettyCategory = (slug: string) =>
+	slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 type OrderStatus =
-	| 'Selesai'
-	| 'Dikirim'
-	| 'Diproses'
-	| 'Menunggu Pembayaran'
-	| 'Dibatalkan';
+	RouterOutputs['admin']['order']['list']['items'][number]['status'];
 
-const orders: {
-	id: string;
-	date: string;
-	customer: string;
-	product: string;
-	area: string;
-	total: string;
-	status: OrderStatus;
-}[] = [
-	{
-		id: 'DF-2026-0042',
-		date: '07 Mei 2026',
-		customer: 'Ibu Ratna',
-		product: 'Papan Bunga Wedding',
-		area: 'Ampar Putih',
-		total: 'Rp 350.000',
-		status: 'Diproses',
-	},
-	{
-		id: 'DF-2026-0041',
-		date: '07 Mei 2026',
-		customer: 'Pak Hendra',
-		product: 'Dekorasi Mobil Pengantin',
-		area: 'Simpang Empat',
-		total: 'Rp 500.000',
-		status: 'Menunggu Pembayaran',
-	},
-	{
-		id: 'DF-2026-0040',
-		date: '06 Mei 2026',
-		customer: 'Ibu Sari',
-		product: 'Papan Bunga Duka Cita',
-		area: 'Kinali',
-		total: 'Rp 350.000',
-		status: 'Dikirim',
-	},
-	{
-		id: 'DF-2026-0039',
-		date: '05 Mei 2026',
-		customer: 'Pak Budi',
-		product: 'Papan Bunga Premium',
-		area: 'Talamau',
-		total: 'Rp 500.000',
-		status: 'Selesai',
-	},
-	{
-		id: 'DF-2026-0038',
-		date: '05 Mei 2026',
-		customer: 'Ibu Lina',
-		product: 'Papan Bunga Ucapan',
-		area: 'Pasaman',
-		total: 'Rp 350.000',
-		status: 'Selesai',
-	},
-	{
-		id: 'DF-2026-0037',
-		date: '04 Mei 2026',
-		customer: 'Pak Roni',
-		product: 'Papan Bunga Wedding',
-		area: 'Lembah Melintang',
-		total: 'Rp 350.000',
-		status: 'Dibatalkan',
-	},
-];
-
-const statusStyles: Record<OrderStatus, { bg: string; color: string }> = {
-	Selesai: { bg: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' },
-	Dikirim: { bg: 'rgba(168, 85, 247, 0.12)', color: '#7c3aed' },
-	Diproses: { bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
-	'Menunggu Pembayaran': {
+// Semua 8 status sewa → label Indonesia + warna (token/inline).
+const statusStyles: Record<
+	OrderStatus,
+	{ label: string; bg: string; color: string }
+> = {
+	PENDING: {
+		label: 'Menunggu Konfirmasi',
 		bg: 'rgba(234, 179, 8, 0.15)',
 		color: '#a16207',
 	},
-	Dibatalkan: { bg: 'rgba(194, 45, 45, 0.12)', color: 'var(--destructive)' },
+	CONFIRMED: {
+		label: 'Dikonfirmasi',
+		bg: 'rgba(59, 130, 246, 0.12)',
+		color: '#2563eb',
+	},
+	SCHEDULED: {
+		label: 'Dijadwalkan',
+		bg: 'rgba(99, 102, 241, 0.12)',
+		color: '#4f46e5',
+	},
+	INSTALLED: {
+		label: 'Terpasang',
+		bg: 'rgba(20, 184, 166, 0.14)',
+		color: '#0d9488',
+	},
+	PICKED_UP: {
+		label: 'Dibongkar',
+		bg: 'rgba(139, 92, 246, 0.14)',
+		color: '#7c3aed',
+	},
+	RETURNED: {
+		label: 'Dikembalikan',
+		bg: 'rgba(100, 116, 139, 0.14)',
+		color: '#475569',
+	},
+	COMPLETED: {
+		label: 'Selesai',
+		bg: 'rgba(34, 197, 94, 0.12)',
+		color: '#16a34a',
+	},
+	CANCELLED: {
+		label: 'Dibatalkan',
+		bg: 'rgba(220, 38, 38, 0.12)',
+		color: '#dc2626',
+	},
 };
 
-const filterTabs: { label: string; count: number }[] = [
-	{ label: 'Semua', count: orders.length },
-	{
-		label: 'Menunggu Pembayaran',
-		count: orders.filter((o) => o.status === 'Menunggu Pembayaran').length,
-	},
-	{
-		label: 'Diproses',
-		count: orders.filter((o) => o.status === 'Diproses').length,
-	},
-	{
-		label: 'Dikirim',
-		count: orders.filter((o) => o.status === 'Dikirim').length,
-	},
-	{
-		label: 'Selesai',
-		count: orders.filter((o) => o.status === 'Selesai').length,
-	},
-];
+const statusFilters = [
+	'ALL',
+	'PENDING',
+	'CONFIRMED',
+	'SCHEDULED',
+	'INSTALLED',
+	'PICKED_UP',
+	'RETURNED',
+	'COMPLETED',
+	'CANCELLED',
+] as const;
+
+const statusFilterLabel: Record<(typeof statusFilters)[number], string> = {
+	ALL: 'Semua',
+	PENDING: 'Menunggu Konfirmasi',
+	CONFIRMED: 'Dikonfirmasi',
+	SCHEDULED: 'Dijadwalkan',
+	INSTALLED: 'Terpasang',
+	PICKED_UP: 'Dibongkar',
+	RETURNED: 'Dikembalikan',
+	COMPLETED: 'Selesai',
+	CANCELLED: 'Dibatalkan',
+};
+
+const formatDate = (d: Date) =>
+	new Date(d).toLocaleDateString('id-ID', {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+	});
 
 export default function AdminOrdersPage() {
+	const [search, setSearch] = useState('');
+	const [debouncedSearch, setDebouncedSearch] = useState('');
+	const [status, setStatus] = useState<(typeof statusFilters)[number]>('ALL');
+	const [category, setCategory] = useState('');
+	const [dateFrom, setDateFrom] = useState('');
+	const [dateTo, setDateTo] = useState('');
+	const [page, setPage] = useState(1);
+
+	// Debounce pencarian (tabel pesanan = join lebih berat) + reset ke halaman 1.
+	useEffect(() => {
+		const t = setTimeout(() => {
+			setDebouncedSearch(search);
+			setPage(1);
+		}, 300);
+		return () => clearTimeout(t);
+	}, [search]);
+
+	// Filter non-search me-reset halaman SINKRON di handler (batched) → tak ada
+	// fetch ganda {filter,page:N} lalu {filter,page:1}.
+	const resetPage = () => setPage(1);
+
+	const { data, isLoading, isFetching } = api.admin.order.list.useQuery({
+		search: debouncedSearch,
+		status,
+		category: category || undefined,
+		dateFrom: dateFrom ? startOfDayWib(dateFrom) : undefined,
+		dateTo: dateTo ? endOfDayWib(dateTo) : undefined,
+		page,
+		pageSize: 10,
+	});
+
+	const items = data?.items ?? [];
+	const totalPages = data?.totalPages ?? 1;
+
 	return (
 		<div className='space-y-5'>
-			<div className='flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between'>
-				<div className='flex items-center gap-2 flex-1 max-w-md'>
-					<div
-						className='flex items-center gap-2 flex-1 px-3.5 h-10 rounded-xl border border-[var(--border)]'
-						style={{ background: 'var(--bg-card)' }}>
-						<Search size={15} style={{ color: 'var(--text-muted)' }} />
-						<input
-							type='search'
-							placeholder='Cari ID atau nama customer...'
-							className='flex-1 bg-transparent text-sm outline-none'
-						/>
-					</div>
-					<button
-						type='button'
-						className='inline-flex items-center gap-2 h-10 px-3.5 rounded-xl border border-[var(--border)] text-sm font-medium cursor-pointer'
+			<div className='flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between'>
+				<div
+					className='flex items-center gap-2 flex-1 max-w-md px-3.5 h-10 rounded-xl border border-[var(--border)]'
+					style={{ background: 'var(--bg-card)' }}>
+					<Search size={15} style={{ color: 'var(--text-muted)' }} />
+					<input
+						type='search'
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder='Cari no. pesanan, nama, atau email...'
+						className='flex-1 bg-transparent text-sm outline-none'
+					/>
+				</div>
+				<div className='flex flex-wrap items-center gap-2'>
+					<select
+						value={status}
+						onChange={(e) => {
+							setStatus(e.target.value as (typeof statusFilters)[number]);
+							resetPage();
+						}}
+						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm font-medium cursor-pointer outline-none'
 						style={{
 							background: 'var(--bg-card)',
 							color: 'var(--text-secondary)',
 						}}>
-						<Filter size={14} />
-						Filter
-					</button>
+						{statusFilters.map((s) => (
+							<option key={s} value={s}>
+								{statusFilterLabel[s]}
+							</option>
+						))}
+					</select>
+					<select
+						value={category}
+						onChange={(e) => {
+							setCategory(e.target.value);
+							resetPage();
+						}}
+						aria-label='Filter kategori'
+						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm font-medium cursor-pointer outline-none'
+						style={{
+							background: 'var(--bg-card)',
+							color: 'var(--text-secondary)',
+						}}>
+						<option value=''>Semua Kategori</option>
+						{productCategories.map((c) => (
+							<option key={c} value={c}>
+								{prettyCategory(c)}
+							</option>
+						))}
+					</select>
+					<input
+						type='date'
+						value={dateFrom}
+						onChange={(e) => {
+							setDateFrom(e.target.value);
+							resetPage();
+						}}
+						aria-label='Dari tanggal'
+						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm cursor-pointer outline-none'
+						style={{
+							background: 'var(--bg-card)',
+							color: 'var(--text-secondary)',
+						}}
+					/>
+					<span className='text-sm' style={{ color: 'var(--text-muted)' }}>
+						–
+					</span>
+					<input
+						type='date'
+						value={dateTo}
+						onChange={(e) => {
+							setDateTo(e.target.value);
+							resetPage();
+						}}
+						aria-label='Sampai tanggal'
+						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm cursor-pointer outline-none'
+						style={{
+							background: 'var(--bg-card)',
+							color: 'var(--text-secondary)',
+						}}
+					/>
 				</div>
 			</div>
 
-			<div className='flex gap-2 flex-wrap'>
-				{filterTabs.map((tab, i) => (
-					<button
-						type='button'
-						key={tab.label}
-						className='inline-flex items-center gap-2 px-3.5 h-9 rounded-full text-xs font-semibold cursor-pointer transition-colors border'
-						style={{
-							background: i === 0 ? 'var(--primary)' : 'transparent',
-							color: i === 0 ? 'white' : 'var(--text-secondary)',
-							borderColor: i === 0 ? 'var(--primary)' : 'var(--border)',
-						}}>
-						{tab.label}
-						<span
-							className='inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold'
-							style={{
-								background:
-									i === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(157, 23, 77, 0.1)',
-								color: i === 0 ? 'white' : 'var(--primary)',
-							}}>
-							{tab.count}
-						</span>
-					</button>
-				))}
-			</div>
+			<ProgressBar active={isFetching} />
 
 			<div
 				className='rounded-2xl border border-[var(--border)] overflow-hidden'
-				style={{
-					background: 'var(--bg-card)',
-					boxShadow: 'var(--shadow-sm)',
-				}}>
+				style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
 				<div className='overflow-x-auto'>
 					<table className='w-full text-sm'>
 						<thead>
@@ -171,74 +234,134 @@ export default function AdminOrdersPage() {
 									background: 'rgba(157, 23, 77, 0.04)',
 									color: 'var(--text-muted)',
 								}}>
-								<th className='px-6 py-3 font-semibold'>ID</th>
-								<th className='px-6 py-3 font-semibold'>Tanggal</th>
-								<th className='px-6 py-3 font-semibold'>Customer</th>
-								<th className='px-6 py-3 font-semibold'>Produk</th>
-								<th className='px-6 py-3 font-semibold'>Area</th>
-								<th className='px-6 py-3 font-semibold'>Total</th>
+								<th className='px-6 py-3 font-semibold'>No. Pesanan</th>
+								<th className='px-6 py-3 font-semibold'>Pelanggan</th>
+								<th className='px-6 py-3 font-semibold'>Item</th>
 								<th className='px-6 py-3 font-semibold'>Status</th>
+								<th className='px-6 py-3 font-semibold'>Tanggal</th>
+								<th className='px-6 py-3 font-semibold text-right'>Total</th>
 								<th className='px-6 py-3 font-semibold text-right'>Aksi</th>
 							</tr>
 						</thead>
 						<tbody>
-							{orders.map((order) => {
-								const style = statusStyles[order.status];
-								return (
-									<tr
-										key={order.id}
-										className='border-t border-[var(--border)]'>
-										<td
-											className='px-6 py-4 font-mono font-semibold whitespace-nowrap'
-											style={{ color: 'var(--text)' }}>
-											{order.id}
-										</td>
-										<td
-											className='px-6 py-4 whitespace-nowrap'
-											style={{ color: 'var(--text-secondary)' }}>
-											{order.date}
-										</td>
-										<td className='px-6 py-4 whitespace-nowrap'>
-											{order.customer}
-										</td>
-										<td
-											className='px-6 py-4'
-											style={{ color: 'var(--text-secondary)' }}>
-											{order.product}
-										</td>
-										<td
-											className='px-6 py-4 whitespace-nowrap'
-											style={{ color: 'var(--text-secondary)' }}>
-											{order.area}
-										</td>
-										<td
-											className='px-6 py-4 font-semibold whitespace-nowrap'
-											style={{ color: 'var(--primary)' }}>
-											{order.total}
-										</td>
-										<td className='px-6 py-4'>
-											<span
-												className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap'
-												style={{ background: style.bg, color: style.color }}>
-												{order.status}
-											</span>
-										</td>
-										<td className='px-6 py-4 text-right'>
-											<button
-												type='button'
-												className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-colors'
+							{isLoading ? (
+								<tr>
+									<td
+										colSpan={7}
+										className='px-6 py-12 text-center text-sm'
+										style={{ color: 'var(--text-muted)' }}>
+										Memuat data...
+									</td>
+								</tr>
+							) : items.length === 0 ? (
+								<tr>
+									<td
+										colSpan={7}
+										className='px-6 py-12 text-center text-sm'
+										style={{ color: 'var(--text-muted)' }}>
+										Tidak ada pesanan yang cocok.
+									</td>
+								</tr>
+							) : (
+								items.map((o) => {
+									const style = statusStyles[o.status];
+									return (
+										<tr
+											key={o.id}
+											className='border-t border-[var(--border)]'>
+											<td
+												className='px-6 py-4 font-mono font-semibold whitespace-nowrap'
+												style={{ color: 'var(--text)' }}>
+												{o.orderNumber}
+											</td>
+											<td className='px-6 py-4'>
+												<p className='font-semibold truncate'>
+													{o.customerName}
+												</p>
+												<p
+													className='text-xs truncate'
+													style={{ color: 'var(--text-muted)' }}>
+													{o.customerEmail}
+												</p>
+											</td>
+											<td
+												className='px-6 py-4'
 												style={{ color: 'var(--text-secondary)' }}>
-												<Eye size={12} />
-												Detail
-											</button>
-										</td>
-									</tr>
-								);
-							})}
+												<span className='inline-flex items-center gap-1.5'>
+													<Package size={13} />
+													{o.itemCount} item
+												</span>
+												{o.firstProductTitle && (
+													<p
+														className='text-xs truncate max-w-[14rem]'
+														style={{ color: 'var(--text-muted)' }}>
+														{o.firstProductTitle}
+														{o.itemCount > 1 ? ', …' : ''}
+													</p>
+												)}
+											</td>
+											<td className='px-6 py-4'>
+												<span
+													className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap'
+													style={{ background: style.bg, color: style.color }}>
+													{style.label}
+												</span>
+											</td>
+											<td
+												className='px-6 py-4 whitespace-nowrap text-xs'
+												style={{ color: 'var(--text-secondary)' }}>
+												{formatDate(o.createdAt)}
+											</td>
+											<td
+												className='px-6 py-4 font-semibold whitespace-nowrap text-right'
+												style={{ color: 'var(--primary)' }}>
+												{formatRupiah(o.total)}
+											</td>
+											<td className='px-6 py-4 text-right'>
+												<Link
+													href={`/admin/orders/${o.id}`}
+													className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-colors'
+													style={{ color: 'var(--text-secondary)' }}>
+													<Eye size={12} />
+													Lihat
+												</Link>
+											</td>
+										</tr>
+									);
+								})
+							)}
 						</tbody>
 					</table>
 				</div>
 			</div>
+
+			{!isLoading && totalPages > 1 && (
+				<div className='flex items-center justify-center gap-1.5'>
+					<button
+						type='button'
+						onClick={() => setPage((p) => Math.max(1, p - 1))}
+						disabled={page === 1}
+						aria-label='Halaman sebelumnya'
+						className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+						style={{ color: 'var(--text-secondary)' }}>
+						<ChevronLeft size={16} />
+					</button>
+					<span
+						className='px-3 text-sm'
+						style={{ color: 'var(--text-secondary)' }}>
+						{page} / {totalPages}
+					</span>
+					<button
+						type='button'
+						onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+						disabled={page === totalPages}
+						aria-label='Halaman berikutnya'
+						className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+						style={{ color: 'var(--text-secondary)' }}>
+						<ChevronRight size={16} />
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }
