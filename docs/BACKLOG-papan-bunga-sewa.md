@@ -170,8 +170,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **Sebagai** pelanggan, **agar** memilih tanggal pasang & durasi.
 **AC:** Date picker dengan tanggal penuh ter-disable (dari `getBookedDates`), selector durasi (chip 1/3/7 hari) dengan harga dinamis, menampilkan estimasi tanggal ambil & status ketersediaan.
 
-- [x] `M` Komponen `RentalDatePicker` (kalender UTC mandiri, disable tanggal penuh & < lead time, a11y label) di [src/components/](../src/components/) + barrel.
-- [x] `S` Komponen `RentalDurationSelector` (chip 1/3/7). _Catatan: harga **flat per periode** (backend `createRental` tak mengalikan hari) → durasi memengaruhi pickup & ketersediaan, BUKAN harga. "Harga dinamis" perlu perubahan backend bila diinginkan._
+- [x] `M` Komponen `RentalDatePicker` (disable tanggal penuh & < lead time, a11y label) di [src/components/](../src/components/) + barrel. _Kini di atas **shadcn Calendar** (react-day-picker v10) dengan konversi batas UTC↔lokal agar tak bergeser hari._
+- [x] `S` Komponen `RentalDurationSelector` (chip 1/3/7, kini **shadcn Button**). _Catatan: harga **flat per periode** (backend `createRental` tak mengalikan hari) → durasi memengaruhi pickup & ketersediaan, BUKAN harga. "Harga dinamis" perlu perubahan backend bila diinginkan._
 - [x] `S` Integrasi di [products/[slug]](../src/app/products/[slug]/) — `getBookedDates` + `checkAvailability` saat tanggal/durasi/ukuran berubah; estimasi pickup + status; tombol order di-gate pada ketersediaan (anti-stale via `isFetching`). Expose `Product.id` ke client.
 - [x] `S` State "Penuh" → saran `nextAvailableDate` (hanya bila di jendela kalender; di luar itu pesan "hubungi kami"); kalender ikut pindah bulan saat saran dipilih.
 
@@ -190,7 +190,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 
 - [x] `S` Perluas `useCart` ([use-cart.ts](../src/hooks/use-cart.ts)): item bawa `productId/sizeLabel/installDate(ISO)/rentalDays/opsi`; `cartId` ikut periode; validasi item saat read (buang cart lama). Pola localStorage+event dipertahankan.
 - [x] `S` Ringkasan periode di keranjang/checkout (pasang→bongkar, jumlah hari, basis UTC).
-- [x] `M` Form checkout: penerima, no HP, alamat acara, kota, waktu acara, catatan papan (§5.1 F3) — validasi JS (tanpa atribut `required`). _Patokan/landmark belum ada di skema Address → folded/diabaikan M2._
+- [x] `M` Form checkout: penerima, no HP, alamat acara, kota, waktu acara, catatan papan (§5.1 F3) — validasi JS (tanpa atribut `required`). _Patokan/landmark belum ada di skema Address → folded/diabaikan M2._ Tanggal & jam acara via **shadcn `DateTimePicker`** (kalender + dropdown jam 30 menit 07:00–22:00).
 - [x] `S` Rincian biaya checkout (subtotal − diskon; ongkir & diskon = Rp 0 M2, ongkir "dikonfirmasi admin").
 - [~] `S` Pilih metode pembayaran (transfer/DP) — pilihan ditangkap & dilipat ke `notes`; instruksi transfer di success. _Unggah/konfirmasi bukti **ditunda**: butuh model `Payment`._
 
@@ -206,6 +206,10 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 - [x] `S` Halaman konfirmasi + nomor pesanan ([confirmation-order](../src/app/confirmation-order/)) — success screen tampilkan `orderNumber` + total server + instruksi transfer (S2.5).
 - [x] `S` `order.listMine` + riwayat di [dashboard/orders](../src/app/dashboard/orders/) dengan badge status sewa (8 status), periode per item, alamat (S2.5).
 
+> **Catatan teknis (lintas-story, dari sesi testing manual):**
+> - **shadcn/ui diadopsi** — `ui/{button,popover,calendar,select,date-time-picker}`, util `cn`, `components.json`; token shadcn dipetakan ke design system existing di [globals.css](../src/app/globals.css). Dipakai untuk `DateTimePicker` checkout (S2.5) & migrasi pickers sewa (S2.3). Komponen UI lain belum dimigrasi.
+> - **Perbaikan stabilitas:** barrel `@/lib` dibuat client-safe (`constant` ber-`@/env` dikeluarkan dari barrel); pesan error produk-hilang diramahkan (tanpa UUID mentah); detail produk tahan produk tanpa ukuran/template/warna; `createRental` memvalidasi sesi user (hindari FK violation saat JWT basi → pesan login ulang); `order-detail` admin diberi `'use client'`.
+
 ---
 
 ## E3 — Admin Operasional (M3)
@@ -216,15 +220,15 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 **AC:** Procedure admin hanya untuk `UserRole.ADMIN`; router `admin` terdaftar di [root.ts](../src/server/api/root.ts).
 > `adminProcedure` sudah dibuat di **S0.4** — story ini mereusenya, tinggal merangkai sub-router sewa.
 
-- [ ] `XS` Pastikan `adminProcedure` (dari S0.4) tersedia di [trpc.ts](../src/server/api/trpc.ts).
-- [ ] `XS` Buat router `admin` (+ sub-router `order`, `unit`, `calendar`) & daftarkan.
+- [x] `XS` `adminProcedure` (dari S0.4) tersedia di [trpc.ts](../src/server/api/trpc.ts) — dipakai semua sub-router admin.
+- [~] `XS` Router `admin` terdaftar; sub-router `order` ✅ (S3.2). `unit`/`calendar` menyusul di S3.4/S3.5.
 
 ### S3.2 — Daftar & detail pesanan admin
 **AC:** `admin.order.list` dengan filter status/rentang tanggal/kategori; halaman [admin/orders](../src/app/admin/orders/) terhubung data nyata.
 
-- [ ] `S` Implement `admin.order.list` (filter + pagination).
-- [ ] `M` Hubungkan UI [admin/orders](../src/app/admin/orders/) ke data (saat ini statis) — tabel + filter.
-- [ ] `S` Halaman detail pesanan admin (item, periode, lokasi, pembayaran).
+- [x] `S` `admin.order.list` — filter status/kategori/rentang tanggal (WIB, inklusif)/search + pagination; `getById` detail.
+- [x] `M` UI [admin/orders](../src/app/admin/orders/) terhubung data nyata — tabel + filter (status, kategori, tanggal, search) + pagination, badge 8 status.
+- [x] `S` Halaman detail pesanan admin [admin/orders/[id]](../src/app/admin/orders/) — item+periode, pelanggan, lokasi, biaya, catatan (metode bayar/pesan papan). Read-only (aksi status di S3.3).
 
 ### S3.3 — Update status & jadwal pasang/pickup
 **AC:** `admin.order.updateStatus` mengubah status mengikuti alur §6.2 dan menetapkan jadwal pasang; verifikasi pembayaran → CONFIRMED.

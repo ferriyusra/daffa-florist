@@ -19,7 +19,7 @@ enum OrderStatus {
   INSTALLED // sudah dipasang di lokasi acara
   PICKED_UP // sudah diambil kembali
   RETURNED // unit kembali & dicek kondisinya
-  COMPLETED // selesai, unit kembali & dicek
+  COMPLETED // pesanan tuntas — pembayaran lunas & unit kembali dengan baik
   CANCELLED // dibatalkan
 }
 

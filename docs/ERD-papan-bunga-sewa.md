@@ -191,16 +191,18 @@ PENDING ──▶ CONFIRMED ──▶ SCHEDULED ──▶ INSTALLED ──▶ PI
    └──────────────────────────────▶ CANCELLED (bisa dari status mana pun sebelum selesai)
 ```
 
-| Status | Arti |
-|--------|------|
-| `PENDING` | Menunggu pembayaran/verifikasi |
-| `CONFIRMED` | Pembayaran terverifikasi |
-| `SCHEDULED` 🆕 | Jadwal pasang ditetapkan |
-| `INSTALLED` 🆕 | Sudah dipasang di lokasi |
-| `PICKED_UP` 🆕 | Sudah diambil kembali |
-| `RETURNED` 🆕 | Unit kembali & dicek |
-| `COMPLETED` 🆕 | Selesai, unit kembali & dicek |
-| `CANCELLED` | Dibatalkan |
+| Status | Arti | Aktor & aksi pemicu |
+|--------|------|---------------------|
+| `PENDING` | Pesanan dibuat, menunggu pembayaran & verifikasi | Pelanggan checkout (`createRental`) — order lahir di status ini |
+| `CONFIRMED` | Pembayaran (DP/lunas) terverifikasi | Admin memverifikasi bukti pembayaran |
+| `SCHEDULED` 🆕 | Jadwal pemasangan papan ditetapkan | Admin menetapkan tanggal/slot tim pasang |
+| `INSTALLED` 🆕 | Papan sudah terpasang di lokasi acara | Tim lapangan menandai setelah memasang |
+| `PICKED_UP` 🆕 | Masa sewa habis, papan diambil/dibongkar dari lokasi | Tim lapangan mengangkut papan kembali |
+| `RETURNED` 🆕 | Papan kembali ke gudang & kondisinya diperiksa | Tim/admin mengecek unit (bila rusak → `MAINTENANCE`) |
+| `COMPLETED` 🆕 | Pesanan tuntas — pembayaran lunas & unit sudah kembali dengan baik | Admin menutup pesanan |
+| `CANCELLED` | Pesanan dibatalkan (dari status mana pun sebelum selesai) | Pelanggan/admin membatalkan |
+
+> Hanya `CANCELLED` & `COMPLETED` yang dianggap **tidak aktif** (tak lagi menahan unit) saat cek ketersediaan (lihat §4). Status lain masih "memegang" unit pada periodenya.
 
 > Status existing `PROCESSING / SHIPPED / DELIVERED` (model jual-putus) digantikan rangkaian status sewa di atas.
 
