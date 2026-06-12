@@ -15,7 +15,18 @@
       "Bash(grep -rn \"^[[:space:]]*required$\" src/app/register/page.tsx src/app/login/page.tsx src/app/confirmation-order/page.tsx src/components/contact.tsx)",
       "Bash(git -c color.ui=false diff --name-only HEAD)",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
-      "Bash(./node_modules/.bin/tsx scripts/test-admin-gallery.ts)"
+      "Bash(./node_modules/.bin/tsx scripts/test-admin-gallery.ts)",
+      "Bash(git -c color.ui=false status --short)",
+      "Bash(./node_modules/.bin/tsx scripts/test-admin-delivery-area.ts)",
+      "Bash(git reset *)",
+      "Bash(./node_modules/.bin/tsx scripts/test-admin-promo.ts)",
+      "Bash(node -e ' *)",
+      "Bash(git push *)",
+      "Bash(./node_modules/.bin/tsc --noEmit -p tsconfig.json)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/private/tmp"
     ]
   }
 }
