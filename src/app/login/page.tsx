@@ -6,6 +6,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Footer, Navbar } from '@/components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
 	return (
@@ -80,55 +83,55 @@ function LoginForm() {
 						</p>
 					</div>
 
-					<form onSubmit={handleSubmit} className='p-8 space-y-5'>
+					<form
+						onSubmit={handleSubmit}
+						noValidate
+						className='p-8 space-y-5'>
 						<div>
-							<label
-								htmlFor='email'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='email' className='mb-2'>
 								Email
-							</label>
+							</Label>
 							<div className='relative'>
 								<Mail
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='email'
 									type='email'
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
 									placeholder='nama@email.com'
-									className='w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									aria-invalid={!!error}
+									className='h-11 pl-10 pr-4'
 								/>
 							</div>
 						</div>
 
 						<div>
-							<label
-								htmlFor='password'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='password' className='mb-2'>
 								Password
-							</label>
+							</Label>
 							<div className='relative'>
 								<Lock
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='password'
 									type={showPassword ? 'text' : 'password'}
-									minLength={6}
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}
 									placeholder='Minimal 6 karakter'
-									className='w-full pl-10 pr-10 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									aria-invalid={!!error}
+									className='h-11 pl-10 pr-10'
 								/>
 								<button
 									type='button'
 									onClick={() => setShowPassword(!showPassword)}
-									className='absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer'
+									className='absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer'
 									style={{ color: 'var(--text-muted)' }}
 									aria-label={
 										showPassword
@@ -181,13 +184,12 @@ function LoginForm() {
 							</p>
 						)}
 
-						<button
+						<Button
 							type='submit'
 							disabled={submitting}
-							className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed'
-							style={{ background: 'var(--primary)' }}>
+							className='w-full h-11 rounded-full'>
 							{submitting ? 'Memproses...' : 'Masuk'}
-						</button>
+						</Button>
 
 						<p
 							className='text-center text-sm'

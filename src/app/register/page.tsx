@@ -14,6 +14,9 @@ import {
 	Phone,
 } from 'lucide-react';
 import { Footer, Navbar } from '@/components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { api } from '@/trpc/react';
 import { registerFields } from '@/lib/auth-schema';
 
@@ -41,9 +44,6 @@ function FieldError({ msg }: { msg?: string }) {
 		</p>
 	);
 }
-
-const inputBase =
-	'w-full pl-10 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors';
 
 function RegisterForm() {
 	const router = useRouter();
@@ -136,17 +136,17 @@ function RegisterForm() {
 
 					<form onSubmit={handleSubmit} className='p-8 space-y-5' noValidate>
 						<div>
-							<label htmlFor='name' className='block text-sm font-medium mb-2'>
+							<Label htmlFor='name' className='mb-2'>
 								Nama Lengkap
 								<Asterisk />
-							</label>
+							</Label>
 							<div className='relative'>
 								<User
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='name'
 									type='text'
 									value={name}
@@ -155,31 +155,25 @@ function RegisterForm() {
 										clearErr('name');
 									}}
 									placeholder='Nama Anda'
-									className={`${inputBase} pr-4`}
-									style={{
-										borderColor: fieldErrors.name
-											? 'var(--destructive)'
-											: undefined,
-									}}
+									aria-invalid={!!fieldErrors.name}
+									className='h-11 pl-10 pr-4'
 								/>
 							</div>
 							<FieldError msg={fieldErrors.name} />
 						</div>
 
 						<div>
-							<label
-								htmlFor='email'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='email' className='mb-2'>
 								Email
 								<Asterisk />
-							</label>
+							</Label>
 							<div className='relative'>
 								<Mail
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='email'
 									type='email'
 									value={email}
@@ -188,31 +182,25 @@ function RegisterForm() {
 										clearErr('email');
 									}}
 									placeholder='nama@email.com'
-									className={`${inputBase} pr-4`}
-									style={{
-										borderColor: fieldErrors.email
-											? 'var(--destructive)'
-											: undefined,
-									}}
+									aria-invalid={!!fieldErrors.email}
+									className='h-11 pl-10 pr-4'
 								/>
 							</div>
 							<FieldError msg={fieldErrors.email} />
 						</div>
 
 						<div>
-							<label
-								htmlFor='phone'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='phone' className='mb-2'>
 								Nomor WhatsApp
 								<Asterisk />
-							</label>
+							</Label>
 							<div className='relative'>
 								<Phone
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='phone'
 									type='tel'
 									value={phone}
@@ -221,31 +209,25 @@ function RegisterForm() {
 										clearErr('phone');
 									}}
 									placeholder='08xxxxxxxxxx'
-									className={`${inputBase} pr-4`}
-									style={{
-										borderColor: fieldErrors.phone
-											? 'var(--destructive)'
-											: undefined,
-									}}
+									aria-invalid={!!fieldErrors.phone}
+									className='h-11 pl-10 pr-4'
 								/>
 							</div>
 							<FieldError msg={fieldErrors.phone} />
 						</div>
 
 						<div>
-							<label
-								htmlFor='password'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='password' className='mb-2'>
 								Password
 								<Asterisk />
-							</label>
+							</Label>
 							<div className='relative'>
 								<Lock
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='password'
 									type={showPassword ? 'text' : 'password'}
 									value={password}
@@ -255,17 +237,13 @@ function RegisterForm() {
 										clearErr('confirmPassword');
 									}}
 									placeholder='Minimal 6 karakter'
-									className={`${inputBase} pr-10`}
-									style={{
-										borderColor: fieldErrors.password
-											? 'var(--destructive)'
-											: undefined,
-									}}
+									aria-invalid={!!fieldErrors.password}
+									className='h-11 pl-10 pr-10'
 								/>
 								<button
 									type='button'
 									onClick={() => setShowPassword(!showPassword)}
-									className='absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer'
+									className='absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer'
 									style={{ color: 'var(--text-muted)' }}
 									aria-label={
 										showPassword
@@ -279,19 +257,17 @@ function RegisterForm() {
 						</div>
 
 						<div>
-							<label
-								htmlFor='confirmPassword'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='confirmPassword' className='mb-2'>
 								Konfirmasi Password
 								<Asterisk />
-							</label>
+							</Label>
 							<div className='relative'>
 								<Lock
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='confirmPassword'
 									type={showPassword ? 'text' : 'password'}
 									value={confirmPassword}
@@ -300,12 +276,8 @@ function RegisterForm() {
 										clearErr('confirmPassword');
 									}}
 									placeholder='Ulangi password'
-									className={`${inputBase} pr-4`}
-									style={{
-										borderColor: fieldErrors.confirmPassword
-											? 'var(--destructive)'
-											: undefined,
-									}}
+									aria-invalid={!!fieldErrors.confirmPassword}
+									className='h-11 pl-10 pr-4'
 								/>
 							</div>
 							<FieldError msg={fieldErrors.confirmPassword} />
@@ -325,13 +297,12 @@ function RegisterForm() {
 							</div>
 						)}
 
-						<button
+						<Button
 							type='submit'
 							disabled={register.isPending}
-							className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed'
-							style={{ background: 'var(--primary)' }}>
+							className='w-full h-11 rounded-full'>
 							{register.isPending ? 'Memproses...' : 'Daftar Sekarang'}
-						</button>
+						</Button>
 
 						<p
 							className='text-center text-sm'
