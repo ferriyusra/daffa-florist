@@ -7,6 +7,8 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "migrate:deploy": "prisma migrate deploy",
+    "release": "prisma migrate deploy && next build && pm2 reload ecosystem.config.js --update-env",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
