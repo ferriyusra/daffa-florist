@@ -22,7 +22,9 @@
       "Bash(./node_modules/.bin/tsx scripts/test-admin-promo.ts)",
       "Bash(node -e ' *)",
       "Bash(git push *)",
-      "Bash(./node_modules/.bin/tsc --noEmit -p tsconfig.json)"
+      "Bash(./node_modules/.bin/tsc --noEmit -p tsconfig.json)",
+      "Bash(docker --version)",
+      "Bash(docker info *)"
     ],
     "additionalDirectories": [
       "/tmp",

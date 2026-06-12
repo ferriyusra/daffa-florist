@@ -1,13 +1,32 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Eye, Package, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, Package, Search, X } from 'lucide-react';
 import { api, type RouterOutputs } from '@/trpc/react';
 import { formatRupiah } from '@/hooks';
 import { ProgressBar } from '@/components';
 import { productCategories } from '@/lib';
 import { ORDER_STATUS_LABEL } from '@/lib/order-status';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /** Zona waktu bisnis (Pasaman Barat = WIB, UTC+7) untuk batas filter tanggal. */
 const WIB_OFFSET = '+07:00';
@@ -18,6 +37,11 @@ const endOfDayWib = (s: string) => new Date(`${s}T23:59:59.999${WIB_OFFSET}`);
 /** Slug kategori → label rapi (mis. `papan-bunga` → `Papan Bunga`). */
 const prettyCategory = (slug: string) =>
 	slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Sentinel "semua kategori" — Radix Select melarang value string kosong. */
+const CATEGORY_ALL = 'ALL';
+
+const PAGE_SIZE = 10;
 
 type OrderStatus =
 	RouterOutputs['admin']['order']['list']['items'][number]['status'];
@@ -55,6 +79,7 @@ const formatDate = (d: Date) =>
 	});
 
 export default function AdminOrdersPage() {
+	const router = useRouter();
 	const [search, setSearch] = useState('');
 	const [debouncedSearch, setDebouncedSearch] = useState('');
 	const [status, setStatus] = useState<(typeof statusFilters)[number]>('ALL');
@@ -83,65 +108,85 @@ export default function AdminOrdersPage() {
 		dateFrom: dateFrom ? startOfDayWib(dateFrom) : undefined,
 		dateTo: dateTo ? endOfDayWib(dateTo) : undefined,
 		page,
-		pageSize: 10,
+		pageSize: PAGE_SIZE,
 	});
 
 	const items = data?.items ?? [];
+	const total = data?.total ?? 0;
 	const totalPages = data?.totalPages ?? 1;
+	const fromRow = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+	const toRow = Math.min(page * PAGE_SIZE, total);
+
+	const hasActiveFilters =
+		search !== '' ||
+		status !== 'ALL' ||
+		category !== '' ||
+		dateFrom !== '' ||
+		dateTo !== '';
+
+	const clearFilters = () => {
+		setSearch('');
+		setStatus('ALL');
+		setCategory('');
+		setDateFrom('');
+		setDateTo('');
+		setPage(1);
+	};
 
 	return (
 		<div className='space-y-5'>
 			<div className='flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between'>
-				<div
-					className='flex items-center gap-2 flex-1 max-w-md px-3.5 h-10 rounded-xl border border-[var(--border)]'
-					style={{ background: 'var(--bg-card)' }}>
-					<Search size={15} style={{ color: 'var(--text-muted)' }} />
-					<input
+				<div className='relative flex-1 max-w-md'>
+					<Search
+						size={15}
+						className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2'
+						style={{ color: 'var(--text-muted)' }}
+					/>
+					<Input
 						type='search'
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder='Cari no. pesanan, nama, atau email...'
-						className='flex-1 bg-transparent text-sm outline-none'
+						className='h-10 pl-9'
 					/>
 				</div>
 				<div className='flex flex-wrap items-center gap-2'>
-					<select
+					<Select
 						value={status}
-						onChange={(e) => {
-							setStatus(e.target.value as (typeof statusFilters)[number]);
+						onValueChange={(v) => {
+							setStatus(v as (typeof statusFilters)[number]);
 							resetPage();
-						}}
-						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm font-medium cursor-pointer outline-none'
-						style={{
-							background: 'var(--bg-card)',
-							color: 'var(--text-secondary)',
 						}}>
-						{statusFilters.map((s) => (
-							<option key={s} value={s}>
-								{statusFilterLabel[s]}
-							</option>
-						))}
-					</select>
-					<select
-						value={category}
-						onChange={(e) => {
-							setCategory(e.target.value);
+						<SelectTrigger className='h-10' aria-label='Filter status'>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{statusFilters.map((s) => (
+								<SelectItem key={s} value={s}>
+									{statusFilterLabel[s]}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<Select
+						value={category || CATEGORY_ALL}
+						onValueChange={(v) => {
+							setCategory(v === CATEGORY_ALL ? '' : v);
 							resetPage();
-						}}
-						aria-label='Filter kategori'
-						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm font-medium cursor-pointer outline-none'
-						style={{
-							background: 'var(--bg-card)',
-							color: 'var(--text-secondary)',
 						}}>
-						<option value=''>Semua Kategori</option>
-						{productCategories.map((c) => (
-							<option key={c} value={c}>
-								{prettyCategory(c)}
-							</option>
-						))}
-					</select>
-					<input
+						<SelectTrigger className='h-10' aria-label='Filter kategori'>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value={CATEGORY_ALL}>Semua Kategori</SelectItem>
+							{productCategories.map((c) => (
+								<SelectItem key={c} value={c}>
+									{prettyCategory(c)}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<Input
 						type='date'
 						value={dateFrom}
 						onChange={(e) => {
@@ -149,16 +194,12 @@ export default function AdminOrdersPage() {
 							resetPage();
 						}}
 						aria-label='Dari tanggal'
-						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm cursor-pointer outline-none'
-						style={{
-							background: 'var(--bg-card)',
-							color: 'var(--text-secondary)',
-						}}
+						className='h-10 w-auto'
 					/>
 					<span className='text-sm' style={{ color: 'var(--text-muted)' }}>
 						–
 					</span>
-					<input
+					<Input
 						type='date'
 						value={dateTo}
 						onChange={(e) => {
@@ -166,12 +207,18 @@ export default function AdminOrdersPage() {
 							resetPage();
 						}}
 						aria-label='Sampai tanggal'
-						className='h-10 px-3 rounded-xl border border-[var(--border)] text-sm cursor-pointer outline-none'
-						style={{
-							background: 'var(--bg-card)',
-							color: 'var(--text-secondary)',
-						}}
+						className='h-10 w-auto'
 					/>
+					{hasActiveFilters && (
+						<Button
+							type='button'
+							variant='ghost'
+							onClick={clearFilters}
+							className='h-10'>
+							<X size={15} />
+							Bersihkan
+						</Button>
+					)}
 				</div>
 			</div>
 
@@ -180,153 +227,167 @@ export default function AdminOrdersPage() {
 			<div
 				className='rounded-2xl border border-[var(--border)] overflow-hidden'
 				style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
-				<div className='overflow-x-auto'>
-					<table className='w-full text-sm'>
-						<thead>
-							<tr
-								className='text-left text-xs uppercase tracking-wider'
-								style={{
-									background: 'rgba(157, 23, 77, 0.04)',
-									color: 'var(--text-muted)',
-								}}>
-								<th className='px-6 py-3 font-semibold'>No. Pesanan</th>
-								<th className='px-6 py-3 font-semibold'>Pelanggan</th>
-								<th className='px-6 py-3 font-semibold'>Item</th>
-								<th className='px-6 py-3 font-semibold'>Status</th>
-								<th className='px-6 py-3 font-semibold'>Tanggal</th>
-								<th className='px-6 py-3 font-semibold text-right'>Total</th>
-								<th className='px-6 py-3 font-semibold text-right'>Aksi</th>
-							</tr>
-						</thead>
-						<tbody>
-							{isLoading ? (
-								<tr>
-									<td
-										colSpan={7}
-										className='px-6 py-12 text-center text-sm'
-										style={{ color: 'var(--text-muted)' }}>
-										Memuat data...
-									</td>
-								</tr>
-							) : items.length === 0 ? (
-								<tr>
-									<td
-										colSpan={7}
-										className='px-6 py-12 text-center text-sm'
-										style={{ color: 'var(--text-muted)' }}>
-										Tidak ada pesanan yang cocok.
-									</td>
-								</tr>
-							) : (
-								items.map((o) => {
-									const color = statusColors[o.status];
-									return (
-										<tr
-											key={o.id}
-											className='border-t border-[var(--border)]'>
-											<td
-												className='px-6 py-4 font-mono font-semibold whitespace-nowrap'
-												style={{ color: 'var(--text)' }}>
-												{o.orderNumber}
-											</td>
-											<td className='px-6 py-4'>
-												<p className='font-semibold truncate'>
-													{o.customerName}
-												</p>
+				<Table>
+					<TableHeader>
+						<TableRow
+							className='hover:bg-transparent'
+							style={{
+								background: 'rgba(157, 23, 77, 0.04)',
+								color: 'var(--text-muted)',
+							}}>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								No. Pesanan
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								Pelanggan
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								Item
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								Status
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								Tanggal
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold text-right'>
+								Total
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold text-right'>
+								Aksi
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							Array.from({ length: PAGE_SIZE }).map((_, i) => (
+								<TableRow
+									key={`skeleton-${i}`}
+									className='hover:bg-transparent'>
+									{Array.from({ length: 7 }).map((__, c) => (
+										<TableCell key={c} className='px-6 py-4'>
+											<Skeleton className='h-4 w-full' />
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : items.length === 0 ? (
+							<TableRow className='hover:bg-transparent'>
+								<TableCell
+									colSpan={7}
+									className='px-6 py-12 text-center text-sm'
+									style={{ color: 'var(--text-muted)' }}>
+									Tidak ada pesanan yang cocok.
+								</TableCell>
+							</TableRow>
+						) : (
+							items.map((o) => {
+								const color = statusColors[o.status];
+								return (
+									<TableRow
+										key={o.id}
+										onClick={() => router.push(`/admin/orders/${o.id}`)}
+										className='cursor-pointer'>
+										<TableCell
+											className='px-6 py-4 font-mono font-semibold'
+											style={{ color: 'var(--text)' }}>
+											{o.orderNumber}
+										</TableCell>
+										<TableCell className='px-6 py-4 whitespace-normal'>
+											<p className='font-semibold truncate'>{o.customerName}</p>
+											<p
+												className='text-xs truncate'
+												style={{ color: 'var(--text-muted)' }}>
+												{o.customerEmail}
+											</p>
+										</TableCell>
+										<TableCell
+											className='px-6 py-4 whitespace-normal'
+											style={{ color: 'var(--text-secondary)' }}>
+											<span className='inline-flex items-center gap-1.5'>
+												<Package size={13} />
+												{o.itemCount} item
+											</span>
+											{o.firstProductTitle && (
 												<p
-													className='text-xs truncate'
+													className='text-xs truncate max-w-[14rem]'
 													style={{ color: 'var(--text-muted)' }}>
-													{o.customerEmail}
+													{o.firstProductTitle}
+													{o.itemCount > 1 ? ', …' : ''}
 												</p>
-											</td>
-											<td
-												className='px-6 py-4'
-												style={{ color: 'var(--text-secondary)' }}>
-												<span className='inline-flex items-center gap-1.5'>
-													<Package size={13} />
-													{o.itemCount} item
-												</span>
-												{o.firstProductTitle && (
-													<p
-														className='text-xs truncate max-w-[14rem]'
-														style={{ color: 'var(--text-muted)' }}>
-														{o.firstProductTitle}
-														{o.itemCount > 1 ? ', …' : ''}
-													</p>
-												)}
-											</td>
-											<td className='px-6 py-4'>
-												<span
-													className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap'
-													style={{ background: color.bg, color: color.color }}>
-													{ORDER_STATUS_LABEL[o.status]}
-												</span>
-											</td>
-											<td
-												className='px-6 py-4 whitespace-nowrap text-xs'
-												style={{ color: 'var(--text-secondary)' }}>
-												{formatDate(o.createdAt)}
-											</td>
-											<td
-												className='px-6 py-4 font-semibold whitespace-nowrap text-right'
-												style={{ color: 'var(--primary)' }}>
-												{formatRupiah(o.total)}
-											</td>
-											<td className='px-6 py-4 text-right'>
-												<Link
-													href={`/admin/orders/${o.id}`}
-													className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-colors'
-													style={{ color: 'var(--text-secondary)' }}>
-													<Eye size={12} />
-													Lihat
-												</Link>
-											</td>
-										</tr>
-									);
-								})
-							)}
-						</tbody>
-					</table>
-				</div>
+											)}
+										</TableCell>
+										<TableCell className='px-6 py-4'>
+											<Badge
+												className='border-transparent text-[11px] font-semibold'
+												style={{ background: color.bg, color: color.color }}>
+												{ORDER_STATUS_LABEL[o.status]}
+											</Badge>
+										</TableCell>
+										<TableCell
+											className='px-6 py-4 text-xs'
+											style={{ color: 'var(--text-secondary)' }}>
+											{formatDate(o.createdAt)}
+										</TableCell>
+										<TableCell
+											className='px-6 py-4 font-semibold text-right'
+											style={{ color: 'var(--primary)' }}>
+											{formatRupiah(o.total)}
+										</TableCell>
+										<TableCell className='px-6 py-4 text-right'>
+											<ChevronRight
+												size={18}
+												className='inline-block'
+												style={{ color: 'var(--text-muted)' }}
+											/>
+										</TableCell>
+									</TableRow>
+								);
+							})
+						)}
+					</TableBody>
+				</Table>
 			</div>
 
 			{!isLoading && items.length > 0 && (
-				<div className='flex items-center justify-center gap-1.5'>
-					<button
+				<div className='flex flex-col sm:flex-row items-center justify-between gap-3'>
+					<p className='text-xs' style={{ color: 'var(--text-muted)' }}>
+						Menampilkan {fromRow}–{toRow} dari {total} pesanan
+					</p>
+					<div className='flex items-center gap-1.5'>
+					<Button
 						type='button'
+						variant='outline'
+						size='icon'
 						onClick={() => setPage((p) => Math.max(1, p - 1))}
 						disabled={page === 1}
-						aria-label='Halaman sebelumnya'
-						className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-						style={{ color: 'var(--text-secondary)' }}>
+						aria-label='Halaman sebelumnya'>
 						<ChevronLeft size={16} />
-					</button>
+					</Button>
 					{Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => {
 						const active = n === page;
 						return (
-							<button
+							<Button
 								type='button'
 								key={n}
+								variant={active ? 'default' : 'outline'}
+								size='icon'
 								onClick={() => setPage(n)}
-								className='inline-flex items-center justify-center min-w-9 h-9 px-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors'
-								style={{
-									background: active ? 'var(--primary)' : 'transparent',
-									color: active ? 'white' : 'var(--text-secondary)',
-									borderColor: active ? 'var(--primary)' : 'var(--border)',
-								}}>
+								aria-current={active ? 'page' : undefined}>
 								{n}
-							</button>
+							</Button>
 						);
 					})}
-					<button
+					<Button
 						type='button'
+						variant='outline'
+						size='icon'
 						onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
 						disabled={page === totalPages}
-						aria-label='Halaman berikutnya'
-						className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-						style={{ color: 'var(--text-secondary)' }}>
+						aria-label='Halaman berikutnya'>
 						<ChevronRight size={16} />
-					</button>
+					</Button>
+					</div>
 				</div>
 			)}
 		</div>
