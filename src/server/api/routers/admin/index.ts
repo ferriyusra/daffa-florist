@@ -6,6 +6,7 @@ import { adminGalleryRouter } from './gallery';
 import { adminDeliveryAreaRouter } from './delivery-area';
 import { adminPromoRouter } from './promo';
 import { adminDashboardRouter } from './dashboard';
+import { adminCalendarRouter } from './calendar';
 
 /** Namespace router admin (semua memakai `adminProcedure`). */
 export const adminRouter = createTRPCRouter({
@@ -13,6 +14,7 @@ export const adminRouter = createTRPCRouter({
 	product: adminProductRouter,
 	customer: adminCustomerRouter,
 	order: adminOrderRouter,
+	calendar: adminCalendarRouter,
 	gallery: adminGalleryRouter,
 	deliveryArea: adminDeliveryAreaRouter,
 	promo: adminPromoRouter,

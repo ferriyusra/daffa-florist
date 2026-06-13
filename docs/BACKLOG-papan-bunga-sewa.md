@@ -243,8 +243,8 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 ### S3.4 — Kalender pesanan admin
 **AC:** `admin.calendar` mengembalikan pesanan untuk rentang tanggal; tampilan kalender bulanan/mingguan berdasarkan tanggal pasang & pickup.
 
-- [ ] `S` Implement `admin.calendar` (input range → events pasang/pickup).
-- [ ] `M` Komponen kalender admin (bulanan/mingguan) + filter status/kategori.
+- [x] `S` `admin.calendar.events` (input range ≤62 hari → event datar pasang/bongkar; filter status/kategori; satu query + ekspansi memori).
+- [x] `M` Komponen kalender admin **bulanan** ([admin/calendar](../src/app/admin/calendar/)) + filter status/kategori, chip pasang/bongkar, detail per-hari, basis UTC-day. _Tampilan mingguan ditunda (bulanan cukup untuk M3)._
 
 ### S3.5 — Manajemen unit/stok & tugas lapangan
 **AC:** `admin.unit.*` CRUD stok; daftar tugas pasang & ambil harian (alamat, waktu, item) untuk tim lapangan.

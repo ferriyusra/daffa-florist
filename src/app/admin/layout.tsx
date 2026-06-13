@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
 	Bell,
+	CalendarDays,
 	ChevronLeft,
 	ClipboardList,
 	Flower2,
@@ -32,6 +33,7 @@ const navGroups = [
 		title: 'Operasional',
 		items: [
 			{ label: 'Manage Order', href: '/admin/orders', icon: ClipboardList },
+			{ label: 'Kalender', href: '/admin/calendar', icon: CalendarDays },
 			{ label: 'Manage Produk', href: '/admin/products', icon: Package },
 			{ label: 'Manage Customer', href: '/admin/customers', icon: Users },
 			{
