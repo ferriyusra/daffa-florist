@@ -221,7 +221,7 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 > `adminProcedure` sudah dibuat di **S0.4** — story ini mereusenya, tinggal merangkai sub-router sewa.
 
 - [x] `XS` `adminProcedure` (dari S0.4) tersedia di [trpc.ts](../src/server/api/trpc.ts) — dipakai semua sub-router admin.
-- [~] `XS` Router `admin` terdaftar; sub-router `order` ✅ (S3.2). `unit`/`calendar` menyusul di S3.4/S3.5.
+- [x] `XS` Router `admin` terdaftar; sub-router `order` ✅ (S3.2), `calendar` ✅ (S3.4), `task`/`unit` ✅ (S3.5).
 
 ### S3.2 — Daftar & detail pesanan admin
 **AC:** `admin.order.list` dengan filter status/rentang tanggal/kategori; halaman [admin/orders](../src/app/admin/orders/) terhubung data nyata.
@@ -249,9 +249,9 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 ### S3.5 — Manajemen unit/stok & tugas lapangan
 **AC:** `admin.unit.*` CRUD stok; daftar tugas pasang & ambil harian (alamat, waktu, item) untuk tim lapangan.
 
-- [ ] `S` Implement `admin.unit.list/create/update/delete` (atau update `unitCount` bila pendekatan a).
-- [ ] `S` UI kelola stok per produk-ukuran.
-- [ ] `M` Halaman "Tugas Harian" — daftar pasang & daftar ambil per tanggal (alamat, waktu, item).
+- [x] `S` Implement `admin.unit.*` (pendekatan a): `unit.list` (stok + unit tersewa aktif per ukuran) & `unit.setUnitCount` ([routers/admin/unit.ts](../src/server/api/routers/admin/unit.ts)).
+- [x] `S` UI kelola stok per produk-ukuran ([admin/stock](../src/app/admin/stock/page.tsx)) — edit `unitCount` inline, peringatan bila tersewa melebihi stok.
+- [x] `M` Halaman "Tugas Harian" ([admin/tasks](../src/app/admin/tasks/page.tsx)) — `task.daily` daftar pasang & ambil per tanggal (alamat, jam acara WIB, kontak, item).
 
 ---
 

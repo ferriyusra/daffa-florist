@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
 	Bell,
+	Boxes,
 	CalendarDays,
 	ChevronLeft,
+	ClipboardCheck,
 	ClipboardList,
 	Flower2,
 	ImagePlus,
@@ -34,8 +36,10 @@ const navGroups = [
 		items: [
 			{ label: 'Manage Order', href: '/admin/orders', icon: ClipboardList },
 			{ label: 'Kalender', href: '/admin/calendar', icon: CalendarDays },
+			{ label: 'Tugas Harian', href: '/admin/tasks', icon: ClipboardCheck },
 			{ label: 'Manage Produk', href: '/admin/products', icon: Package },
 			{ label: 'Manage Customer', href: '/admin/customers', icon: Users },
+			{ label: 'Kelola Stok', href: '/admin/stock', icon: Boxes },
 			{
 				label: 'Area Pengiriman',
 				href: '/admin/delivery-areas',
