@@ -1,8 +1,12 @@
 'use client';
 
+import { Switch } from '@/components/ui/switch';
+
 /**
- * Sakelar aktif/nonaktif reusable (a11y `role="switch"`). Dipakai di form admin
+ * Sakelar aktif/nonaktif reusable di atas shadcn `Switch`. Dipakai di form admin
  * (gallery, delivery-areas, promos) untuk field boolean seperti `isActive`.
+ * API prop (`checked`/`onChange`/`onLabel`/`offLabel`) tidak berubah — adaptasi
+ * `onCheckedChange` shadcn ke `onChange` dilakukan di dalam.
  */
 export function ToggleSwitch({
 	checked,
@@ -16,22 +20,11 @@ export function ToggleSwitch({
 	offLabel?: string;
 }) {
 	return (
-		<button
-			type='button'
-			role='switch'
-			aria-checked={checked}
-			onClick={() => onChange(!checked)}
+		<label
 			className='inline-flex items-center gap-2 text-sm cursor-pointer'
 			style={{ color: 'var(--text-secondary)' }}>
-			<span
-				className='inline-flex items-center w-9 h-5 rounded-full transition-colors px-0.5'
-				style={{
-					background: checked ? 'var(--secondary)' : 'var(--border)',
-					justifyContent: checked ? 'flex-end' : 'flex-start',
-				}}>
-				<span className='w-4 h-4 rounded-full bg-white' />
-			</span>
+			<Switch checked={checked} onCheckedChange={onChange} />
 			{checked ? onLabel : offLabel}
-		</button>
+		</label>
 	);
 }

@@ -1,14 +1,20 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 /**
- * Modal form reusable untuk admin CRUD — backdrop + animasi masuk/keluar, header
- * (judul + tombol tutup), area field (`children`), dan footer (Batal/Simpan).
- * Backdrop & tutup dinonaktifkan saat `pending`. Mengelola `AnimatePresence`
- * sendiri; pemanggil cukup mengatur `open`.
+ * Modal form reusable untuk admin CRUD — kini di atas shadcn `Dialog` (overlay,
+ * focus trap, Esc-to-close), dengan header (judul + tombol tutup bawaan Dialog),
+ * area field (`children`), dan footer (Batal/Simpan). Tutup dinonaktifkan saat
+ * `pending`. Pemanggil cukup mengatur `open`; API prop tidak berubah.
  */
 export function FormModal({
 	open,
@@ -33,59 +39,44 @@ export function FormModal({
 	children: ReactNode;
 }) {
 	return (
-		<AnimatePresence>
-			{open && (
-				<motion.div
-					className='fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40'
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					onClick={pending ? undefined : onClose}>
-					<motion.div
-						onClick={(e) => e.stopPropagation()}
-						className={`relative w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-2xl p-6`}
-						style={{
-							background: 'var(--bg-card)',
-							boxShadow: 'var(--shadow-md)',
-						}}
-						initial={{ opacity: 0, scale: 0.95, y: 8 }}
-						animate={{ opacity: 1, scale: 1, y: 0 }}
-						exit={{ opacity: 0, scale: 0.95, y: 8 }}
-						transition={{ duration: 0.18, ease: 'easeOut' }}>
-						<div className='flex items-center justify-between mb-5'>
-							<h2 className='font-serif text-lg font-semibold'>{title}</h2>
-							<button
-								type='button'
-								onClick={onClose}
-								aria-label='Tutup'
-								className='inline-flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer'
-								style={{ color: 'var(--text-secondary)' }}>
-								<X size={18} />
-							</button>
-						</div>
+		<Dialog
+			open={open}
+			onOpenChange={(next) => {
+				if (!next && !pending) onClose();
+			}}>
+			<DialogContent
+				className={`w-full ${maxWidth}`}
+				onInteractOutside={(e) => {
+					if (pending) e.preventDefault();
+				}}
+				onEscapeKeyDown={(e) => {
+					if (pending) e.preventDefault();
+				}}>
+				<DialogHeader>
+					<DialogTitle className='font-serif'>{title}</DialogTitle>
+				</DialogHeader>
 
-						<div className='space-y-4'>{children}</div>
+				<form
+					onSubmit={(e) => {
+						e.preventDefault();
+						onSubmit();
+					}}>
+					<div className='space-y-4'>{children}</div>
 
-						<div className='flex items-center justify-center gap-3 pt-6'>
-							<button
-								type='button'
-								onClick={onClose}
-								className='px-5 py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] cursor-pointer'
-								style={{ color: 'var(--text-secondary)' }}>
-								Batal
-							</button>
-							<button
-								type='button'
-								onClick={onSubmit}
-								disabled={pending}
-								className='px-6 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer disabled:opacity-60'
-								style={{ background: 'var(--primary)' }}>
-								{pending ? loadingLabel : submitLabel}
-							</button>
-						</div>
-					</motion.div>
-				</motion.div>
-			)}
-		</AnimatePresence>
+					<DialogFooter className='sm:justify-center pt-6'>
+						<Button
+							type='button'
+							variant='outline'
+							onClick={onClose}
+							disabled={pending}>
+							Batal
+						</Button>
+						<Button type='submit' disabled={pending}>
+							{pending ? loadingLabel : submitLabel}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
 	);
 }

@@ -1,19 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { api, type RouterOutputs } from '@/trpc/react';
 import { useAdminForm, useToast } from '@/hooks';
 import {
 	ConfirmDialog,
-	FloatingInput,
-	FloatingSelect,
 	FormModal,
 	ImageUpload,
 	ProductImage,
 	ProgressBar,
 	ToggleSwitch,
 } from '@/components';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import {
 	galleryCategories,
 	galleryFields,
@@ -36,6 +47,33 @@ const emptyForm: Form = {
 	sortOrder: 0,
 	isActive: true,
 };
+
+function Field({
+	label,
+	required = false,
+	error,
+	children,
+}: {
+	label: string;
+	required?: boolean;
+	error?: string;
+	children: ReactNode;
+}) {
+	return (
+		<div>
+			<Label className='mb-2 font-semibold'>
+				{label}
+				{required && <span style={{ color: 'var(--destructive)' }}>*</span>}
+			</Label>
+			{children}
+			{error && (
+				<p className='mt-1.5 text-xs' style={{ color: 'var(--destructive)' }}>
+					{error}
+				</p>
+			)}
+		</div>
+	);
+}
 
 export default function AdminGalleryPage() {
 	const utils = api.useUtils();
@@ -119,14 +157,10 @@ export default function AdminGalleryPage() {
 				<p className='text-sm' style={{ color: 'var(--text-secondary)' }}>
 					{items.length} item · tampil di galeri publik
 				</p>
-				<button
-					type='button'
-					onClick={openNew}
-					className='inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-sm font-semibold cursor-pointer'
-					style={{ background: 'var(--primary)', color: 'white' }}>
+				<Button type='button' onClick={openNew} className='h-10'>
 					<Plus size={15} />
 					Tambah Item
-				</button>
+				</Button>
 			</div>
 
 			<ProgressBar active={isFetching} />
@@ -134,11 +168,7 @@ export default function AdminGalleryPage() {
 			{isLoading ? (
 				<div className='grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4'>
 					{Array.from({ length: 4 }).map((_, i) => (
-						<div
-							key={i}
-							className='aspect-4/3 rounded-2xl border border-[var(--border)] animate-pulse'
-							style={{ background: 'var(--bg-card)' }}
-						/>
+						<Skeleton key={i} className='aspect-4/3 rounded-2xl' />
 					))}
 				</div>
 			) : items.length === 0 ? (
@@ -146,16 +176,13 @@ export default function AdminGalleryPage() {
 					className='text-center py-16 rounded-2xl border border-[var(--border)]'
 					style={{ background: 'var(--bg-card)' }}>
 					<p className='text-sm' style={{ color: 'var(--text-secondary)' }}>
-						Belum ada item galeri. Klik "Tambah Item" untuk menambah.
+						Belum ada item galeri. Klik &quot;Tambah Item&quot; untuk menambah.
 					</p>
 				</div>
 			) : (
 				<div className='grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4'>
 					{items.map((it) => (
-						<div
-							key={it.id}
-							className='rounded-2xl border border-[var(--border)] overflow-hidden'
-							style={{ background: 'var(--bg-card)' }}>
+						<Card key={it.id} className='gap-0 p-0 overflow-hidden rounded-2xl'>
 							<div className='relative aspect-4/3'>
 								<ProductImage
 									src={it.image}
@@ -163,11 +190,11 @@ export default function AdminGalleryPage() {
 									sizes='(max-width: 640px) 50vw, 25vw'
 								/>
 								{!it.isActive && (
-									<span
-										className='absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-semibold'
+									<Badge
+										className='absolute top-2 left-2 border-transparent text-[10px] font-semibold'
 										style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}>
 										Nonaktif
-									</span>
+									</Badge>
 								)}
 							</div>
 							<div className='p-3'>
@@ -178,25 +205,27 @@ export default function AdminGalleryPage() {
 									{it.category}
 								</p>
 								<div className='flex gap-2'>
-									<button
+									<Button
 										type='button'
+										variant='outline'
+										size='sm'
 										onClick={() => openEdit(it)}
-										className='flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] cursor-pointer transition-colors hover:border-[var(--primary)]'
-										style={{ color: 'var(--text-secondary)' }}>
+										className='flex-1'>
 										<Pencil size={12} />
 										Edit
-									</button>
-									<button
+									</Button>
+									<Button
 										type='button'
+										variant='outline'
+										size='icon'
 										onClick={() => setConfirmId(it.id)}
 										aria-label='Hapus item'
-										className='inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--border)] cursor-pointer transition-colors hover:border-[var(--destructive)]'
-										style={{ color: 'var(--destructive)' }}>
+										className='size-8 text-[var(--destructive)] hover:text-[var(--destructive)] hover:border-[var(--destructive)]'>
 										<Trash2 size={12} />
-									</button>
+									</Button>
 								</div>
 							</div>
-						</div>
+						</Card>
 					))}
 				</div>
 			)}
@@ -208,54 +237,50 @@ export default function AdminGalleryPage() {
 				onSubmit={save}
 				pending={pending}
 				maxWidth='max-w-lg'>
-				<FloatingInput
-					label='Judul'
-					required
-					error={fieldErrors.title}
-					value={form.title}
-					onChange={(v) => set('title', v)}
-				/>
-				<div className='grid grid-cols-2 gap-4'>
-					<FloatingSelect
-						label='Kategori'
-						required
-						error={fieldErrors.category}
-						value={form.category}
-						onChange={(v) => set('category', v as GalleryCategory)}>
-						{galleryCategories.map((c) => (
-							<option key={c} value={c}>
-								{c}
-							</option>
-						))}
-					</FloatingSelect>
-					<FloatingInput
-						label='Urutan'
-						type='number'
-						min={0}
-						value={String(form.sortOrder)}
-						onChange={(v) =>
-							set('sortOrder', Math.max(0, Math.trunc(Number(v) || 0)))
-						}
+				<Field label='Judul' required error={fieldErrors.title}>
+					<Input
+						value={form.title}
+						onChange={(e) => set('title', e.target.value)}
+						aria-invalid={!!fieldErrors.title}
 					/>
+				</Field>
+				<div className='grid grid-cols-2 gap-4'>
+					<Field label='Kategori' required error={fieldErrors.category}>
+						<Select
+							value={form.category}
+							onValueChange={(v) => set('category', v as GalleryCategory)}>
+							<SelectTrigger
+								className='w-full'
+								aria-invalid={!!fieldErrors.category}>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{galleryCategories.map((c) => (
+									<SelectItem key={c} value={c}>
+										{c}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</Field>
+					<Field label='Urutan'>
+						<Input
+							type='number'
+							min={0}
+							value={String(form.sortOrder)}
+							onChange={(e) =>
+								set('sortOrder', Math.max(0, Math.trunc(Number(e.target.value) || 0)))
+							}
+						/>
+					</Field>
 				</div>
 
-				<div>
-					<label className='block text-sm font-semibold mb-2'>
-						Gambar
-						<span style={{ color: 'var(--destructive)' }}> *</span>
-					</label>
+				<Field label='Gambar' required error={fieldErrors.image}>
 					<ImageUpload
 						value={form.image}
 						onChange={(image) => set('image', image)}
 					/>
-					{fieldErrors.image && (
-						<p
-							className='mt-1.5 text-xs'
-							style={{ color: 'var(--destructive)' }}>
-							{fieldErrors.image}
-						</p>
-					)}
-				</div>
+				</Field>
 
 				<ToggleSwitch
 					checked={form.isActive}
