@@ -52,10 +52,14 @@ export const adminDashboardRouter = createTRPCRouter({
 					order: { status: { notIn: ['CANCELLED', 'COMPLETED'] } },
 				},
 			}),
-			// Pendapatan: total semua pesanan kecuali yang dibatalkan.
+			// Nilai pesanan TERKONFIRMASI: jumlah `total` pesanan yang pembayarannya
+			// sudah terverifikasi (PRD/ERD: CONFIRMED = "pembayaran terverifikasi").
+			// PENDING (belum bayar/verifikasi) & CANCELLED tidak dihitung. Catatan:
+			// model `Payment` belum ada, jadi ini nilai pesanan, bukan kas riil
+			// (CONFIRMED bisa baru DP).
 			ctx.prisma.order.aggregate({
 				_sum: { total: true },
-				where: { status: { not: 'CANCELLED' } },
+				where: { status: { notIn: ['PENDING', 'CANCELLED'] } },
 			}),
 			ctx.prisma.user.count({ where: { role: 'CUSTOMER' } }),
 			ctx.prisma.product.count(),

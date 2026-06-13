@@ -160,7 +160,7 @@ function StatGrid({ data }: { data: Overview }) {
 			/>
 			<StatCard
 				icon={Wallet}
-				label='Pendapatan'
+				label='Nilai Terkonfirmasi'
 				value={formatRupiah(data.revenue)}
 				tone='secondary'
 			/>
