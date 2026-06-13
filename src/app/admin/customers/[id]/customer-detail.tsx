@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { ArrowLeft, ClipboardList, MapPin, Wallet } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { formatRupiah } from '@/hooks';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formatDate = (d: Date) =>
 	new Date(d).toLocaleDateString('id-ID', {
@@ -11,24 +15,6 @@ const formatDate = (d: Date) =>
 		month: 'long',
 		year: 'numeric',
 	});
-
-function Badge({
-	children,
-	bg,
-	color,
-}: {
-	children: React.ReactNode;
-	bg: string;
-	color: string;
-}) {
-	return (
-		<span
-			className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold'
-			style={{ background: bg, color }}>
-			{children}
-		</span>
-	);
-}
 
 function Section({
 	title,
@@ -40,15 +26,17 @@ function Section({
 	children: React.ReactNode;
 }) {
 	return (
-		<div
-			className='rounded-2xl border border-[var(--border)] p-6'
+		<Card
+			className='gap-0 py-6 rounded-2xl border-[var(--border)]'
 			style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
-			<div className='flex items-center gap-2 mb-4'>
-				<Icon size={16} style={{ color: 'var(--primary)' }} />
-				<h2 className='font-serif text-base font-semibold'>{title}</h2>
-			</div>
-			{children}
-		</div>
+			<CardContent>
+				<div className='flex items-center gap-2 mb-4'>
+					<Icon size={16} style={{ color: 'var(--primary)' }} />
+					<h2 className='font-serif text-base font-semibold'>{title}</h2>
+				</div>
+				{children}
+			</CardContent>
+		</Card>
 	);
 }
 
@@ -58,23 +46,27 @@ export default function CustomerDetail({ id }: { id: string }) {
 	});
 
 	const back = (
-		<Link
-			href='/admin/customers'
-			className='inline-flex items-center gap-1.5 text-sm font-medium cursor-pointer'
-			style={{ color: 'var(--text-secondary)' }}>
-			<ArrowLeft size={15} />
-			Kembali
-		</Link>
+		<Button asChild variant='ghost' size='sm' className='-ml-2'>
+			<Link href='/admin/customers'>
+				<ArrowLeft size={15} />
+				Kembali
+			</Link>
+		</Button>
 	);
 
 	if (isLoading) {
 		return (
 			<div className='space-y-5'>
 				{back}
-				<div
-					className='rounded-2xl border border-[var(--border)] h-40 animate-pulse'
-					style={{ background: 'var(--bg-card)' }}
-				/>
+				<Card
+					className='rounded-2xl border-[var(--border)]'
+					style={{ background: 'var(--bg-card)' }}>
+					<CardContent className='space-y-3'>
+						<Skeleton className='h-14 w-14 rounded-full' />
+						<Skeleton className='h-5 w-48' />
+						<Skeleton className='h-4 w-64' />
+					</CardContent>
+				</Card>
 			</div>
 		);
 	}
@@ -103,80 +95,88 @@ export default function CustomerDetail({ id }: { id: string }) {
 			{back}
 
 			{/* Profil */}
-			<div
-				className='rounded-2xl border border-[var(--border)] p-6'
+			<Card
+				className='gap-0 py-6 rounded-2xl border-[var(--border)]'
 				style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
-				<div className='flex items-start gap-4'>
-					<span
-						className='inline-flex items-center justify-center w-14 h-14 rounded-full font-semibold shrink-0'
-						style={{
-							background: 'rgba(157, 23, 77, 0.12)',
-							color: 'var(--primary)',
-						}}>
-						{initials}
-					</span>
-					<div className='min-w-0 flex-1'>
-						<h1 className='font-serif text-xl font-semibold'>
-							{c.name ?? '—'}
-						</h1>
-						<p className='text-sm' style={{ color: 'var(--text-muted)' }}>
-							{c.email}
-							{c.phone ? ` · ${c.phone}` : ''}
-						</p>
-						<div className='flex flex-wrap gap-2 mt-3'>
-							<Badge
-								bg={
-									isAdmin
-										? 'rgba(61, 107, 79, 0.12)'
-										: 'rgba(140, 130, 121, 0.15)'
-								}
-								color={isAdmin ? 'var(--secondary)' : 'var(--text-secondary)'}>
-								{c.role}
-							</Badge>
-							<Badge
-								bg={
-									c.isActive
-										? 'rgba(61, 107, 79, 0.12)'
-										: 'color-mix(in srgb, var(--destructive) 12%, transparent)'
-								}
-								color={c.isActive ? 'var(--secondary)' : 'var(--destructive)'}>
-								{c.isActive ? 'Aktif' : 'Nonaktif'}
-							</Badge>
+				<CardContent>
+					<div className='flex items-start gap-4'>
+						<span
+							className='inline-flex items-center justify-center w-14 h-14 rounded-full font-semibold shrink-0'
+							style={{
+								background: 'rgba(157, 23, 77, 0.12)',
+								color: 'var(--primary)',
+							}}>
+							{initials}
+						</span>
+						<div className='min-w-0 flex-1'>
+							<h1 className='font-serif text-xl font-semibold'>
+								{c.name ?? '—'}
+							</h1>
+							<p className='text-sm' style={{ color: 'var(--text-muted)' }}>
+								{c.email}
+								{c.phone ? ` · ${c.phone}` : ''}
+							</p>
+							<div className='flex flex-wrap gap-2 mt-3'>
+								<Badge
+									className='border-transparent text-[11px] font-semibold'
+									style={{
+										background: isAdmin
+											? 'rgba(61, 107, 79, 0.12)'
+											: 'rgba(140, 130, 121, 0.15)',
+										color: isAdmin
+											? 'var(--secondary)'
+											: 'var(--text-secondary)',
+									}}>
+									{c.role}
+								</Badge>
+								<Badge
+									className='border-transparent text-[11px] font-semibold'
+									style={{
+										background: c.isActive
+											? 'rgba(61, 107, 79, 0.12)'
+											: 'color-mix(in srgb, var(--destructive) 12%, transparent)',
+										color: c.isActive
+											? 'var(--secondary)'
+											: 'var(--destructive)',
+									}}>
+									{c.isActive ? 'Aktif' : 'Nonaktif'}
+								</Badge>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<div className='grid grid-cols-3 gap-3 mt-5'>
-					{[
-						{
-							label: 'Pesanan',
-							value: `${c.orderCount}`,
-							icon: ClipboardList,
-						},
-						{
-							label: 'Total Belanja',
-							value: formatRupiah(c.totalSpent),
-							icon: Wallet,
-						},
-						{
-							label: 'Bergabung',
-							value: formatDate(c.createdAt),
-							icon: MapPin,
-						},
-					].map((s) => (
-						<div
-							key={s.label}
-							className='rounded-xl border border-[var(--border)] p-3'>
-							<p
-								className='text-[11px] uppercase tracking-wider mb-1'
-								style={{ color: 'var(--text-muted)' }}>
-								{s.label}
-							</p>
-							<p className='text-sm font-semibold'>{s.value}</p>
-						</div>
-					))}
-				</div>
-			</div>
+					<div className='grid grid-cols-3 gap-3 mt-5'>
+						{[
+							{
+								label: 'Pesanan',
+								value: `${c.orderCount}`,
+								icon: ClipboardList,
+							},
+							{
+								label: 'Total Belanja',
+								value: formatRupiah(c.totalSpent),
+								icon: Wallet,
+							},
+							{
+								label: 'Bergabung',
+								value: formatDate(c.createdAt),
+								icon: MapPin,
+							},
+						].map((s) => (
+							<div
+								key={s.label}
+								className='rounded-xl border border-[var(--border)] p-3'>
+								<p
+									className='text-[11px] uppercase tracking-wider mb-1'
+									style={{ color: 'var(--text-muted)' }}>
+									{s.label}
+								</p>
+								<p className='text-sm font-semibold'>{s.value}</p>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
 
 			{/* Alamat */}
 			<Section title='Alamat' icon={MapPin}>
@@ -194,8 +194,11 @@ export default function CustomerDetail({ id }: { id: string }) {
 									<p className='text-sm font-semibold'>{a.recipientName}</p>
 									{a.isDefault && (
 										<Badge
-											bg='rgba(157, 23, 77, 0.1)'
-											color='var(--primary)'>
+											className='border-transparent text-[11px] font-semibold'
+											style={{
+												background: 'rgba(157, 23, 77, 0.1)',
+												color: 'var(--primary)',
+											}}>
 											Utama
 										</Badge>
 									)}
