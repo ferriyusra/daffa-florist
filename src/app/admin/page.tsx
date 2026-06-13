@@ -99,7 +99,7 @@ function StatCard({
 				style={{ background: s.chipBg, color: s.chipColor }}>
 				<Icon size={20} />
 			</span>
-			<div className='min-w-0'>
+			<div className='min-w-0 flex-1'>
 				<p
 					className='font-serif text-2xl font-bold leading-tight'
 					style={{ color: 'var(--text)' }}>
@@ -111,12 +111,21 @@ function StatCard({
 					{label}
 				</p>
 			</div>
+			{href && (
+				<ChevronRight
+					size={18}
+					className='shrink-0'
+					style={{ color: 'var(--text-muted)' }}
+				/>
+			)}
 		</Card>
 	);
 
 	if (href) {
 		return (
-			<Link href={href} className='block cursor-pointer'>
+			<Link
+				href={href}
+				className='block cursor-pointer transition-opacity hover:opacity-90'>
 				{body}
 			</Link>
 		);
@@ -174,6 +183,77 @@ function StatGrid({ data }: { data: Overview }) {
 	);
 }
 
+/** Item status pipeline (urutan daur hidup sewa). */
+const PIPELINE: { key: keyof Overview['orders']; status: OrderStatus }[] = [
+	{ key: 'pending', status: 'PENDING' },
+	{ key: 'confirmed', status: 'CONFIRMED' },
+	{ key: 'scheduled', status: 'SCHEDULED' },
+	{ key: 'installed', status: 'INSTALLED' },
+	{ key: 'completed', status: 'COMPLETED' },
+	{ key: 'cancelled', status: 'CANCELLED' },
+];
+
+function StatusPipeline({ orders }: { orders: Overview['orders'] }) {
+	return (
+		<Card
+			className='p-5'
+			style={{
+				background: 'var(--bg-card)',
+				borderColor: 'var(--border)',
+				boxShadow: 'var(--shadow-sm)',
+			}}>
+			<p
+				className='mb-4 font-serif text-sm font-bold'
+				style={{ color: 'var(--text)' }}>
+				Status Pesanan
+			</p>
+			<div className='grid grid-cols-3 gap-4 sm:grid-cols-6'>
+				{PIPELINE.map(({ key, status }) => {
+					const c = statusColors[status];
+					return (
+						<div key={status} className='flex flex-col gap-1'>
+							<span className='flex items-center gap-1.5'>
+								<span
+									className='h-2 w-2 shrink-0 rounded-full'
+									style={{ background: c.color }}
+								/>
+								<span
+									className='font-serif text-xl font-bold leading-none'
+									style={{ color: 'var(--text)' }}>
+									{orders[key]}
+								</span>
+							</span>
+							<span
+								className='text-[11px] leading-tight'
+								style={{ color: 'var(--text-muted)' }}>
+								{ORDER_STATUS_LABEL[status]}
+							</span>
+						</div>
+					);
+				})}
+			</div>
+		</Card>
+	);
+}
+
+function StatusPipelineSkeleton() {
+	return (
+		<Card
+			className='p-5'
+			style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+			<Skeleton className='mb-4 h-4 w-28' />
+			<div className='grid grid-cols-3 gap-4 sm:grid-cols-6'>
+				{Array.from({ length: 6 }).map((_, i) => (
+					<div key={i} className='space-y-1.5'>
+						<Skeleton className='h-5 w-10' />
+						<Skeleton className='h-3 w-16' />
+					</div>
+				))}
+			</div>
+		</Card>
+	);
+}
+
 export default function AdminDashboardPage() {
 	const router = useRouter();
 	const { data, isLoading } = api.admin.dashboard.overview.useQuery();
@@ -199,6 +279,12 @@ export default function AdminDashboardPage() {
 				</div>
 			) : (
 				<StatGrid data={data} />
+			)}
+
+			{isLoading || !data ? (
+				<StatusPipelineSkeleton />
+			) : (
+				<StatusPipeline orders={data.orders} />
 			)}
 
 			<section className='space-y-3'>
