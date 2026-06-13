@@ -11,6 +11,9 @@ import {
 	Package,
 	ChevronRight,
 	ArrowRight,
+	TrendingUp,
+	TrendingDown,
+	Minus,
 } from 'lucide-react';
 import { api, type RouterOutputs } from '@/trpc/react';
 import { formatRupiah } from '@/hooks';
@@ -72,6 +75,99 @@ const toneStyles: Record<
 	},
 };
 
+// ── Tren bulanan ────────────────────────────────────────────────────────────
+
+type TrendDir = 'up' | 'down' | 'flat' | 'new' | 'none';
+
+/** Delta % bulan-ini vs bulan-lalu. `new` = bulan lalu 0 tapi sekarang ada. */
+function computeDelta(curr: number, prev: number): { dir: TrendDir; label: string } {
+	if (prev === 0) {
+		if (curr === 0) return { dir: 'none', label: '' };
+		return { dir: 'new', label: 'Baru bulan ini' };
+	}
+	const pct = ((curr - prev) / prev) * 100;
+	if (Math.abs(pct) < 0.5) return { dir: 'flat', label: '0%' };
+	const sign = pct > 0 ? '+' : '';
+	return { dir: pct > 0 ? 'up' : 'down', label: `${sign}${Math.round(pct)}%` };
+}
+
+const trendVisual: Record<
+	TrendDir,
+	{ icon: typeof TrendingUp; color: string; bg: string }
+> = {
+	up: { icon: TrendingUp, color: '#16a34a', bg: 'rgba(34, 197, 94, 0.12)' },
+	new: { icon: TrendingUp, color: '#16a34a', bg: 'rgba(34, 197, 94, 0.12)' },
+	down: { icon: TrendingDown, color: '#dc2626', bg: 'rgba(220, 38, 38, 0.10)' },
+	flat: { icon: Minus, color: 'var(--text-muted)', bg: 'rgba(140, 130, 121, 0.12)' },
+	none: { icon: Minus, color: 'var(--text-muted)', bg: 'transparent' },
+};
+
+function TrendBadge({ dir, label }: { dir: TrendDir; label: string }) {
+	if (dir === 'none') return null;
+	const v = trendVisual[dir];
+	const Icon = v.icon;
+	return (
+		<span
+			className='inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold'
+			style={{ background: v.bg, color: v.color }}>
+			<Icon size={13} />
+			{label}
+		</span>
+	);
+}
+
+/** Kartu sorotan besar dengan tren bulan-ini vs bulan-lalu + sub-baris all-time. */
+function HighlightCard({
+	icon: Icon,
+	label,
+	value,
+	tone,
+	delta,
+	footnote,
+}: {
+	icon: typeof Wallet;
+	label: string;
+	value: string | number;
+	tone: StatTone;
+	delta: { dir: TrendDir; label: string };
+	footnote: string;
+}) {
+	const s = toneStyles[tone];
+	return (
+		<Card
+			className='flex flex-col gap-3 p-5 transition-shadow'
+			style={{
+				background: 'var(--bg-card)',
+				borderColor: 'var(--border)',
+				boxShadow: 'var(--shadow-sm)',
+			}}>
+			<div className='flex items-center justify-between gap-2'>
+				<span className='flex items-center gap-2'>
+					<span
+						className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl'
+						style={{ background: s.chipBg, color: s.chipColor }}>
+						<Icon size={18} />
+					</span>
+					<span
+						className='text-sm font-medium'
+						style={{ color: 'var(--text-secondary)' }}>
+						{label}
+					</span>
+				</span>
+				<TrendBadge dir={delta.dir} label={delta.label} />
+			</div>
+			<p
+				className='font-serif text-3xl font-bold leading-none'
+				style={{ color: 'var(--text)' }}>
+				{value}
+			</p>
+			<p className='text-xs' style={{ color: 'var(--text-muted)' }}>
+				{footnote}
+			</p>
+		</Card>
+	);
+}
+
 function StatCard({
 	icon: Icon,
 	label,
@@ -88,7 +184,7 @@ function StatCard({
 	const s = toneStyles[tone];
 	const body = (
 		<Card
-			className='flex flex-row items-center gap-4 p-5 transition-shadow'
+			className='flex h-full flex-row items-center gap-4 p-5 transition-shadow'
 			style={{
 				background: 'var(--bg-card)',
 				borderColor: 'var(--border)',
@@ -133,6 +229,24 @@ function StatCard({
 	return body;
 }
 
+function HighlightSkeleton() {
+	return (
+		<Card
+			className='flex flex-col gap-3 p-5'
+			style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+			<div className='flex items-center justify-between'>
+				<div className='flex items-center gap-2'>
+					<Skeleton className='h-9 w-9 rounded-xl' />
+					<Skeleton className='h-4 w-28' />
+				</div>
+				<Skeleton className='h-5 w-14 rounded-full' />
+			</div>
+			<Skeleton className='h-8 w-40' />
+			<Skeleton className='h-3 w-32' />
+		</Card>
+	);
+}
+
 function StatSkeleton() {
 	return (
 		<Card
@@ -147,14 +261,41 @@ function StatSkeleton() {
 	);
 }
 
-function StatGrid({ data }: { data: Overview }) {
+function HighlightsRow({ data }: { data: Overview }) {
+	const { trends } = data;
+	const revenueDelta = computeDelta(
+		trends.revenueThisMonth,
+		trends.revenueLastMonth,
+	);
+	const ordersDelta = computeDelta(
+		trends.ordersThisMonth,
+		trends.ordersLastMonth,
+	);
 	return (
-		<div className='grid grid-cols-2 gap-4 lg:grid-cols-3'>
-			<StatCard
-				icon={ClipboardList}
-				label='Total Pesanan'
-				value={data.orders.total}
+		<div className='grid gap-4 sm:grid-cols-2'>
+			<HighlightCard
+				icon={Wallet}
+				label='Pendapatan Bulan Ini'
+				value={formatRupiah(trends.revenueThisMonth)}
+				tone='secondary'
+				delta={revenueDelta}
+				footnote={`Total terkonfirmasi: ${formatRupiah(data.revenue)}`}
 			/>
+			<HighlightCard
+				icon={ClipboardList}
+				label='Pesanan Bulan Ini'
+				value={trends.ordersThisMonth}
+				tone='primary'
+				delta={ordersDelta}
+				footnote={`Total sepanjang waktu: ${data.orders.total} pesanan`}
+			/>
+		</div>
+	);
+}
+
+function SecondaryRow({ data }: { data: Overview }) {
+	return (
+		<div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
 			<StatCard
 				icon={AlertCircle}
 				label='Menunggu Konfirmasi'
@@ -166,18 +307,10 @@ function StatGrid({ data }: { data: Overview }) {
 				icon={CalendarCheck}
 				label='Pasang Hari Ini'
 				value={data.todayInstalls}
+				tone={data.todayInstalls > 0 ? 'secondary' : 'neutral'}
+				href='/admin/calendar'
 			/>
-			<StatCard
-				icon={Wallet}
-				label='Nilai Terkonfirmasi'
-				value={formatRupiah(data.revenue)}
-				tone='secondary'
-			/>
-			<StatCard
-				icon={Users}
-				label='Pelanggan'
-				value={data.customerCount}
-			/>
+			<StatCard icon={Users} label='Pelanggan' value={data.customerCount} />
 			<StatCard icon={Package} label='Produk' value={data.productCount} />
 		</div>
 	);
@@ -194,6 +327,7 @@ const PIPELINE: { key: keyof Overview['orders']; status: OrderStatus }[] = [
 ];
 
 function StatusPipeline({ orders }: { orders: Overview['orders'] }) {
+	const total = orders.total;
 	return (
 		<Card
 			className='p-5'
@@ -202,11 +336,39 @@ function StatusPipeline({ orders }: { orders: Overview['orders'] }) {
 				borderColor: 'var(--border)',
 				boxShadow: 'var(--shadow-sm)',
 			}}>
-			<p
-				className='mb-4 font-serif text-sm font-bold'
-				style={{ color: 'var(--text)' }}>
-				Status Pesanan
-			</p>
+			<div className='mb-4 flex items-baseline justify-between'>
+				<p
+					className='font-serif text-sm font-bold'
+					style={{ color: 'var(--text)' }}>
+					Status Pesanan
+				</p>
+				<span className='text-xs' style={{ color: 'var(--text-muted)' }}>
+					{total} total
+				</span>
+			</div>
+
+			{/* Bar proporsional: lebar tiap segmen sebanding jumlahnya. */}
+			<div
+				className='mb-5 flex h-2.5 w-full overflow-hidden rounded-full'
+				style={{ background: 'var(--bg-surface)' }}>
+				{total === 0
+					? null
+					: PIPELINE.map(({ key, status }) => {
+							const n = orders[key];
+							if (n === 0) return null;
+							return (
+								<span
+									key={status}
+									title={`${ORDER_STATUS_LABEL[status]}: ${n}`}
+									style={{
+										width: `${(n / total) * 100}%`,
+										background: statusColors[status].color,
+									}}
+								/>
+							);
+					  })}
+			</div>
+
 			<div className='grid grid-cols-3 gap-4 sm:grid-cols-6'>
 				{PIPELINE.map(({ key, status }) => {
 					const c = statusColors[status];
@@ -242,6 +404,7 @@ function StatusPipelineSkeleton() {
 			className='p-5'
 			style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
 			<Skeleton className='mb-4 h-4 w-28' />
+			<Skeleton className='mb-5 h-2.5 w-full rounded-full' />
 			<div className='grid grid-cols-3 gap-4 sm:grid-cols-6'>
 				{Array.from({ length: 6 }).map((_, i) => (
 					<div key={i} className='space-y-1.5'>
@@ -257,6 +420,7 @@ function StatusPipelineSkeleton() {
 export default function AdminDashboardPage() {
 	const router = useRouter();
 	const { data, isLoading } = api.admin.dashboard.overview.useQuery();
+	const loading = isLoading || !data;
 
 	return (
 		<div className='space-y-6'>
@@ -271,17 +435,26 @@ export default function AdminDashboardPage() {
 				</p>
 			</div>
 
-			{isLoading || !data ? (
-				<div className='grid grid-cols-2 gap-4 lg:grid-cols-3'>
-					{Array.from({ length: 6 }).map((_, i) => (
+			{loading ? (
+				<div className='grid gap-4 sm:grid-cols-2'>
+					<HighlightSkeleton />
+					<HighlightSkeleton />
+				</div>
+			) : (
+				<HighlightsRow data={data} />
+			)}
+
+			{loading ? (
+				<div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
+					{Array.from({ length: 4 }).map((_, i) => (
 						<StatSkeleton key={i} />
 					))}
 				</div>
 			) : (
-				<StatGrid data={data} />
+				<SecondaryRow data={data} />
 			)}
 
-			{isLoading || !data ? (
+			{loading ? (
 				<StatusPipelineSkeleton />
 			) : (
 				<StatusPipeline orders={data.orders} />
@@ -341,7 +514,7 @@ export default function AdminDashboardPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{isLoading || !data ? (
+							{loading ? (
 								Array.from({ length: 6 }).map((_, i) => (
 									<TableRow
 										key={`skeleton-${i}`}

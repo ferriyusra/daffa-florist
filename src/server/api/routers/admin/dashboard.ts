@@ -23,6 +23,30 @@ function wibTodayUtcMidnight(): { start: Date; end: Date } {
 }
 
 /**
+ * Rentang [start, end) sebuah bulan kalender WIB sebagai instant UTC sungguhan.
+ *
+ * Berbeda dari `installDate` (UTC-midnight date-only), `createdAt` adalah
+ * timestamp riil — jadi batas bulan harus instant ketika kalender WIB melewati
+ * tanggal 1 pukul 00:00, yaitu midnight-WIB dikurangi 7 jam (offset WIB).
+ * `monthsAgo = 0` → bulan ini, `1` → bulan lalu. `Date.UTC` menangani luapan
+ * bulan/tahun (mis. Januari → Desember tahun sebelumnya).
+ */
+function wibMonthRange(monthsAgo: number): { start: Date; end: Date } {
+	const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+	const nowWib = new Date(Date.now() + WIB_OFFSET_MS);
+	const y = nowWib.getUTCFullYear();
+	const m = nowWib.getUTCMonth() - monthsAgo;
+	const start = new Date(Date.UTC(y, m, 1) - WIB_OFFSET_MS);
+	const end = new Date(Date.UTC(y, m + 1, 1) - WIB_OFFSET_MS);
+	return { start, end };
+}
+
+/** Sum `total` pesanan terkonfirmasi (bukan PENDING/CANCELLED) dalam rentang createdAt. */
+const CONFIRMED_REVENUE_WHERE = {
+	status: { notIn: ['PENDING', 'CANCELLED'] as OrderStatus[] },
+} as const;
+
+/**
  * Ringkasan operasional dashboard admin (S?.?) — `adminProcedure`. Semua statistik
  * diambil dalam SATU round-trip via `Promise.all` (groupBy/count/aggregate/findMany,
  * tanpa N+1).
@@ -30,6 +54,8 @@ function wibTodayUtcMidnight(): { start: Date; end: Date } {
 export const adminDashboardRouter = createTRPCRouter({
 	overview: adminProcedure.query(async ({ ctx }) => {
 		const { start, end } = wibTodayUtcMidnight();
+		const thisMonth = wibMonthRange(0);
+		const lastMonth = wibMonthRange(1);
 
 		const [
 			statusGroups,
@@ -38,6 +64,10 @@ export const adminDashboardRouter = createTRPCRouter({
 			customerCount,
 			productCount,
 			recentRows,
+			ordersThisMonth,
+			ordersLastMonth,
+			revenueThisMonthAgg,
+			revenueLastMonthAgg,
 		] = await Promise.all([
 			// Jumlah pesanan per status (1 query, bukan 6 count terpisah).
 			ctx.prisma.order.groupBy({
@@ -59,7 +89,7 @@ export const adminDashboardRouter = createTRPCRouter({
 			// (CONFIRMED bisa baru DP).
 			ctx.prisma.order.aggregate({
 				_sum: { total: true },
-				where: { status: { notIn: ['PENDING', 'CANCELLED'] } },
+				where: CONFIRMED_REVENUE_WHERE,
 			}),
 			ctx.prisma.user.count({ where: { role: 'CUSTOMER' } }),
 			ctx.prisma.product.count(),
@@ -73,6 +103,28 @@ export const adminDashboardRouter = createTRPCRouter({
 					total: true,
 					createdAt: true,
 					user: { select: { name: true, email: true } },
+				},
+			}),
+			// Tren bulanan (createdAt, kalender WIB): jumlah pesanan & nilai
+			// terkonfirmasi untuk bulan ini vs bulan lalu — basis panah naik/turun.
+			ctx.prisma.order.count({
+				where: { createdAt: { gte: thisMonth.start, lt: thisMonth.end } },
+			}),
+			ctx.prisma.order.count({
+				where: { createdAt: { gte: lastMonth.start, lt: lastMonth.end } },
+			}),
+			ctx.prisma.order.aggregate({
+				_sum: { total: true },
+				where: {
+					...CONFIRMED_REVENUE_WHERE,
+					createdAt: { gte: thisMonth.start, lt: thisMonth.end },
+				},
+			}),
+			ctx.prisma.order.aggregate({
+				_sum: { total: true },
+				where: {
+					...CONFIRMED_REVENUE_WHERE,
+					createdAt: { gte: lastMonth.start, lt: lastMonth.end },
 				},
 			}),
 		]);
@@ -116,6 +168,13 @@ export const adminDashboardRouter = createTRPCRouter({
 			customerCount,
 			productCount,
 			recentOrders,
+			// Tren bulan-berjalan vs bulan-lalu (delta % dihitung di klien).
+			trends: {
+				ordersThisMonth,
+				ordersLastMonth,
+				revenueThisMonth: revenueThisMonthAgg._sum.total ?? 0,
+				revenueLastMonth: revenueLastMonthAgg._sum.total ?? 0,
+			},
 		};
 	}),
 });
