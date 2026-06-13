@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
 	ChevronLeft,
 	ChevronRight,
-	Eye,
 	Pencil,
 	Plus,
 	Search,
@@ -15,10 +15,23 @@ import { api } from '@/trpc/react';
 import { productCategories, type ProductCategory } from '@/lib/products';
 import { formatRupiah, useToast } from '@/hooks';
 import { ConfirmDialog, ProductImage, ProgressBar } from '@/components';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 10;
 
 export default function AdminProductsPage() {
+	const router = useRouter();
 	const utils = api.useUtils();
 	const toast = useToast();
 	const { data: products = [], isLoading, isFetching } =
@@ -51,8 +64,11 @@ export default function AdminProductsPage() {
 
 	const confirmProduct = products.find((p) => p.id === confirmId) ?? null;
 
-	const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+	const total = filtered.length;
+	const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 	const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+	const fromRow = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+	const toRow = Math.min(page * PAGE_SIZE, total);
 
 	// Balik ke halaman 1 saat filter berubah; jaga halaman tetap valid saat data menyusut.
 	useEffect(() => {
@@ -65,190 +81,209 @@ export default function AdminProductsPage() {
 	return (
 		<div className='space-y-5'>
 			<div className='flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between'>
-				<div
-					className='flex items-center gap-2 flex-1 max-w-md px-3.5 h-10 rounded-xl border border-[var(--border)]'
-					style={{ background: 'var(--bg-card)' }}>
-					<Search size={15} style={{ color: 'var(--text-muted)' }} />
-					<input
+				<div className='relative flex-1 max-w-md'>
+					<Search
+						size={15}
+						className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2'
+						style={{ color: 'var(--text-muted)' }}
+					/>
+					<Input
 						type='search'
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder='Cari nama produk...'
-						className='flex-1 bg-transparent text-sm outline-none'
+						className='h-10 pl-9'
 					/>
 				</div>
-				<Link
-					href='/admin/products/new'
-					className='inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-sm font-semibold cursor-pointer transition-colors'
-					style={{ background: 'var(--primary)', color: 'white' }}>
-					<Plus size={15} />
-					Tambah Produk
-				</Link>
+				<Button asChild className='h-10'>
+					<Link href='/admin/products/new'>
+						<Plus size={15} />
+						Tambah Produk
+					</Link>
+				</Button>
 			</div>
 
 			<div className='flex gap-2 flex-wrap'>
 				{(['all', ...productCategories] as const).map((cat) => {
 					const active = category === cat;
 					return (
-						<button
+						<Button
 							type='button'
 							key={cat}
+							variant={active ? 'default' : 'outline'}
 							onClick={() => setCategory(cat)}
-							className='inline-flex items-center px-3.5 h-9 rounded-full text-xs font-semibold cursor-pointer border transition-colors'
-							style={{
-								background: active ? 'var(--primary)' : 'transparent',
-								color: active ? 'white' : 'var(--text-secondary)',
-								borderColor: active ? 'var(--primary)' : 'var(--border)',
-							}}>
+							className='h-9 rounded-full text-xs font-semibold'>
 							{cat === 'all' ? 'Semua' : cat}
-						</button>
+						</Button>
 					);
 				})}
 			</div>
 
 			<ProgressBar active={isFetching} />
 
-			{isLoading ? (
-				<div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4'>
-					{Array.from({ length: 6 }).map((_, i) => (
-						<div
-							key={i}
-							className='rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] h-64 animate-pulse'
-						/>
-					))}
-				</div>
-			) : filtered.length === 0 ? (
-				<div
-					className='text-center py-16 rounded-2xl border border-[var(--border)]'
-					style={{ background: 'var(--bg-card)' }}>
-					<p className='text-sm' style={{ color: 'var(--text-secondary)' }}>
-						Tidak ada produk yang cocok.
-					</p>
-				</div>
-			) : (
-				<div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4'>
-					{paged.map((product) => (
-						<div
-							key={product.id}
-							className='rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col'
+			<div
+				className='rounded-2xl border border-[var(--border)] overflow-hidden'
+				style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+				<Table>
+					<TableHeader>
+						<TableRow
+							className='hover:bg-transparent'
 							style={{
-								background: 'var(--bg-card)',
-								boxShadow: 'var(--shadow-sm)',
+								background: 'rgba(157, 23, 77, 0.04)',
+								color: 'var(--text-muted)',
 							}}>
-							<div className='relative aspect-4/3 bg-[var(--bg-surface)]'>
-								<ProductImage
-									src={product.image}
-									alt={product.title}
-									sizes='(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw'
-								/>
-								<span
-									className='absolute top-3 left-3 inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider'
-									style={{
-										background: 'rgba(255, 255, 255, 0.95)',
-										color: 'var(--primary)',
-									}}>
-									{product.category}
-								</span>
-							</div>
-
-							<div className='p-5 flex flex-col flex-1 gap-3'>
-								<div>
-									<h3 className='font-serif text-base font-semibold mb-1 line-clamp-1'>
-										{product.title}
-									</h3>
-									<p
-										className='text-xs line-clamp-2'
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								Produk
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								Kategori
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold text-right'>
+								Harga Mulai
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold'>
+								Varian
+							</TableHead>
+							<TableHead className='px-6 py-3 text-xs uppercase tracking-wider font-semibold text-right'>
+								Aksi
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							Array.from({ length: PAGE_SIZE }).map((_, i) => (
+								<TableRow key={`skeleton-${i}`} className='hover:bg-transparent'>
+									{Array.from({ length: 5 }).map((__, c) => (
+										<TableCell key={c} className='px-6 py-4'>
+											<Skeleton className='h-4 w-full' />
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : total === 0 ? (
+							<TableRow className='hover:bg-transparent'>
+								<TableCell
+									colSpan={5}
+									className='px-6 py-12 text-center text-sm'
+									style={{ color: 'var(--text-muted)' }}>
+									Tidak ada produk yang cocok.
+								</TableCell>
+							</TableRow>
+						) : (
+							paged.map((product) => (
+								<TableRow
+									key={product.id}
+									onClick={() => router.push(`/admin/products/${product.id}`)}
+									className='cursor-pointer'>
+									<TableCell className='px-6 py-4'>
+										<div className='flex items-center gap-3'>
+											<div className='relative w-12 h-12 rounded-lg overflow-hidden border border-[var(--border)] shrink-0 bg-[var(--bg-surface)]'>
+												<ProductImage
+													src={product.image}
+													alt={product.title}
+													sizes='48px'
+												/>
+											</div>
+											<div className='min-w-0'>
+												<p className='font-semibold truncate'>{product.title}</p>
+												<p
+													className='text-xs truncate max-w-[18rem]'
+													style={{ color: 'var(--text-muted)' }}>
+													{product.shortDescription}
+												</p>
+											</div>
+										</div>
+									</TableCell>
+									<TableCell className='px-6 py-4'>
+										<Badge
+											className='border-transparent text-[11px] font-semibold'
+											style={{
+												background: 'rgba(157, 23, 77, 0.08)',
+												color: 'var(--primary)',
+											}}>
+											{product.category}
+										</Badge>
+									</TableCell>
+									<TableCell
+										className='px-6 py-4 font-semibold text-right whitespace-nowrap'
+										style={{ color: 'var(--primary)' }}>
+										{formatRupiah(product.basePrice)}
+									</TableCell>
+									<TableCell
+										className='px-6 py-4 whitespace-nowrap'
 										style={{ color: 'var(--text-secondary)' }}>
-										{product.shortDescription}
-									</p>
-								</div>
+										{product._count.sizes} ukuran
+									</TableCell>
+									<TableCell className='px-6 py-4'>
+										<div
+											className='flex items-center justify-end gap-1.5'
+											onClick={(e) => e.stopPropagation()}>
+											<Button
+												asChild
+												variant='outline'
+												size='icon'
+												aria-label='Edit produk'>
+												<Link href={`/admin/products/${product.id}/edit`}>
+													<Pencil size={13} />
+												</Link>
+											</Button>
+											<Button
+												type='button'
+												variant='outline'
+												size='icon'
+												onClick={() => setConfirmId(product.id)}
+												aria-label='Hapus produk'
+												className='text-[var(--destructive)] hover:text-[var(--destructive)] hover:border-[var(--destructive)]'>
+												<Trash2 size={13} />
+											</Button>
+										</div>
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
 
-								<div className='flex items-center justify-between text-xs pt-3 border-t border-[var(--border)]'>
-									<div>
-										<p style={{ color: 'var(--text-muted)' }}>Harga mulai</p>
-										<p
-											className='font-serif text-base font-semibold'
-											style={{ color: 'var(--primary)' }}>
-											{formatRupiah(product.basePrice)}
-										</p>
-									</div>
-									<div className='text-right'>
-										<p style={{ color: 'var(--text-muted)' }}>Varian</p>
-										<p
-											className='font-semibold'
-											style={{ color: 'var(--secondary)' }}>
-											{product._count.sizes} ukuran
-										</p>
-									</div>
-								</div>
-
-								<div className='flex gap-2 pt-1'>
-									<Link
-										href={`/admin/products/${product.id}`}
-										className='flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-colors'
-										style={{ color: 'var(--text-secondary)' }}>
-										<Eye size={12} />
-										Detail
-									</Link>
-									<Link
-										href={`/admin/products/${product.id}/edit`}
-										className='flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-[var(--border)] cursor-pointer hover:border-[var(--primary)] transition-colors'
-										style={{ color: 'var(--text-secondary)' }}>
-										<Pencil size={12} />
-										Edit
-									</Link>
-									<button
-										type='button'
-										onClick={() => setConfirmId(product.id)}
-										className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors hover:border-[var(--destructive)]'
-										style={{ color: 'var(--destructive)' }}
-										aria-label='Hapus produk'>
-										<Trash2 size={13} />
-									</button>
-								</div>
-							</div>
-						</div>
-					))}
-				</div>
-			)}
-
-			{!isLoading && totalPages > 1 && (
-				<div className='flex items-center justify-center gap-1.5 pt-2'>
-					<button
-						type='button'
-						onClick={() => setPage((p) => Math.max(1, p - 1))}
-						disabled={page === 1}
-						aria-label='Halaman sebelumnya'
-						className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-						style={{ color: 'var(--text-secondary)' }}>
-						<ChevronLeft size={16} />
-					</button>
-					{Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => {
-						const active = n === page;
-						return (
-							<button
-								type='button'
-								key={n}
-								onClick={() => setPage(n)}
-								className='inline-flex items-center justify-center min-w-9 h-9 px-2 rounded-lg text-sm font-semibold cursor-pointer border transition-colors'
-								style={{
-									background: active ? 'var(--primary)' : 'transparent',
-									color: active ? 'white' : 'var(--text-secondary)',
-									borderColor: active ? 'var(--primary)' : 'var(--border)',
-								}}>
-								{n}
-							</button>
-						);
-					})}
-					<button
-						type='button'
-						onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-						disabled={page === totalPages}
-						aria-label='Halaman berikutnya'
-						className='inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[var(--border)] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-						style={{ color: 'var(--text-secondary)' }}>
-						<ChevronRight size={16} />
-					</button>
+			{!isLoading && total > 0 && (
+				<div className='flex flex-col sm:flex-row items-center justify-between gap-3'>
+					<p className='text-xs' style={{ color: 'var(--text-muted)' }}>
+						Menampilkan {fromRow}–{toRow} dari {total} produk
+					</p>
+					<div className='flex items-center gap-1.5'>
+						<Button
+							type='button'
+							variant='outline'
+							size='icon'
+							onClick={() => setPage((p) => Math.max(1, p - 1))}
+							disabled={page === 1}
+							aria-label='Halaman sebelumnya'>
+							<ChevronLeft size={16} />
+						</Button>
+						{Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => {
+							const active = n === page;
+							return (
+								<Button
+									type='button'
+									key={n}
+									variant={active ? 'default' : 'outline'}
+									size='icon'
+									onClick={() => setPage(n)}
+									aria-current={active ? 'page' : undefined}>
+									{n}
+								</Button>
+							);
+						})}
+						<Button
+							type='button'
+							variant='outline'
+							size='icon'
+							onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+							disabled={page === totalPages}
+							aria-label='Halaman berikutnya'>
+							<ChevronRight size={16} />
+						</Button>
+					</div>
 				</div>
 			)}
 

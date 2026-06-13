@@ -5,6 +5,16 @@ import { ArrowLeft, Pencil } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { formatRupiah } from '@/hooks';
 import { ProductImage } from '@/components';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 
 export default function ProductDetail({ productId }: { productId: string }) {
 	const { data: product, isLoading } = api.admin.product.getById.useQuery({
@@ -51,14 +61,14 @@ export default function ProductDetail({ productId }: { productId: string }) {
 				style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
 				<div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 sm:px-8 py-5 border-b border-[var(--border)]'>
 					<div>
-						<span
-							className='inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider mb-2'
+						<Badge
+							className='border-transparent text-[10px] font-semibold uppercase tracking-wider mb-2'
 							style={{
 								background: 'rgba(157, 23, 77, 0.08)',
 								color: 'var(--primary)',
 							}}>
 							{product.category}
-						</span>
+						</Badge>
 						<h2 className='font-serif text-xl font-semibold'>{product.title}</h2>
 						<p
 							className='text-xs font-mono mt-0.5'
@@ -67,20 +77,18 @@ export default function ProductDetail({ productId }: { productId: string }) {
 						</p>
 					</div>
 					<div className='flex items-center gap-2 shrink-0'>
-						<Link
-							href='/admin/products'
-							className='inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-[var(--border)] cursor-pointer'
-							style={{ color: 'var(--text-secondary)' }}>
-							<ArrowLeft size={14} />
-							Kembali
-						</Link>
-						<Link
-							href={`/admin/products/${product.id}/edit`}
-							className='inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white cursor-pointer'
-							style={{ background: 'var(--primary)' }}>
-							<Pencil size={14} />
-							Edit
-						</Link>
+						<Button asChild variant='outline'>
+							<Link href='/admin/products'>
+								<ArrowLeft size={14} />
+								Kembali
+							</Link>
+						</Button>
+						<Button asChild>
+							<Link href={`/admin/products/${product.id}/edit`}>
+								<Pencil size={14} />
+								Edit
+							</Link>
+						</Button>
 					</div>
 				</div>
 
@@ -149,43 +157,51 @@ export default function ProductDetail({ productId }: { productId: string }) {
 					{product.sizes.length > 0 && (
 						<Section title='Ukuran & harga'>
 							<div className='rounded-lg border border-[var(--border)] overflow-hidden'>
-								<table className='w-full text-sm'>
-									<thead>
-										<tr
-											className='text-left text-xs'
+								<Table>
+									<TableHeader>
+										<TableRow
+											className='hover:bg-transparent text-xs'
 											style={{
 												background: 'rgba(157, 23, 77, 0.04)',
 												color: 'var(--text-muted)',
 											}}>
-											<th className='px-4 py-2 font-semibold'>Label</th>
-											<th className='px-4 py-2 font-semibold'>Harga</th>
-											<th className='px-4 py-2 font-semibold'>Stok</th>
-											<th className='px-4 py-2 font-semibold'>Catatan</th>
-										</tr>
-									</thead>
-									<tbody>
+											<TableHead className='px-4 py-2 font-semibold'>
+												Label
+											</TableHead>
+											<TableHead className='px-4 py-2 font-semibold'>
+												Harga
+											</TableHead>
+											<TableHead className='px-4 py-2 font-semibold'>
+												Stok
+											</TableHead>
+											<TableHead className='px-4 py-2 font-semibold'>
+												Catatan
+											</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
 										{product.sizes.map((s) => (
-											<tr
-												key={s.id}
-												className='border-t border-[var(--border)]'>
-												<td className='px-4 py-2 font-medium'>{s.label}</td>
-												<td
+											<TableRow key={s.id} className='hover:bg-transparent'>
+												<TableCell className='px-4 py-2 font-medium'>
+													{s.label}
+												</TableCell>
+												<TableCell
 													className='px-4 py-2 font-semibold'
 													style={{ color: 'var(--primary)' }}>
 													{formatRupiah(s.price)}
-												</td>
-												<td className='px-4 py-2 font-medium'>
+												</TableCell>
+												<TableCell className='px-4 py-2 font-medium'>
 													{s.unitCount} unit
-												</td>
-												<td
+												</TableCell>
+												<TableCell
 													className='px-4 py-2'
 													style={{ color: 'var(--text-muted)' }}>
 													{s.note ?? '—'}
-												</td>
-											</tr>
+												</TableCell>
+											</TableRow>
 										))}
-									</tbody>
-								</table>
+									</TableBody>
+								</Table>
 							</div>
 						</Section>
 					)}

@@ -5,16 +5,21 @@ import { useRouter } from 'next/navigation';
 import { Plus, Trash2 } from 'lucide-react';
 import { api } from '@/trpc/react';
 import { productCategories, type ProductCategory } from '@/lib/products';
-import {
-	FloatingInput,
-	FloatingSelect,
-	FloatingTextarea,
-	ImageUpload,
-	RupiahInput,
-	TagsInput,
-} from '@/components';
+import { ImageUpload, RupiahInput, TagsInput } from '@/components';
 import { useToast } from '@/hooks';
 import { MAX_GALLERY, MAX_SIZES, productFields } from '@/lib/product-schema';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 
 type SizeRow = {
 	label: string;
@@ -54,10 +59,13 @@ const emptyForm: FormState = {
 	sizes: [{ label: '', price: 0, unitCount: 1, note: '' }],
 };
 
-// Preset ukuran umum (papan bunga sewa). Hanya saran lewat datalist — admin
-// tetap boleh mengetik ukuran custom (mis. "3 meter").
+// Preset ukuran umum (papan bunga sewa). Hanya saran lewat dropdown — admin
+// tetap boleh mengetik ukuran custom (mis. "3 meter") lewat data existing.
 const SIZE_PRESETS = ['Kecil', 'Sedang', 'Besar', 'Jumbo'];
 const STANDARD_SIZES = ['Kecil', 'Sedang', 'Besar'];
+
+// Radix Select melarang value string kosong → sentinel untuk opsi "Pilih ukuran".
+const SIZE_PLACEHOLDER = '__none__';
 
 /** Ubah teks bebas → slug valid (huruf kecil, angka, strip). Selaras regex zod. */
 const slugify = (s: string): string =>
@@ -81,10 +89,10 @@ function Field({
 }) {
 	return (
 		<div>
-			<label className='block text-sm font-semibold mb-2'>
+			<Label className='mb-2 font-semibold'>
 				{label}
-				{required && <span style={{ color: 'var(--destructive)' }}> *</span>}
-			</label>
+				{required && <span style={{ color: 'var(--destructive)' }}>*</span>}
+			</Label>
 			{children}
 			{error && (
 				<p className='mt-1.5 text-xs' style={{ color: 'var(--destructive)' }}>
@@ -314,44 +322,56 @@ export default function ProductForm({
 					</div>
 				) : (
 					<form onSubmit={handleSubmit} className='p-6 sm:p-8 space-y-5'>
-						<FloatingInput
-							label='Judul'
-							required
-							error={fieldErrors.title}
-							value={form.title}
-							onChange={(v) => set('title', v)}
-						/>
+						<Field label='Judul' required error={fieldErrors.title}>
+							<Input
+								value={form.title}
+								onChange={(e) => set('title', e.target.value)}
+								aria-invalid={!!fieldErrors.title}
+							/>
+						</Field>
 
-						<FloatingInput
+						<Field
 							label='Deskripsi singkat'
 							required
-							error={fieldErrors.shortDescription}
-							value={form.shortDescription}
-							onChange={(v) => set('shortDescription', v)}
-						/>
+							error={fieldErrors.shortDescription}>
+							<Input
+								value={form.shortDescription}
+								onChange={(e) => set('shortDescription', e.target.value)}
+								aria-invalid={!!fieldErrors.shortDescription}
+							/>
+						</Field>
 
-						<FloatingTextarea
+						<Field
 							label='Deskripsi lengkap'
 							required
-							error={fieldErrors.description}
-							rows={3}
-							value={form.description}
-							onChange={(v) => set('description', v)}
-						/>
+							error={fieldErrors.description}>
+							<Textarea
+								rows={3}
+								value={form.description}
+								onChange={(e) => set('description', e.target.value)}
+								aria-invalid={!!fieldErrors.description}
+							/>
+						</Field>
 
 						<div className='grid sm:grid-cols-2 gap-4'>
-							<FloatingSelect
-								label='Kategori'
-								required
-								error={fieldErrors.category}
-								value={form.category}
-								onChange={(v) => set('category', v as ProductCategory)}>
-								{productCategories.map((cat) => (
-									<option key={cat} value={cat}>
-										{cat}
-									</option>
-								))}
-							</FloatingSelect>
+							<Field label='Kategori' required error={fieldErrors.category}>
+								<Select
+									value={form.category}
+									onValueChange={(v) => set('category', v as ProductCategory)}>
+									<SelectTrigger
+										className='w-full'
+										aria-invalid={!!fieldErrors.category}>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{productCategories.map((cat) => (
+											<SelectItem key={cat} value={cat}>
+												{cat}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</Field>
 							<RupiahInput
 								label='Harga sewa mulai'
 								required
@@ -375,42 +395,67 @@ export default function ProductForm({
 									<div
 										key={i}
 										className='relative rounded-xl border border-[var(--border)] p-4 space-y-3'>
-										<button
+										<Button
 											type='button'
+											variant='ghost'
+											size='icon'
 											onClick={() => removeSize(i)}
 											aria-label='Hapus ukuran'
-											className='absolute top-3 right-3 p-1.5 rounded-md cursor-pointer hover:opacity-70 transition-opacity'
-											style={{ color: 'var(--destructive)' }}>
+											className='absolute top-3 right-3 size-8 text-[var(--destructive)] hover:text-[var(--destructive)]'>
 											<Trash2 size={16} />
-										</button>
+										</Button>
 										<div className='grid sm:grid-cols-2 gap-3 pr-9'>
-											<FloatingSelect
+											<Field
 												label='Ukuran'
 												required
-												error={fieldErrors[`sizes.${i}.label`]}
-												value={s.label}
-												onChange={(v) => setSize(i, 'label', v)}>
-												<option value=''>Pilih ukuran</option>
-												{/* Label lama non-preset (data existing) tetap tampil agar tak hilang saat edit. */}
-												{s.label &&
-													!SIZE_PRESETS.some(
-														(p) =>
-															p.toLowerCase() === s.label.toLowerCase(),
-													) && <option value={s.label}>{s.label}</option>}
-												{SIZE_PRESETS.map((p) => (
-													<option
-														key={p}
-														value={p}
-														disabled={form.sizes.some(
-															(o, idx) =>
-																idx !== i &&
-																o.label.toLowerCase() ===
-																	p.toLowerCase(),
-														)}>
-														{p}
-													</option>
-												))}
-											</FloatingSelect>
+												error={fieldErrors[`sizes.${i}.label`]}>
+												<Select
+													value={s.label || SIZE_PLACEHOLDER}
+													onValueChange={(v) =>
+														setSize(
+															i,
+															'label',
+															v === SIZE_PLACEHOLDER ? '' : v,
+														)
+													}>
+													<SelectTrigger
+														className='w-full'
+														aria-invalid={
+															!!fieldErrors[`sizes.${i}.label`]
+														}>
+														<SelectValue placeholder='Pilih ukuran' />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value={SIZE_PLACEHOLDER}>
+															Pilih ukuran
+														</SelectItem>
+														{/* Label lama non-preset (data existing) tetap tampil agar tak hilang saat edit. */}
+														{s.label &&
+															!SIZE_PRESETS.some(
+																(p) =>
+																	p.toLowerCase() ===
+																	s.label.toLowerCase(),
+															) && (
+																<SelectItem value={s.label}>
+																	{s.label}
+																</SelectItem>
+															)}
+														{SIZE_PRESETS.map((p) => (
+															<SelectItem
+																key={p}
+																value={p}
+																disabled={form.sizes.some(
+																	(o, idx) =>
+																		idx !== i &&
+																		o.label.toLowerCase() ===
+																			p.toLowerCase(),
+																)}>
+																{p}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</Field>
 											<RupiahInput
 												label='Harga'
 												required
@@ -420,46 +465,54 @@ export default function ProductForm({
 											/>
 										</div>
 										<div className='grid sm:grid-cols-2 gap-3 pr-9'>
-											<FloatingInput
+											<Field
 												label='Stok (unit)'
-												type='number'
-												min={0}
-												error={fieldErrors[`sizes.${i}.unitCount`]}
-												value={String(s.unitCount)}
-												onChange={(v) =>
-													setSize(
-														i,
-														'unitCount',
-														Math.max(0, Math.trunc(Number(v) || 0)),
-													)
-												}
-											/>
-											<FloatingInput
-												label='Catatan (opsional)'
-												value={s.note}
-												onChange={(v) => setSize(i, 'note', v)}
-											/>
+												error={fieldErrors[`sizes.${i}.unitCount`]}>
+												<Input
+													type='number'
+													min={0}
+													value={String(s.unitCount)}
+													onChange={(e) =>
+														setSize(
+															i,
+															'unitCount',
+															Math.max(
+																0,
+																Math.trunc(Number(e.target.value) || 0),
+															),
+														)
+													}
+													aria-invalid={
+														!!fieldErrors[`sizes.${i}.unitCount`]
+													}
+												/>
+											</Field>
+											<Field label='Catatan (opsional)'>
+												<Input
+													value={s.note}
+													onChange={(e) => setSize(i, 'note', e.target.value)}
+												/>
+											</Field>
 										</div>
 									</div>
 								))}
 								<div className='flex flex-wrap items-center gap-2'>
-									<button
+									<Button
 										type='button'
+										variant='outline'
 										onClick={addSize}
-										disabled={form.sizes.length >= MAX_SIZES}
-										className='inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-[var(--border)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
-										style={{ color: 'var(--text-secondary)' }}>
+										disabled={form.sizes.length >= MAX_SIZES}>
 										<Plus size={16} />
 										Tambah ukuran
-									</button>
-									<button
+									</Button>
+									<Button
 										type='button'
+										variant='ghost'
 										onClick={fillStandardSizes}
 										disabled={form.sizes.length >= MAX_SIZES}
-										className='inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
-										style={{ color: 'var(--primary)' }}>
+										className='text-[var(--primary)] hover:text-[var(--primary)]'>
 										Isi standar (Kecil/Sedang/Besar)
-									</button>
+									</Button>
 									{form.sizes.length >= MAX_SIZES && (
 										<span
 											className='text-xs'
@@ -478,11 +531,12 @@ export default function ProductForm({
 							/>
 						</Field>
 
-						<FloatingInput
-							label='Waktu produksi'
-							value={form.productionTime}
-							onChange={(v) => set('productionTime', v)}
-						/>
+						<Field label='Waktu produksi'>
+							<Input
+								value={form.productionTime}
+								onChange={(e) => set('productionTime', e.target.value)}
+							/>
+						</Field>
 
 						<Field label='Galeri gambar'>
 							<ImageUpload
@@ -529,12 +583,10 @@ export default function ProductForm({
 														? 'rgba(157, 23, 77, 0.04)'
 														: 'var(--bg-surface)',
 												}}>
-												<input
-													type='checkbox'
+												<Checkbox
 													checked={active}
-													onChange={() => toggleArea(name)}
-													className='w-4 h-4 rounded cursor-pointer shrink-0'
-													style={{ accentColor: 'var(--primary)' }}
+													onCheckedChange={() => toggleArea(name)}
+													className='shrink-0'
 												/>
 												<span className='truncate'>{name}</span>
 											</label>
@@ -545,20 +597,15 @@ export default function ProductForm({
 						</Field>
 
 						<div className='flex items-center justify-center gap-3 pt-4'>
-							<button
+							<Button
 								type='button'
-								onClick={() => router.push('/admin/products')}
-								className='px-5 py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] cursor-pointer'
-								style={{ color: 'var(--text-secondary)' }}>
+								variant='outline'
+								onClick={() => router.push('/admin/products')}>
 								Kembali
-							</button>
-							<button
-								type='submit'
-								disabled={pending}
-								className='px-6 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer disabled:opacity-60'
-								style={{ background: 'var(--primary)' }}>
+							</Button>
+							<Button type='submit' disabled={pending}>
 								{pending ? 'Menyimpan...' : 'Simpan'}
-							</button>
+							</Button>
 						</div>
 					</form>
 				)}
