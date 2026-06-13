@@ -5,9 +5,11 @@ import { adminOrderRouter } from './order';
 import { adminGalleryRouter } from './gallery';
 import { adminDeliveryAreaRouter } from './delivery-area';
 import { adminPromoRouter } from './promo';
+import { adminDashboardRouter } from './dashboard';
 
 /** Namespace router admin (semua memakai `adminProcedure`). */
 export const adminRouter = createTRPCRouter({
+	dashboard: adminDashboardRouter,
 	product: adminProductRouter,
 	customer: adminCustomerRouter,
 	order: adminOrderRouter,
