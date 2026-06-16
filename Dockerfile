@@ -29,8 +29,27 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ENV NEXTAUTH_SECRET="build-time-placeholder"
+# Midtrans wajib di env.ts → beri nilai dummy agar validasi build lolos.
+# Nilai asli di-inject saat runtime lewat compose, bukan di-bake ke image.
+ENV MIDTRANS_API_URL="https://api.sandbox.midtrans.com"
+ENV MIDTRANS_CLIENT_KEY="build-time-placeholder"
+ENV MIDTRANS_SERVER_KEY="build-time-placeholder"
 
+# Client Prisma di-generate ke src/generated/prisma (gitignored & dockerignored),
+# jadi harus dibuat di sini sebelum build — kalau tidak, import @/generated/prisma gagal.
+RUN npx prisma generate
 RUN npm run build
+
+# ──────────────────────────────────────────────────────────────
+# Seeder: image sekali-jalan untuk isi data awal (punya tsx + source).
+# Dipakai service `seed` (profile) di docker-compose, BUKAN runtime app.
+# ──────────────────────────────────────────────────────────────
+FROM base AS seeder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# Regenerate client (dockerignore mengecualikan src/generated/prisma).
+RUN npx prisma generate
+CMD ["npm", "run", "prisma:seed"]
 
 # ──────────────────────────────────────────────────────────────
 # Runner: image final yang ramping

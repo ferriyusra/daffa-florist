@@ -30,6 +30,9 @@ declare module 'next-auth/jwt' {
  * middleware (edge) bisa membaca sesi tanpa mem-bundle Prisma.
  */
 export const baseAuthConfig = {
+	// Di belakang reverse proxy (Caddy/Nginx) host dari header tak sama dengan
+	// origin asli — tanpa ini NextAuth v5 menolak request (`UntrustedHost`).
+	trustHost: true,
 	session: { strategy: 'jwt' },
 	pages: { signIn: '/login' },
 	callbacks: {
