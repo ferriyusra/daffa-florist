@@ -8,6 +8,7 @@ import {
 	CalendarClock,
 	CalendarDays,
 	CheckCircle2,
+	CreditCard,
 	MapPin,
 	Package,
 	Receipt,
@@ -60,6 +61,22 @@ const STEPPER_FLOW: OrderStatus[] = [
 	'INSTALLED',
 	'COMPLETED',
 ];
+
+/** Label + warna status pembayaran Midtrans (UI-only, read-only). */
+const paymentStatusMeta: Record<
+	string,
+	{ label: string; bg: string; color: string }
+> = {
+	PENDING: { label: 'Menunggu', bg: 'rgba(234, 179, 8, 0.15)', color: '#a16207' },
+	PAID: { label: 'Lunas', bg: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' },
+	FAILED: { label: 'Gagal', bg: 'rgba(220, 38, 38, 0.12)', color: '#dc2626' },
+	EXPIRED: {
+		label: 'Kedaluwarsa',
+		bg: 'rgba(120, 120, 120, 0.14)',
+		color: '#6b7280',
+	},
+	REFUNDED: { label: 'Refund', bg: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5' },
+};
 
 /** Pesan konfirmasi spesifik untuk transisi tertentu (fallback generik). */
 const confirmCopy: Partial<Record<OrderStatus, string>> = {
@@ -184,7 +201,11 @@ export default function OrderDetail({ order }: { order: Order }) {
 		onError: (e) => toast.error(e.message),
 	});
 
-	const nextStatuses = ORDER_STATUS_TRANSITIONS[order.status];
+	// CONFIRMED dikecualikan dari aksi admin — transisi PENDING → CONFIRMED hanya
+	// dari webhook Midtrans (pembayaran terverifikasi). Admin tak konfirmasi manual.
+	const nextStatuses = ORDER_STATUS_TRANSITIONS[order.status].filter(
+		(s) => s !== 'CONFIRMED',
+	);
 	const itemCount = order.items.reduce((n, it) => n + it.quantity, 0);
 
 	return (
@@ -406,6 +427,64 @@ export default function OrderDetail({ order }: { order: Order }) {
 							</p>
 						</Section>
 					)}
+
+					{/* Pembayaran (Midtrans) — read-only. Konfirmasi otomatis via webhook. */}
+					<Section title='Pembayaran' icon={CreditCard}>
+						{order.payments.length === 0 ? (
+							<p className='text-sm' style={{ color: 'var(--text-muted)' }}>
+								Belum ada percobaan pembayaran.
+							</p>
+						) : (
+							<ul className='divide-y divide-[var(--border)]'>
+								{order.payments.map((p) => {
+									const meta =
+										paymentStatusMeta[p.status] ?? paymentStatusMeta.PENDING!;
+									return (
+										<li
+											key={p.id}
+											className='py-3 first:pt-0 last:pb-0 flex items-start justify-between gap-3'>
+											<div className='min-w-0 space-y-0.5'>
+												<p className='text-sm font-semibold'>
+													{formatRupiah(p.amount)}
+													{p.paymentType ? (
+														<span
+															className='ml-2 text-xs font-normal'
+															style={{ color: 'var(--text-secondary)' }}>
+															{p.paymentType}
+														</span>
+													) : null}
+												</p>
+												<p
+													className='font-mono text-[11px] truncate'
+													style={{ color: 'var(--text-muted)' }}>
+													{p.midtransOrderId}
+												</p>
+												{p.transactionId && (
+													<p
+														className='font-mono text-[11px] truncate'
+														style={{ color: 'var(--text-muted)' }}>
+														txn: {p.transactionId}
+													</p>
+												)}
+												<p
+													className='text-[11px]'
+													style={{ color: 'var(--text-secondary)' }}>
+													{p.paidAt
+														? `Dibayar ${formatInstantTime(p.paidAt)}`
+														: `Dibuat ${formatInstantTime(p.createdAt)}`}
+												</p>
+											</div>
+											<span
+												className='inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0'
+												style={{ background: meta.bg, color: meta.color }}>
+												{meta.label}
+											</span>
+										</li>
+									);
+								})}
+							</ul>
+						)}
+					</Section>
 				</div>
 
 				{/* Sidebar lengket */}
@@ -424,6 +503,14 @@ export default function OrderDetail({ order }: { order: Order }) {
 								{ORDER_STATUS_LABEL[order.status]}
 							</span>
 						</div>
+						{order.status === 'PENDING' && (
+							<p
+								className='mb-3 text-xs leading-relaxed'
+								style={{ color: 'var(--text-muted)' }}>
+								Menunggu pembayaran Midtrans. Pesanan otomatis menjadi
+								Dikonfirmasi setelah pembayaran berhasil.
+							</p>
+						)}
 						{nextStatuses.length === 0 ? (
 							<p className='text-sm' style={{ color: 'var(--text-muted)' }}>
 								Pesanan {ORDER_STATUS_LABEL[order.status].toLowerCase()} —

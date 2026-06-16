@@ -303,3 +303,30 @@ section { padding: 96px 0; }
   .marquee-scroll { animation: none; }
   .floating-petal { display: none; }
 }
+
+/* goey-toast — perbesar ukuran default (blob mengikuti konten otomatis) */
+.gooey-contentCompact {
+  padding: 11px 16px;
+}
+.gooey-contentExpanded {
+  padding: 11px 16px 20px;
+  min-width: 340px;
+  max-width: 440px;
+}
+.gooey-title {
+  font-size: 14px;
+}
+.gooey-iconWrapper {
+  width: 22px;
+  height: 22px;
+}
+.gooey-iconWrapper svg {
+  width: 22px;
+  height: 22px;
+}
+.gooey-description {
+  font-size: 14px;
+}
+.gooey-timestamp {
+  font-size: 12px;
+}

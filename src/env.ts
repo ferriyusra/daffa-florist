@@ -26,6 +26,12 @@ export const env = createEnv({
 				? z.string().min(1)
 				: z.string().min(1).optional(),
 		NEXTAUTH_URL: z.string().url().optional(),
+		// Midtrans Snap. API_URL membedakan sandbox vs produksi
+		// (mis. https://api.sandbox.midtrans.com). CLIENT_KEY non-rahasia —
+		// diteruskan ke browser lewat respons tRPC untuk memuat snap.js.
+		MIDTRANS_API_URL: z.string().url(),
+		MIDTRANS_CLIENT_KEY: z.string().min(1),
+		MIDTRANS_SERVER_KEY: z.string().min(1),
 	},
 	client: {},
 	runtimeEnv: {
@@ -37,6 +43,9 @@ export const env = createEnv({
 		NODE_ENV: process.env.NODE_ENV,
 		NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
 		NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+		MIDTRANS_API_URL: process.env.MIDTRANS_API_URL,
+		MIDTRANS_CLIENT_KEY: process.env.MIDTRANS_CLIENT_KEY,
+		MIDTRANS_SERVER_KEY: process.env.MIDTRANS_SERVER_KEY,
 	},
 	emptyStringAsUndefined: true,
 });

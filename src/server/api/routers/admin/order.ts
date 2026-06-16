@@ -178,6 +178,19 @@ export const adminOrderRouter = createTRPCRouter({
 						},
 						orderBy: { id: 'asc' },
 					},
+					payments: {
+						select: {
+							id: true,
+							amount: true,
+							status: true,
+							midtransOrderId: true,
+							paymentType: true,
+							transactionId: true,
+							paidAt: true,
+							createdAt: true,
+						},
+						orderBy: { createdAt: 'desc' },
+					},
 				},
 			});
 			if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -203,6 +216,15 @@ export const adminOrderRouter = createTRPCRouter({
 				select: { id: true, status: true },
 			});
 			if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
+
+			// PENDING → CONFIRMED hanya boleh dari webhook Midtrans (pembayaran
+			// terverifikasi). Admin tak boleh mengonfirmasi manual.
+			if (input.status === 'CONFIRMED') {
+				throw new TRPCError({
+					code: 'FORBIDDEN',
+					message: 'Konfirmasi pesanan hanya melalui pembayaran Midtrans.',
+				});
+			}
 
 			if (!canTransition(order.status, input.status)) {
 				throw new TRPCError({
@@ -246,9 +268,24 @@ export const adminOrderRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const order = await ctx.prisma.order.findUnique({
 				where: { id: input.id },
-				select: { id: true, subtotal: true, discount: true },
+				select: {
+					id: true,
+					subtotal: true,
+					discount: true,
+					payments: { select: { status: true } },
+				},
 			});
 			if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
+
+			// Total terkunci begitu ada attempt pembayaran aktif/lunas: mengubahnya
+			// akan menyimpangkan gross_amount yang sudah dikirim ke Midtrans.
+			if (order.payments.some((p) => p.status === 'PENDING' || p.status === 'PAID')) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message:
+						'Ongkir tak bisa diubah: sudah ada pembayaran berjalan/lunas untuk pesanan ini.',
+				});
+			}
 
 			let newCost: number;
 			let areaName: string | null;

@@ -8,10 +8,12 @@ import {
 	CalendarDays,
 	ChevronLeft,
 	ChevronRight,
+	CreditCard,
 	MapPin,
 	Package,
 } from 'lucide-react';
-import { formatRupiah } from '@/hooks';
+import { formatRupiah, useToast } from '@/hooks';
+import { payWithSnap } from '@/lib/midtrans-snap';
 import type { RouterOutputs } from '@/trpc/react';
 import { api } from '@/trpc/react';
 
@@ -76,7 +78,14 @@ function formatCreatedAt(date: Date): string {
 const PAGE_SIZE = 5;
 
 export default function OrdersPage() {
-	const { data: orders, isLoading } = api.order.listMine.useQuery();
+	// Selama ada pesanan PENDING, poll tiap 5 dtk supaya status otomatis ter-update
+	// begitu webhook Midtrans mengonfirmasi (CONFIRMED). Berhenti sendiri saat tak
+	// ada lagi yang PENDING. refetchOnWindowFocus (default) menambah refresh saat
+	// pengguna kembali dari popup pembayaran.
+	const { data: orders, isLoading } = api.order.listMine.useQuery(undefined, {
+		refetchInterval: (query) =>
+			query.state.data?.some((o) => o.status === 'PENDING') ? 5000 : false,
+	});
 	const [page, setPage] = useState(1);
 
 	const total = orders?.length ?? 0;
@@ -160,6 +169,46 @@ export default function OrdersPage() {
 
 function OrderCard({ order }: { order: Order }) {
 	const status = statusMeta[order.status];
+	const toast = useToast();
+	const utils = api.useUtils();
+	const [paying, setPaying] = useState(false);
+	const createSnap = api.payment.createSnapTransaction.useMutation();
+
+	// Bayar / bayar ulang order yang masih menunggu pembayaran. Webhook Midtrans
+	// yang mengonfirmasi pesanan — callback hanya untuk umpan balik UX.
+	const payOrder = async () => {
+		if (paying) return;
+		setPaying(true);
+		try {
+			const snap = await createSnap.mutateAsync({ orderId: order.id });
+			await payWithSnap(
+				{
+					snapJsUrl: snap.snapJsUrl,
+					clientKey: snap.clientKey,
+					snapToken: snap.snapToken,
+				},
+				{
+					onSuccess: () => {
+						toast.success('Pembayaran diterima. Pesanan sedang dikonfirmasi.');
+						// Pancing refetch; konfirmasi final menyusul dari webhook.
+						void utils.order.listMine.invalidate();
+					},
+					onPending: () => {
+						toast.success('Menunggu penyelesaian pembayaran Anda.');
+						void utils.order.listMine.invalidate();
+					},
+					onError: () => toast.error('Pembayaran gagal. Silakan coba lagi.'),
+				},
+			);
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : 'Gagal memulai pembayaran.';
+			toast.error(message);
+		} finally {
+			setPaying(false);
+		}
+	};
+
 	return (
 		<div
 			className='bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] overflow-hidden'
@@ -284,6 +333,18 @@ function OrderCard({ order }: { order: Order }) {
 						</span>
 					</div>
 				</div>
+
+				{order.status === 'PENDING' && (
+					<button
+						type='button'
+						onClick={payOrder}
+						disabled={paying}
+						className='w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full font-medium text-sm text-white transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100 cursor-pointer'
+						style={{ background: 'var(--primary)' }}>
+						<CreditCard size={15} />
+						{paying ? 'Memproses…' : 'Bayar Sekarang'}
+					</button>
+				)}
 			</div>
 		</div>
 	);

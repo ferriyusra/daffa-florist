@@ -6,6 +6,12 @@
       "sourceType": "github",
       "computedHash": "932ef23b5d0a0aa4a89e51a9bde1217fb987d35fe2c1d5fe51c3090938ac4bd8"
     },
+    "goey-toast": {
+      "source": "anl331/goey-toast",
+      "sourceType": "github",
+      "skillPath": "skills/goey-toast/SKILL.md",
+      "computedHash": "0059b8b94320d82e226538e093351252b8eb55fbb83b4e4988b17daafec4a8b8"
+    },
     "javascript-pro": {
       "source": "jeffallan/claude-skills",
       "sourceType": "github",

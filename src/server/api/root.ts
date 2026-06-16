@@ -5,6 +5,7 @@ import {
 import { authRouter } from '@/server/api/routers/auth';
 import { productRouter } from '@/server/api/routers/product';
 import { orderRouter } from '@/server/api/routers/order';
+import { paymentRouter } from '@/server/api/routers/payment';
 import { rentalRouter } from '@/server/api/routers/rental';
 import { galleryRouter } from '@/server/api/routers/gallery';
 import { addressRouter } from '@/server/api/routers/address';
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
 	auth: authRouter,
 	product: productRouter,
 	order: orderRouter,
+	payment: paymentRouter,
 	rental: rentalRouter,
 	gallery: galleryRouter,
 	address: addressRouter,

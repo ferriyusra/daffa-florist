@@ -10,7 +10,6 @@ import {
 	CalendarClock,
 	CheckCircle2,
 	CreditCard,
-	Landmark,
 	MapPin,
 	Minus,
 	Package,
@@ -19,7 +18,6 @@ import {
 	ShoppingBag,
 	StickyNote,
 	Trash2,
-	Wallet,
 } from 'lucide-react';
 import { Footer, Navbar } from '@/components';
 import {
@@ -32,20 +30,8 @@ import {
 import { formatRupiah, useAuth, useCart, useToast } from '@/hooks';
 import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
 import { MIN_LEAD_TIME_DAYS } from '@/lib/rental-config';
+import { payWithSnap } from '@/lib/midtrans-snap';
 import { api } from '@/trpc/react';
-
-// Metode bayar untuk M2: hanya menangkap PILIHAN dan dilipat ke `notes`.
-// CATATAN: unggah bukti pembayaran DITUNDA — belum ada model `Payment`/endpoint.
-const paymentMethods = [
-	{
-		id: 'transfer',
-		label: 'Transfer Bank',
-		sub: 'BCA, BRI, Mandiri',
-		Icon: Landmark,
-	},
-] as const;
-
-type PaymentMethodId = (typeof paymentMethods)[number]['id'];
 
 /** Slot jam acara 07:00–22:00 tiap 30 menit. */
 const TIME_SLOTS: string[] = (() => {
@@ -99,19 +85,54 @@ function CheckoutScreen() {
 	const [deliveryAreaId, setDeliveryAreaId] = useState('');
 	const [eventTime, setEventTime] = useState('');
 	const [boardMessage, setBoardMessage] = useState('');
-	const [paymentMethod, setPaymentMethod] =
-		useState<PaymentMethodId>('transfer');
 	const [errors, setErrors] = useState<Record<string, string>>({});
 
 	const [submitted, setSubmitted] = useState(false);
+	const [orderId, setOrderId] = useState('');
 	const [orderNumber, setOrderNumber] = useState('');
 	const [orderTotal, setOrderTotal] = useState(0);
+	const [paying, setPaying] = useState(false);
 
 	const { data: zones = [] } = api.deliveryArea.list.useQuery();
 	const selectedZone = zones.find((z) => z.id === deliveryAreaId) ?? null;
 
 	const createRental = api.order.createRental.useMutation();
+	const createSnap = api.payment.createSnapTransaction.useMutation();
 	const submitting = createRental.isPending;
+
+	// Buka popup Midtrans Snap untuk sebuah order. Webhook yang mengonfirmasi
+	// pesanan — callback di sini hanya untuk umpan balik UX.
+	const payOrder = async (id: string) => {
+		if (paying) return;
+		setPaying(true);
+		try {
+			const snap = await createSnap.mutateAsync({ orderId: id });
+			await payWithSnap(
+				{
+					snapJsUrl: snap.snapJsUrl,
+					clientKey: snap.clientKey,
+					snapToken: snap.snapToken,
+				},
+				{
+					onSuccess: () =>
+						toast.success('Pembayaran diterima. Pesanan sedang dikonfirmasi.'),
+					onPending: () =>
+						toast.success('Menunggu penyelesaian pembayaran Anda.'),
+					onError: () => toast.error('Pembayaran gagal. Silakan coba lagi.'),
+					onClose: () =>
+						toast.error(
+							'Pembayaran belum selesai. Anda bisa membayar lagi dari Pesanan Saya.',
+						),
+				},
+			);
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : 'Gagal memulai pembayaran.';
+			toast.error(message);
+		} finally {
+			setPaying(false);
+		}
+	};
 	// Guard re-entrancy SINKRON (sebelum await) — `submitting` baru update setelah
 	// re-render, jadi ref ini menutup celah klik-ganda / Enter.
 	const submitGuard = useRef(false);
@@ -188,15 +209,11 @@ function CheckoutScreen() {
 		}
 		submitGuard.current = true;
 
-		const methodLabel =
-			paymentMethods.find((m) => m.id === paymentMethod)?.label ?? '';
 		// Pesan papan dilipat ke notes (belum ada field boardMessage per item di M2).
-		const composedNotes = [
-			`Metode bayar: ${methodLabel}`,
-			boardMessage.trim() ? `Pesan papan: ${boardMessage.trim()}` : '',
-		]
-			.filter(Boolean)
-			.join('\n');
+		// Metode bayar tidak lagi dicatat di sini — ditangani Midtrans saat checkout.
+		const composedNotes = boardMessage.trim()
+			? `Pesan papan: ${boardMessage.trim()}`
+			: undefined;
 
 		try {
 			// Alamat acara dibuat DI DALAM transaksi createRental (rollback bila
@@ -226,10 +243,13 @@ function CheckoutScreen() {
 				})),
 			});
 
+			setOrderId(order.id);
 			setOrderNumber(order.orderNumber);
 			setOrderTotal(order.total);
 			setSubmitted(true);
 			clear();
+			// Langsung buka popup pembayaran Midtrans.
+			void payOrder(order.id);
 		} catch (err) {
 			// Jangan kosongkan keranjang — pengguna mungkin perlu memperbaiki tanggal
 			// (mis. periode penuh / lead time kurang).
@@ -248,7 +268,14 @@ function CheckoutScreen() {
 	}
 
 	if (submitted) {
-		return <SuccessScreen orderNumber={orderNumber} total={orderTotal} />;
+		return (
+			<SuccessScreen
+				orderNumber={orderNumber}
+				total={orderTotal}
+				paying={paying}
+				onPay={() => void payOrder(orderId)}
+			/>
+		);
 	}
 
 	if (items.length === 0) {
@@ -548,66 +575,30 @@ function CheckoutScreen() {
 						<Section
 							icon={CreditCard}
 							title='Metode Pembayaran'
-							subtitle='Pilih cara pembayaran Anda'>
-							<div className='space-y-2'>
-								{paymentMethods.map((m) => {
-									const active = paymentMethod === m.id;
-									const Icon = m.Icon;
-									return (
-										<label
-											key={m.id}
-											className='flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors'
-											style={{
-												borderColor: active
-													? 'var(--primary)'
-													: 'var(--border)',
-												background: active
-													? 'rgba(157, 23, 77, 0.04)'
-													: 'transparent',
-											}}>
-											<input
-												type='radio'
-												name='payment'
-												value={m.id}
-												checked={active}
-												onChange={() => setPaymentMethod(m.id)}
-												className='sr-only'
-											/>
-											<div
-												className='w-10 h-10 rounded-full flex items-center justify-center shrink-0'
-												style={{
-													background: active
-														? 'var(--primary)'
-														: 'rgba(157, 23, 77, 0.08)',
-													color: active ? 'white' : 'var(--primary)',
-												}}>
-												<Icon size={16} />
-											</div>
-											<div className='flex-1'>
-												<p className='text-sm font-semibold'>{m.label}</p>
-												<p
-													className='text-xs'
-													style={{ color: 'var(--text-secondary)' }}>
-													{m.sub}
-												</p>
-											</div>
-											<div
-												className='w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0'
-												style={{
-													borderColor: active
-														? 'var(--primary)'
-														: 'var(--border)',
-												}}>
-												{active && (
-													<div
-														className='w-2.5 h-2.5 rounded-full'
-														style={{ background: 'var(--primary)' }}
-													/>
-												)}
-											</div>
-										</label>
-									);
-								})}
+							subtitle='Pembayaran aman via Midtrans'>
+							<div
+								className='flex items-start gap-3 p-3 rounded-xl border border-[var(--border)]'
+								style={{ background: 'rgba(157, 23, 77, 0.03)' }}>
+								<div
+									className='w-10 h-10 rounded-full flex items-center justify-center shrink-0'
+									style={{
+										background: 'rgba(157, 23, 77, 0.08)',
+										color: 'var(--primary)',
+									}}>
+									<ShieldCheck size={16} />
+								</div>
+								<div className='flex-1'>
+									<p className='text-sm font-semibold'>
+										Transfer bank, e-wallet, &amp; kartu
+									</p>
+									<p
+										className='text-xs'
+										style={{ color: 'var(--text-secondary)' }}>
+										Setelah membuat pesanan, jendela pembayaran Midtrans akan
+										terbuka otomatis. Pesanan dikonfirmasi begitu pembayaran
+										berhasil.
+									</p>
+								</div>
 							</div>
 						</Section>
 					</div>
@@ -891,9 +882,13 @@ function EmptyCartScreen() {
 function SuccessScreen({
 	orderNumber,
 	total,
+	paying,
+	onPay,
 }: {
 	orderNumber: string;
 	total: number;
+	paying: boolean;
+	onPay: () => void;
 }) {
 	return (
 		<main className='floral-bg min-h-[70vh] flex items-center justify-center px-6 py-16'>
@@ -929,35 +924,30 @@ function SuccessScreen({
 					<p
 						className='text-xs font-semibold uppercase tracking-wider mb-2 inline-flex items-center gap-1.5'
 						style={{ color: 'var(--text-muted)' }}>
-						<Landmark size={12} style={{ color: 'var(--primary)' }} />
-						Instruksi Pembayaran (Transfer Bank)
+						<CreditCard size={12} style={{ color: 'var(--primary)' }} />
+						Selesaikan Pembayaran
 					</p>
-					<ul
-						className='space-y-1 text-sm'
-						style={{ color: 'var(--text-secondary)' }}>
-						<li>
-							BCA <span className='font-semibold'>1234567890</span> a.n. Dafa
-							Florist
-						</li>
-						<li>
-							BRI <span className='font-semibold'>0987654321</span> a.n. Dafa
-							Florist
-						</li>
-					</ul>
-					<p
-						className='text-xs mt-2'
-						style={{ color: 'var(--text-secondary)' }}>
-						Tim Dafa Florist akan mengonfirmasi pembayaran &amp; ongkir sesuai
-						zona acara Anda.
+					<p className='text-sm' style={{ color: 'var(--text-secondary)' }}>
+						Jendela pembayaran Midtrans akan terbuka otomatis. Jika tertutup,
+						tekan <span className='font-semibold'>Bayar Sekarang</span> di bawah.
+						Pesanan dikonfirmasi otomatis setelah pembayaran berhasil.
 					</p>
 				</div>
+
+				<button
+					type='button'
+					onClick={onPay}
+					disabled={paying}
+					className='w-full mb-2 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100 cursor-pointer'
+					style={{ background: 'var(--primary)' }}>
+					{paying ? 'Memproses…' : 'Bayar Sekarang'}
+				</button>
 
 				<div className='flex flex-col sm:flex-row gap-2'>
 					<Link
 						href='/dashboard/orders'
-						className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02]'
-						style={{ background: 'var(--primary)' }}>
-						Lihat Pesanan Saya
+						className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium border border-[var(--border)] transition-colors hover:bg-[rgba(0,0,0,0.03)]'>
+						Pesanan Saya
 					</Link>
 					<Link
 						href='/'
