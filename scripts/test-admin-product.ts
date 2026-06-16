@@ -37,7 +37,7 @@ async function main() {
 			title: 'x',
 			shortDescription: 'x',
 			description: 'x',
-			category: 'Wedding',
+			category: 'Pernikahan',
 			basePrice: 1,
 			image: '/x.png',
 		});
@@ -51,7 +51,7 @@ async function main() {
 		title: 'Produk Uji CRUD',
 		shortDescription: 'Produk untuk tes CRUD admin.',
 		description: 'Deskripsi panjang produk uji.',
-		category: 'Grand Opening',
+		category: 'Peresmian',
 		basePrice: 333_000,
 		image: '/product/papan-bunga-1.PNG',
 		sizes: [
@@ -80,7 +80,7 @@ async function main() {
 		title: 'Produk Uji CRUD (Edit)',
 		shortDescription: 'Diperbarui.',
 		description: 'Deskripsi diperbarui.',
-		category: 'Grand Opening',
+		category: 'Peresmian',
 		basePrice: 444_000,
 		image: '/product/papan-bunga-1.PNG',
 		sizes: [{ label: 'Jumbo', price: 600_000 }],

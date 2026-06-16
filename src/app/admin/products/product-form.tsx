@@ -61,22 +61,10 @@ const emptyForm: FormState = {
 
 // Preset ukuran umum (papan bunga sewa). Hanya saran lewat dropdown — admin
 // tetap boleh mengetik ukuran custom (mis. "3 meter") lewat data existing.
-// Preset mengikuti skema nyata katalog: papan bunga (1.25m/2m/Custom),
-// dekorasi (Mini/Standard/Premium), buket (Kecil/Sedang/Besar). Label di luar
-// daftar ini tetap bisa dipakai lewat data existing.
-const SIZE_PRESETS = [
-	'1.25m',
-	'2m',
-	'Custom',
-	'Mini',
-	'Standard',
-	'Premium',
-	'Kecil',
-	'Sedang',
-	'Besar',
-];
-// Isi-cepat untuk produk papan bunga (skema dominan di katalog).
-const STANDARD_SIZES = ['1.25m', '2m', 'Custom'];
+// Ukuran baku katalog: Kecil/Sedang/Besar (vokabulari tunggal, Bahasa Indonesia).
+// Label di luar daftar ini tetap bisa dipakai lewat data existing.
+const SIZE_PRESETS = ['Kecil', 'Sedang', 'Besar'];
+const STANDARD_SIZES = ['Kecil', 'Sedang', 'Besar'];
 
 // Radix Select melarang value string kosong → sentinel untuk opsi "Pilih ukuran".
 const SIZE_PLACEHOLDER = '__none__';
@@ -261,7 +249,7 @@ export default function ProductForm({
 		}));
 		clearFieldError(`sizes.${i}.${key}`);
 	};
-	// Tambah preset papan bunga (1.25m/2m/Custom) yang belum ada — harga diisi admin.
+	// Tambah preset standar (Kecil/Sedang/Besar) yang belum ada — harga diisi admin.
 	const fillStandardSizes = () =>
 		setForm((prev) => {
 			const have = new Set(
@@ -535,7 +523,7 @@ export default function ProductForm({
 										onClick={fillStandardSizes}
 										disabled={form.sizes.length >= MAX_SIZES}
 										className='text-[var(--primary)] hover:text-[var(--primary)]'>
-										Isi standar (1.25m/2m/Custom)
+										Isi standar (Kecil/Sedang/Besar)
 									</Button>
 									{form.sizes.length >= MAX_SIZES && (
 										<span

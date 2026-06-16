@@ -1,11 +1,10 @@
 export const productCategories = [
-	'Wedding',
+	'Pernikahan',
 	'Duka Cita',
-	'Grand Opening',
-	'Congratulations',
+	'Peresmian',
+	'Ucapan Selamat',
 	'Wisuda',
 	'Dekorasi',
-	'Premium',
 ] as const;
 
 export type ProductCategory = (typeof productCategories)[number];
@@ -103,23 +102,23 @@ const defaultAddons = (): ProductAddon[] => [
 
 const papanBungaSizes = (basePrice: number): ProductSize[] => [
 	{
-		id: '1-25m',
-		label: '1.25m',
+		id: 'kecil',
+		label: 'Kecil',
 		price: basePrice,
 		priceLabel: formatPrice(basePrice),
 	},
 	{
-		id: '2m',
-		label: '2m',
+		id: 'sedang',
+		label: 'Sedang',
 		price: Math.round(basePrice * 1.5),
 		priceLabel: formatPrice(Math.round(basePrice * 1.5)),
 	},
 	{
-		id: 'custom',
-		label: 'Custom',
+		id: 'besar',
+		label: 'Besar',
 		price: Math.round(basePrice * 1.7),
 		priceLabel: formatPrice(Math.round(basePrice * 1.7)),
-		note: 'Ukuran custom dikonfirmasi via WhatsApp',
+		note: 'Ukuran besar/custom dikonfirmasi via WhatsApp',
 	},
 ];
 
@@ -133,7 +132,7 @@ export const products: Product[] = [
 			'Rangkaian papan bunga klasik untuk ucapan pernikahan. Desain elegan dengan bunga segar dan tulisan custom sesuai permintaan. Cocok untuk gedung resepsi maupun rumah.',
 		price: 350_000,
 		priceLabel: 'Rp 350.000',
-		category: 'Wedding',
+		category: 'Pernikahan',
 		image: '/product/papan-bunga-5.PNG',
 		images: [
 			'/product/papan-bunga-5.PNG',
@@ -178,7 +177,7 @@ export const products: Product[] = [
 			'Papan bunga edisi premium dengan rangkaian bunga lebih padat dan dekorasi tambahan. Cocok untuk pernikahan eksklusif yang ingin tampil istimewa di hari spesial.',
 		price: 750_000,
 		priceLabel: 'Rp 750.000',
-		category: 'Wedding',
+		category: 'Pernikahan',
 		image: '/product/papan-bunga-3.PNG',
 		images: [
 			'/product/papan-bunga-3.PNG',
@@ -223,7 +222,7 @@ export const products: Product[] = [
 			'Papan bunga dengan tulisan ucapan selamat custom untuk berbagai keperluan: ulang tahun, kelulusan, promosi jabatan, dan pencapaian lainnya.',
 		price: 350_000,
 		priceLabel: 'Rp 350.000',
-		category: 'Congratulations',
+		category: 'Ucapan Selamat',
 		image: '/product/papan-bunga-4.PNG',
 		images: [
 			'/product/papan-bunga-4.PNG',
@@ -268,7 +267,7 @@ export const products: Product[] = [
 			'Papan bunga eksklusif untuk grand opening usaha. Desain mencolok dengan kombinasi warna cerah agar terlihat menonjol dan menarik perhatian pelanggan.',
 		price: 400_000,
 		priceLabel: 'Rp 400.000',
-		category: 'Grand Opening',
+		category: 'Peresmian',
 		image: '/product/papan-bunga-1.PNG',
 		images: [
 			'/product/papan-bunga-1.PNG',
@@ -358,7 +357,7 @@ export const products: Product[] = [
 			'Papan bunga khusus acara serah terima jabatan dengan desain formal. Cocok untuk instansi pemerintahan, militer, kepolisian, dan korporasi.',
 		price: 350_000,
 		priceLabel: 'Rp 350.000',
-		category: 'Congratulations',
+		category: 'Ucapan Selamat',
 		image: '/product/papan-bunga-4.PNG',
 		images: [
 			'/product/papan-bunga-4.PNG',
@@ -409,20 +408,20 @@ export const products: Product[] = [
 		tags: ['mobil pengantin', 'dekorasi', 'wedding car'],
 		sizes: [
 			{
-				id: 'mini',
-				label: 'Mini',
+				id: 'kecil',
+				label: 'Kecil',
 				price: 500_000,
 				priceLabel: formatPrice(500_000),
 			},
 			{
-				id: 'standard',
-				label: 'Standard',
+				id: 'sedang',
+				label: 'Sedang',
 				price: 750_000,
 				priceLabel: formatPrice(750_000),
 			},
 			{
-				id: 'premium',
-				label: 'Premium',
+				id: 'besar',
+				label: 'Besar',
 				price: 1_000_000,
 				priceLabel: formatPrice(1_000_000),
 			},
