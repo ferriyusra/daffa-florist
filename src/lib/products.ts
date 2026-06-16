@@ -468,20 +468,20 @@ export const products: Product[] = [
 		tags: ['bucket', 'hadiah', 'wisuda', 'anniversary'],
 		sizes: [
 			{
-				id: 'small',
-				label: 'Small',
+				id: 'kecil',
+				label: 'Kecil',
 				price: 250_000,
 				priceLabel: formatPrice(250_000),
 			},
 			{
-				id: 'medium',
-				label: 'Medium',
+				id: 'sedang',
+				label: 'Sedang',
 				price: 350_000,
 				priceLabel: formatPrice(350_000),
 			},
 			{
-				id: 'large',
-				label: 'Large',
+				id: 'besar',
+				label: 'Besar',
 				price: 500_000,
 				priceLabel: formatPrice(500_000),
 			},
