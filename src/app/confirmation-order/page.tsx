@@ -43,12 +43,6 @@ const paymentMethods = [
 		sub: 'BCA, BRI, Mandiri',
 		Icon: Landmark,
 	},
-	{
-		id: 'dp',
-		label: 'DP (Uang Muka)',
-		sub: 'Bayar sebagian dulu, sisanya saat acara',
-		Icon: Wallet,
-	},
 ] as const;
 
 type PaymentMethodId = (typeof paymentMethods)[number]['id'];
@@ -161,7 +155,8 @@ function CheckoutScreen() {
 
 	const validate = () => {
 		const next: Record<string, string> = {};
-		if (!recipientName.trim()) next.recipientName = 'Nama penerima wajib diisi.';
+		if (!recipientName.trim())
+			next.recipientName = 'Nama penerima wajib diisi.';
 		if (!phone.trim()) next.phone = 'Nomor telepon wajib diisi.';
 		if (!fullAddress.trim()) next.fullAddress = 'Alamat acara wajib diisi.';
 		if (!city.trim()) next.city = 'Kota wajib diisi.';
@@ -203,7 +198,9 @@ function CheckoutScreen() {
 					city: city.trim(),
 				},
 				// Tanggal acara = tanggal pasang (dari keranjang) + jam dipilih, di WIB.
-				eventDate: new Date(`${eventBaseIso.slice(0, 10)}T${eventTime}:00+07:00`),
+				eventDate: new Date(
+					`${eventBaseIso.slice(0, 10)}T${eventTime}:00+07:00`,
+				),
 				shippingCost: 0,
 				notes: composedNotes,
 				items: items.map((i) => ({
@@ -466,7 +463,8 @@ function CheckoutScreen() {
 										<p
 											className='text-[11px] mt-1.5'
 											style={{ color: 'var(--text-muted)' }}>
-											Tanggal mengikuti tanggal pasang yang dipilih — pilih jam acara.
+											Tanggal mengikuti tanggal pasang yang dipilih — pilih jam
+											acara.
 										</p>
 										{errors.eventDate && (
 											<p
