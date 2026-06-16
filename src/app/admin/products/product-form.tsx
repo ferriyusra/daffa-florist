@@ -378,6 +378,16 @@ export default function ProductForm({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
+										{/* Kategori existing di luar taksonomi tetap tampil agar
+										    nilai tersimpan tak hilang saat edit. */}
+										{form.category &&
+											!(productCategories as readonly string[]).includes(
+												form.category,
+											) && (
+												<SelectItem value={form.category}>
+													{form.category}
+												</SelectItem>
+											)}
 										{productCategories.map((cat) => (
 											<SelectItem key={cat} value={cat}>
 												{cat}
