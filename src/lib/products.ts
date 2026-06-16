@@ -124,8 +124,8 @@ const papanBungaSizes = (basePrice: number): ProductSize[] => [
 
 export const products: Product[] = [
 	{
-		slug: 'papan-bunga-wedding-klasik',
-		title: 'Papan Bunga Wedding Klasik',
+		slug: 'papan-bunga-pernikahan-klasik',
+		title: 'Papan Bunga Pernikahan Klasik',
 		shortDescription:
 			'Papan bunga ucapan Happy Wedding dengan desain elegan dan ukuran standar.',
 		description:
@@ -169,8 +169,8 @@ export const products: Product[] = [
 		serviceAreas: standardServiceAreas,
 	},
 	{
-		slug: 'papan-bunga-wedding-royale',
-		title: 'Papan Bunga Wedding Royale',
+		slug: 'papan-bunga-pernikahan-mewah',
+		title: 'Papan Bunga Pernikahan Mewah',
 		shortDescription:
 			'Papan bunga premium untuk pernikahan dengan hiasan mewah & rangkaian khusus.',
 		description:
@@ -259,8 +259,8 @@ export const products: Product[] = [
 		serviceAreas: standardServiceAreas,
 	},
 	{
-		slug: 'papan-bunga-grand-opening',
-		title: 'Papan Bunga Grand Opening',
+		slug: 'papan-bunga-peresmian',
+		title: 'Papan Bunga Peresmian',
 		shortDescription:
 			'Papan bunga ucapan untuk pembukaan toko, restoran, atau usaha baru.',
 		description:
@@ -449,8 +449,8 @@ export const products: Product[] = [
 		serviceAreas: standardServiceAreas,
 	},
 	{
-		slug: 'bucket-bunga-premium',
-		title: 'Bucket Bunga Premium',
+		slug: 'buket-bunga-eksklusif',
+		title: 'Buket Bunga Eksklusif',
 		shortDescription:
 			'Bucket bunga eksklusif untuk wisuda, anniversary, atau hadiah istimewa.',
 		description:
