@@ -134,6 +134,7 @@ model Order {
   status       OrderStatus @default(PENDING)
   subtotal     Int
   shippingCost Int         @default(0)
+  shippingArea String? // snapshot nama zona ongkir terpilih (DeliveryArea.name) saat order dibuat/diubah admin
 
   // Pengiriman: rilis awal ongkir diisi manual admin per zona.
   // Field provider/layanan/resi disiapkan (nullable) untuk integrasi kurir di M5.

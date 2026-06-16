@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,7 +16,17 @@ import {
 	XCircle,
 } from 'lucide-react';
 import { ConfirmDialog, ProductImage } from '@/components';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
 import { Stepper } from '@/components/ui/stepper';
 import { formatRupiah, useToast } from '@/hooks';
 import { api, type RouterOutputs } from '@/trpc/react';
@@ -26,6 +36,7 @@ import {
 	ORDER_STATUS_TRANSITIONS,
 	type OrderStatus,
 } from '@/lib/order-status';
+import { MAX_SHIPPING_COST } from '@/lib/delivery-area-schema';
 
 type Order = RouterOutputs['admin']['order']['getById'];
 
@@ -124,6 +135,44 @@ export default function OrderDetail({ order }: { order: Order }) {
 
 	// Status target yang sedang dikonfirmasi (null = dialog tertutup).
 	const [pending, setPending] = useState<OrderStatus | null>(null);
+
+	// Editor ongkir: amount = nominal manual, deliveryAreaId = zona terpilih
+	// (kosong = override manual). Memilih zona mengisi amount; mengedit amount
+	// menghapus deliveryAreaId.
+	const [shippingAmount, setShippingAmount] = useState(String(order.shippingCost));
+	const [shippingAreaId, setShippingAreaId] = useState('');
+
+	// Sinkronkan editor dengan nilai server setelah tersimpan (getById di-invalidate)
+	// agar form tak menyisakan zona/nominal lama.
+	useEffect(() => {
+		setShippingAmount(String(order.shippingCost));
+		setShippingAreaId('');
+	}, [order.shippingCost, order.shippingArea]);
+
+	const { data: deliveryAreas = [] } =
+		api.admin.deliveryArea.list.useQuery();
+
+	const setShipping = api.admin.order.setShipping.useMutation({
+		onSuccess: () => {
+			toast.success('Ongkir diperbarui');
+			void utils.admin.order.getById.invalidate({ id: order.id });
+		},
+		onError: (e) => toast.error(e.message),
+	});
+
+	const parsedAmount = Number(shippingAmount);
+	const amountInvalid =
+		!Number.isInteger(parsedAmount) ||
+		parsedAmount < 0 ||
+		parsedAmount > MAX_SHIPPING_COST;
+
+	const handleSaveShipping = () => {
+		setShipping.mutate(
+			shippingAreaId
+				? { id: order.id, deliveryAreaId: shippingAreaId }
+				: { id: order.id, shippingCost: parsedAmount },
+		);
+	};
 
 	const updateStatus = api.admin.order.updateStatus.useMutation({
 		onSuccess: async () => {
@@ -413,10 +462,72 @@ export default function OrderDetail({ order }: { order: Order }) {
 								<dd className='font-medium'>{formatRupiah(order.subtotal)}</dd>
 							</div>
 							<div className='flex items-center justify-between'>
-								<dt style={{ color: 'var(--text-secondary)' }}>Ongkir</dt>
+								<dt
+									className='flex items-center gap-2'
+									style={{ color: 'var(--text-secondary)' }}>
+									Ongkir
+									{order.shippingArea && (
+										<Badge variant='secondary'>
+											Zona: {order.shippingArea}
+										</Badge>
+									)}
+								</dt>
 								<dd className='font-medium'>
 									{formatRupiah(order.shippingCost)}
 								</dd>
+							</div>
+
+							{/* Editor ongkir (admin) */}
+							<div className='rounded-xl border border-[var(--border)] p-3 mt-1 space-y-3'>
+								<div className='space-y-1.5'>
+									<Label htmlFor='shippingZone' className='text-xs'>
+										Pilih zona
+									</Label>
+									<Select
+										value={shippingAreaId || undefined}
+										onValueChange={(id) => {
+											setShippingAreaId(id);
+											const z = deliveryAreas.find((a) => a.id === id);
+											if (z) setShippingAmount(String(z.shippingCost));
+										}}>
+										<SelectTrigger
+											id='shippingZone'
+											className='w-full'
+											aria-label='Zona pengiriman'>
+											<SelectValue placeholder='Pilih zona pengiriman' />
+										</SelectTrigger>
+										<SelectContent className='max-h-64'>
+											{deliveryAreas.map((z) => (
+												<SelectItem key={z.id} value={z.id}>
+													{z.name} — {formatRupiah(z.shippingCost)}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+								<div className='space-y-1.5'>
+									<Label htmlFor='shippingAmount' className='text-xs'>
+										Atau nominal manual (Rp)
+									</Label>
+									<Input
+										id='shippingAmount'
+										type='number'
+										min={0}
+										value={shippingAmount}
+										onChange={(e) => {
+											setShippingAmount(e.target.value);
+											// Edit manual = override → lupakan zona terpilih.
+											setShippingAreaId('');
+										}}
+									/>
+								</div>
+								<Button
+									type='button'
+									className='w-full justify-center'
+									onClick={handleSaveShipping}
+									disabled={setShipping.isPending || amountInvalid}>
+									{setShipping.isPending ? 'Menyimpan...' : 'Simpan Ongkir'}
+								</Button>
 							</div>
 							{order.discount > 0 && (
 								<div className='flex items-center justify-between'>

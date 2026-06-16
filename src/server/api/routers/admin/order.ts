@@ -7,6 +7,7 @@ import {
 	ORDER_STATUS_LABEL,
 	canTransition,
 } from '@/lib/order-status';
+import { MAX_SHIPPING_COST } from '@/lib/delivery-area-schema';
 
 /** Semua status sewa (ERD §4) + sentinel `ALL` untuk filter. */
 const statusFilter = z.enum([
@@ -143,6 +144,7 @@ export const adminOrderRouter = createTRPCRouter({
 					status: true,
 					subtotal: true,
 					shippingCost: true,
+					shippingArea: true,
 					discount: true,
 					total: true,
 					eventDate: true,
@@ -222,5 +224,63 @@ export const adminOrderRouter = createTRPCRouter({
 				});
 			}
 			return { id: input.id, status: input.status };
+		}),
+
+	/**
+	 * Admin menetapkan/override ongkir per pesanan (S4.3) — pilih zona (tarif
+	 * otoritatif dari DB) atau isi ongkir manual; `total` dihitung ulang
+	 * (subtotal + ongkir - diskon).
+	 */
+	setShipping: adminProcedure
+		.input(
+			z
+				.object({
+					id: z.string().min(1),
+					deliveryAreaId: z.string().uuid().optional(),
+					shippingCost: z.number().int().min(0).max(MAX_SHIPPING_COST).optional(),
+				})
+				.refine((d) => d.deliveryAreaId !== undefined || d.shippingCost !== undefined, {
+					message: 'Pilih zona atau isi ongkir manual.',
+				}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const order = await ctx.prisma.order.findUnique({
+				where: { id: input.id },
+				select: { id: true, subtotal: true, discount: true },
+			});
+			if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
+
+			let newCost: number;
+			let areaName: string | null;
+			if (input.deliveryAreaId) {
+				const zone = await ctx.prisma.deliveryArea.findUnique({
+					where: { id: input.deliveryAreaId },
+					select: { shippingCost: true, name: true },
+				});
+				if (!zone) {
+					throw new TRPCError({
+						code: 'NOT_FOUND',
+						message: 'Zona tidak ditemukan.',
+					});
+				}
+				newCost = zone.shippingCost;
+				areaName = zone.name;
+			} else {
+				newCost = input.shippingCost!;
+				areaName = null;
+			}
+
+			const total = order.subtotal + newCost - order.discount;
+
+			return ctx.prisma.order.update({
+				where: { id: input.id },
+				data: { shippingCost: newCost, shippingArea: areaName, total },
+				select: {
+					id: true,
+					shippingCost: true,
+					shippingArea: true,
+					total: true,
+				},
+			});
 		}),
 });

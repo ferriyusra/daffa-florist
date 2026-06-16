@@ -96,6 +96,7 @@ function CheckoutScreen() {
 	const [phone, setPhone] = useState('');
 	const [fullAddress, setFullAddress] = useState('');
 	const [city, setCity] = useState('');
+	const [deliveryAreaId, setDeliveryAreaId] = useState('');
 	const [eventTime, setEventTime] = useState('');
 	const [boardMessage, setBoardMessage] = useState('');
 	const [paymentMethod, setPaymentMethod] =
@@ -105,6 +106,9 @@ function CheckoutScreen() {
 	const [submitted, setSubmitted] = useState(false);
 	const [orderNumber, setOrderNumber] = useState('');
 	const [orderTotal, setOrderTotal] = useState(0);
+
+	const { data: zones = [] } = api.deliveryArea.list.useQuery();
+	const selectedZone = zones.find((z) => z.id === deliveryAreaId) ?? null;
 
 	const createRental = api.order.createRental.useMutation();
 	const submitting = createRental.isPending;
@@ -118,10 +122,13 @@ function CheckoutScreen() {
 		}
 	}, [authLoading, user, router]);
 
-	// Ongkir M2 = Rp 0 (dikonfirmasi admin), diskon M2 = Rp 0 (belum ada apply promo).
-	const shipping = 0;
+	// Ongkir mengikuti zona yang dipilih pelanggan (S4.3). Diskon M2 = Rp 0.
+	const shipping = selectedZone?.shippingCost ?? 0;
 	const discount = 0;
 	const total = subtotal + shipping - discount;
+
+	// Zona wajib dipilih HANYA bila ada zona tersedia (graceful degrade saat kosong).
+	const needsZone = zones.length > 0 && !deliveryAreaId;
 
 	// Pre-flight lead time: tanggal pasang yang dipilih bisa sudah lewat batas
 	// saat checkout (item lama di keranjang). Tandai item kedaluwarsa & blokir
@@ -175,6 +182,10 @@ function CheckoutScreen() {
 			);
 			return;
 		}
+		if (needsZone) {
+			toast.error('Pilih zona pengiriman terlebih dahulu.');
+			return;
+		}
 		submitGuard.current = true;
 
 		const methodLabel =
@@ -201,7 +212,7 @@ function CheckoutScreen() {
 				eventDate: new Date(
 					`${eventBaseIso.slice(0, 10)}T${eventTime}:00+07:00`,
 				),
-				shippingCost: 0,
+				...(deliveryAreaId ? { deliveryAreaId } : {}),
 				notes: composedNotes,
 				items: items.map((i) => ({
 					productId: i.productId,
@@ -416,6 +427,43 @@ function CheckoutScreen() {
 										placeholder='mis. Pasaman Barat'
 										error={errors.city}
 									/>
+									{zones.length > 0 && (
+										<div>
+											<label
+												className='block text-xs font-medium mb-2'
+												htmlFor='deliveryArea'>
+												Zona Pengiriman
+											</label>
+											<Select
+												value={deliveryAreaId || undefined}
+												onValueChange={setDeliveryAreaId}>
+												<SelectTrigger
+													id='deliveryArea'
+													className='h-auto w-full rounded-xl bg-muted px-4 py-3'
+													aria-label='Zona pengiriman'>
+													<SelectValue placeholder='Pilih zona pengiriman' />
+												</SelectTrigger>
+												<SelectContent className='max-h-64'>
+													{zones.map((z) => (
+														<SelectItem key={z.id} value={z.id}>
+															{z.name} — {formatRupiah(z.shippingCost)}
+															{z.district ? (
+																<span style={{ color: 'var(--text-muted)' }}>
+																	{' '}
+																	· {z.district}
+																</span>
+															) : null}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<p
+												className='text-[11px] mt-1.5'
+												style={{ color: 'var(--text-muted)' }}>
+												Ongkir mengikuti zona pengiriman yang dipilih.
+											</p>
+										</div>
+									)}
 									<div>
 										<label
 											className='block text-xs font-medium mb-2'
@@ -583,7 +631,13 @@ function CheckoutScreen() {
 									label={`Subtotal (${items.length} item)`}
 									value={formatRupiah(subtotal)}
 								/>
-								<Row label='Ongkir' value='dikonfirmasi admin' />
+								<Row
+									label='Ongkir'
+									value={
+										selectedZone ? formatRupiah(shipping) : 'Pilih zona dulu'
+									}
+									muted={!selectedZone}
+								/>
 								<Row label='Diskon' value={formatRupiah(discount)} />
 								<div className='pt-3 border-t border-[var(--border)]'>
 									<div className='flex items-center justify-between'>
@@ -597,8 +651,9 @@ function CheckoutScreen() {
 									<p
 										className='text-[11px] mt-1'
 										style={{ color: 'var(--text-muted)' }}>
-										Ongkir ditetapkan admin sesuai zona, lalu dikonfirmasi
-										sebelum pembayaran.
+										{zones.length > 0
+											? 'Ongkir mengikuti zona pengiriman yang Anda pilih.'
+											: 'Ongkir ditetapkan admin sesuai zona acara Anda.'}
 									</p>
 								</div>
 
@@ -612,9 +667,18 @@ function CheckoutScreen() {
 									</p>
 								)}
 
+								{needsZone && !hasStale && (
+									<p
+										className='flex items-start gap-1.5 text-[11px]'
+										style={{ color: 'var(--text-muted)' }}>
+										<AlertTriangle size={13} className='mt-0.5 shrink-0' />
+										Pilih zona pengiriman dulu untuk melanjutkan.
+									</p>
+								)}
+
 								<button
 									type='submit'
-									disabled={submitting || hasStale}
+									disabled={submitting || hasStale || needsZone}
 									className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100'
 									style={{ background: 'var(--primary)' }}>
 									{submitting ? 'Memproses...' : 'Buat Pesanan Sewa'}
@@ -739,11 +803,23 @@ function Field({
 	);
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+	label,
+	value,
+	muted,
+}: {
+	label: string;
+	value: string;
+	muted?: boolean;
+}) {
 	return (
 		<div className='flex items-center justify-between text-sm'>
 			<span style={{ color: 'var(--text-secondary)' }}>{label}</span>
-			<span className='font-medium'>{value}</span>
+			<span
+				className='font-medium'
+				style={muted ? { color: 'var(--text-muted)' } : undefined}>
+				{value}
+			</span>
 		</div>
 	);
 }

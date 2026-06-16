@@ -8,6 +8,7 @@ import { orderRouter } from '@/server/api/routers/order';
 import { rentalRouter } from '@/server/api/routers/rental';
 import { galleryRouter } from '@/server/api/routers/gallery';
 import { addressRouter } from '@/server/api/routers/address';
+import { deliveryAreaRouter } from '@/server/api/routers/delivery-area';
 import { adminRouter } from '@/server/api/routers/admin';
 
 export const appRouter = createTRPCRouter({
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
 	rental: rentalRouter,
 	gallery: galleryRouter,
 	address: addressRouter,
+	deliveryArea: deliveryAreaRouter,
 	admin: adminRouter,
 });
 

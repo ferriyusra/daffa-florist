@@ -273,9 +273,9 @@ Backlog ini menerjemahkan PRD menjadi **Epic → Story → Task kecil**. Tiap st
 ### S4.3 — Zona layanan & ongkir manual
 **AC:** Alamat acara dibatasi ke area layanan (Simpang Empat, Talu, Ujung Gading, Kinali, dll.); admin isi ongkir per zona (§10.8).
 
-- [ ] `XS` Daftar zona layanan (reuse [admin/delivery-areas](../src/app/admin/delivery-areas/)).
-- [ ] `S` Validasi alamat acara dalam zona saat checkout.
-- [ ] `S` Field ongkir manual per zona di checkout/admin.
+- [x] `XS` Daftar zona layanan ([admin/delivery-areas](../src/app/admin/delivery-areas/), S0.9) + router publik `deliveryArea.list` (zona aktif untuk checkout).
+- [~] `S` ~~Validasi alamat acara dalam zona saat checkout.~~ Pelanggan **memilih zona** secara eksplisit saat checkout (wajib bila ada zona aktif); pencocokan/validasi alamat-dalam-zona otomatis (geofencing) **ditunda**.
+- [x] `S` Field ongkir manual per zona di checkout/admin: pelanggan pilih zona → ongkir otoritatif dari `DeliveryArea` (`createRental` pakai `deliveryAreaId`, server-trusted) + admin override per pesanan (`admin.order.setShipping`: pilih zona / nominal manual, `total` dihitung ulang). Snapshot `Order.shippingArea`.
 
 ### S4.4 — Aturan ekspres duka cita & lead time
 **AC:** Flag "express"/same-day untuk duka cita; lead time & buffer dapat dikonfigurasi (§10.1, §10.2, §10.7).

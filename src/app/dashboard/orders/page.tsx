@@ -256,17 +256,33 @@ function OrderCard({ order }: { order: Order }) {
 					</p>
 				)}
 
-				<div className='flex items-center justify-between pt-3 border-t border-[var(--border)]'>
-					<span
-						className='text-xs'
-						style={{ color: 'var(--text-secondary)' }}>
-						Total
-					</span>
-					<span
-						className='font-semibold text-sm'
-						style={{ color: 'var(--primary)' }}>
-						{formatRupiah(order.total)}
-					</span>
+				<div className='pt-3 border-t border-[var(--border)] space-y-1'>
+					{order.shippingCost > 0 && (
+						<div className='flex items-center justify-between'>
+							<span
+								className='text-xs'
+								style={{ color: 'var(--text-secondary)' }}>
+								Ongkir{order.shippingArea ? ` · ${order.shippingArea}` : ''}
+							</span>
+							<span
+								className='text-xs'
+								style={{ color: 'var(--text-secondary)' }}>
+								{formatRupiah(order.shippingCost)}
+							</span>
+						</div>
+					)}
+					<div className='flex items-center justify-between'>
+						<span
+							className='text-xs'
+							style={{ color: 'var(--text-secondary)' }}>
+							Total
+						</span>
+						<span
+							className='font-semibold text-sm'
+							style={{ color: 'var(--primary)' }}>
+							{formatRupiah(order.total)}
+						</span>
+					</div>
 				</div>
 			</div>
 		</div>

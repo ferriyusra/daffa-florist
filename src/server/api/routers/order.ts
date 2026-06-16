@@ -179,7 +179,7 @@ export const orderRouter = createTRPCRouter({
 					})
 					.optional(),
 				notes: z.string().optional(),
-				shippingCost: z.number().int().nonnegative().default(0),
+				deliveryAreaId: z.string().uuid().optional(),
 				eventDate: z.coerce.date().optional(),
 				items: z.array(rentalItemInput).min(1),
 			}),
@@ -234,6 +234,22 @@ export const orderRouter = createTRPCRouter({
 						message: 'Alamat tidak ditemukan.',
 					});
 				}
+			}
+
+			// Ongkir OTORITATIF dari zona (jangan percaya nilai dari klien). Zona wajib
+			// aktif; bila tak ada deliveryAreaId, ongkir 0 (mis. ambil sendiri).
+			let resolvedShipping = 0;
+			let resolvedArea: string | null = null;
+			if (input.deliveryAreaId) {
+				const zone = await ctx.prisma.deliveryArea.findUnique({
+					where: { id: input.deliveryAreaId },
+					select: { shippingCost: true, name: true, isActive: true },
+				});
+				if (!zone || !zone.isActive) {
+					throw new TRPCError({ code: 'BAD_REQUEST', message: 'Zona pengiriman tidak tersedia.' });
+				}
+				resolvedShipping = zone.shippingCost;
+				resolvedArea = zone.name;
 			}
 
 			return ctx.prisma.$transaction(async (tx) => {
@@ -367,7 +383,7 @@ export const orderRouter = createTRPCRouter({
 					(sum, p) => sum + p.price * p.input.quantity,
 					0,
 				);
-				const total = subtotal + input.shippingCost;
+				const total = subtotal + resolvedShipping;
 
 				const data = (orderNumber: string): Prisma.OrderCreateInput => ({
 					orderNumber,
@@ -376,7 +392,8 @@ export const orderRouter = createTRPCRouter({
 						? { address: { connect: { id: resolvedAddressId } } }
 						: {}),
 					subtotal,
-					shippingCost: input.shippingCost,
+					shippingCost: resolvedShipping,
+					shippingArea: resolvedArea,
 					total,
 					notes: input.notes,
 					eventDate: input.eventDate,
