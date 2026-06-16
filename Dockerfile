@@ -65,9 +65,10 @@ RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs
 
 # Prisma CLI + schema/migrations untuk `prisma migrate deploy` saat start.
+# Tidak menyalin .bin/prisma (symlink) — entrypoint memanggil build/index.js
+# langsung agar resolusi *.wasm benar (lihat docker-entrypoint.sh).
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=builder /app/prisma ./prisma
 
 # Artefak Next.js standalone.
