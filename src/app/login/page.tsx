@@ -3,9 +3,12 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { ArrowLeft, Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { useAuth } from '@/hooks';
 import { Footer, Navbar } from '@/components';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
 	return (
@@ -19,13 +22,9 @@ export default function LoginPage() {
 	);
 }
 
-const DEMO_EMAIL = 'test2026@test.test';
-const DEMO_PASSWORD = 'test2026';
-
 function LoginForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const { login } = useAuth();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [showPassword, setShowPassword] = useState(false);
@@ -33,23 +32,28 @@ function LoginForm() {
 	const [error, setError] = useState('');
 
 	const redirectTo = searchParams.get('redirect') ?? '/dashboard';
+	const justRegistered = searchParams.get('registered') === '1';
 
-	const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError('');
+		setSubmitting(true);
 
-		if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
-			setError(
-				'Email atau password salah. Gunakan kredensial demo yang ditampilkan di bawah.',
-			);
+		const res = await signIn('credentials', {
+			email,
+			password,
+			redirect: false,
+		});
+
+		setSubmitting(false);
+
+		if (!res || res.error) {
+			setError('Email atau password salah.');
 			return;
 		}
 
-		setSubmitting(true);
-		setTimeout(() => {
-			login({ name: 'Pengguna Demo', email });
-			router.push(redirectTo);
-		}, 600);
+		router.push(redirectTo);
+		router.refresh();
 	};
 
 	return (
@@ -79,57 +83,55 @@ function LoginForm() {
 						</p>
 					</div>
 
-					<form onSubmit={handleSubmit} className='p-8 space-y-5'>
+					<form
+						onSubmit={handleSubmit}
+						noValidate
+						className='p-8 space-y-5'>
 						<div>
-							<label
-								htmlFor='email'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='email' className='mb-2'>
 								Email
-							</label>
+							</Label>
 							<div className='relative'>
 								<Mail
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='email'
 									type='email'
-									required
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
 									placeholder='nama@email.com'
-									className='w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									aria-invalid={!!error}
+									className='h-11 pl-10 pr-4'
 								/>
 							</div>
 						</div>
 
 						<div>
-							<label
-								htmlFor='password'
-								className='block text-sm font-medium mb-2'>
+							<Label htmlFor='password' className='mb-2'>
 								Password
-							</label>
+							</Label>
 							<div className='relative'>
 								<Lock
 									size={16}
-									className='absolute left-3 top-1/2 -translate-y-1/2'
+									className='absolute left-3 top-1/2 -translate-y-1/2 z-10'
 									style={{ color: 'var(--text-muted)' }}
 								/>
-								<input
+								<Input
 									id='password'
 									type={showPassword ? 'text' : 'password'}
-									required
-									minLength={6}
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}
 									placeholder='Minimal 6 karakter'
-									className='w-full pl-10 pr-10 py-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors'
+									aria-invalid={!!error}
+									className='h-11 pl-10 pr-10'
 								/>
 								<button
 									type='button'
 									onClick={() => setShowPassword(!showPassword)}
-									className='absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer'
+									className='absolute right-3 top-1/2 -translate-y-1/2 z-10 cursor-pointer'
 									style={{ color: 'var(--text-muted)' }}
 									aria-label={
 										showPassword
@@ -159,6 +161,18 @@ function LoginForm() {
 							</a>
 						</div>
 
+						{justRegistered && !error && (
+							<p
+								className='text-sm rounded-xl px-4 py-3'
+								style={{
+									background: 'rgba(61, 107, 79, 0.1)',
+									color: 'var(--secondary)',
+								}}>
+								Akun berhasil dibuat. Silakan masuk dengan email & password
+								Anda.
+							</p>
+						)}
+
 						{error && (
 							<p
 								className='text-sm rounded-xl px-4 py-3'
@@ -170,32 +184,12 @@ function LoginForm() {
 							</p>
 						)}
 
-						<button
+						<Button
 							type='submit'
 							disabled={submitting}
-							className='w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed'
-							style={{ background: 'var(--primary)' }}>
+							className='w-full h-11 rounded-full'>
 							{submitting ? 'Memproses...' : 'Masuk'}
-						</button>
-
-						<div
-							className='rounded-xl p-4 text-xs space-y-1'
-							style={{
-								background: 'rgba(157, 23, 77, 0.06)',
-								color: 'var(--text-secondary)',
-							}}>
-							<p
-								className='font-semibold'
-								style={{ color: 'var(--primary)' }}>
-								Akun Demo
-							</p>
-							<p>
-								Email: <span className='font-mono'>{DEMO_EMAIL}</span>
-							</p>
-							<p>
-								Password: <span className='font-mono'>{DEMO_PASSWORD}</span>
-							</p>
-						</div>
+						</Button>
 
 						<p
 							className='text-center text-sm'

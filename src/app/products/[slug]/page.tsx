@@ -1,13 +1,18 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Footer, Navbar } from '@/components';
-import { getProductBySlug, getRelatedProducts, products } from '@/lib';
+import { api } from '@/trpc/server';
 import ProductDetailClient from './product-detail-client';
 
 type Params = Promise<{ slug: string }>;
 
-export function generateStaticParams() {
-	return products.map((p) => ({ slug: p.slug }));
+/** Ambil produk dari DB; kembalikan null bila tidak ada (NOT_FOUND dari router). */
+async function getProduct(slug: string) {
+	try {
+		return await api.product.getBySlug({ slug });
+	} catch {
+		return null;
+	}
 }
 
 export async function generateMetadata({
@@ -16,7 +21,7 @@ export async function generateMetadata({
 	params: Params;
 }): Promise<Metadata> {
 	const { slug } = await params;
-	const product = getProductBySlug(slug);
+	const product = await getProduct(slug);
 	if (!product) return { title: 'Produk Tidak Ditemukan' };
 	return {
 		title: product.title,
@@ -35,10 +40,10 @@ export default async function ProductDetailPage({
 	params: Params;
 }) {
 	const { slug } = await params;
-	const product = getProductBySlug(slug);
+	const product = await getProduct(slug);
 	if (!product) notFound();
 
-	const related = getRelatedProducts(slug, 3);
+	const related = await api.product.related({ slug, limit: 3 });
 
 	return (
 		<>

@@ -1,0 +1,590 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+	ClipboardList,
+	AlertCircle,
+	CalendarCheck,
+	Wallet,
+	Users,
+	Package,
+	ChevronRight,
+	ArrowRight,
+	TrendingUp,
+	TrendingDown,
+	Minus,
+} from 'lucide-react';
+import { api, type RouterOutputs } from '@/trpc/react';
+import { formatRupiah } from '@/hooks';
+import { ORDER_STATUS_LABEL, type OrderStatus } from '@/lib/order-status';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+
+// Warna badge status (UI-only). Label dari modul bersama `@/lib/order-status`.
+const statusColors: Record<OrderStatus, { bg: string; color: string }> = {
+	PENDING: { bg: 'rgba(234, 179, 8, 0.15)', color: '#a16207' },
+	CONFIRMED: { bg: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
+	SCHEDULED: { bg: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5' },
+	INSTALLED: { bg: 'rgba(20, 184, 166, 0.14)', color: '#0d9488' },
+	COMPLETED: { bg: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' },
+	CANCELLED: { bg: 'rgba(220, 38, 38, 0.12)', color: '#dc2626' },
+};
+
+const formatDate = (d: Date) =>
+	new Date(d).toLocaleDateString('id-ID', {
+		day: '2-digit',
+		month: 'short',
+		year: 'numeric',
+	});
+
+type Overview = RouterOutputs['admin']['dashboard']['overview'];
+
+/** Definisi tiap kartu statistik (ikon, label, aken warna). */
+type StatTone = 'neutral' | 'primary' | 'accent' | 'secondary';
+
+const toneStyles: Record<
+	StatTone,
+	{ chipBg: string; chipColor: string }
+> = {
+	neutral: {
+		chipBg: 'rgba(157, 23, 77, 0.08)',
+		chipColor: 'var(--primary)',
+	},
+	primary: {
+		chipBg: 'rgba(157, 23, 77, 0.12)',
+		chipColor: 'var(--primary)',
+	},
+	accent: {
+		chipBg: 'rgba(139, 105, 20, 0.14)',
+		chipColor: 'var(--accent)',
+	},
+	secondary: {
+		chipBg: 'rgba(61, 107, 79, 0.14)',
+		chipColor: 'var(--secondary)',
+	},
+};
+
+// ── Tren bulanan ────────────────────────────────────────────────────────────
+
+type TrendDir = 'up' | 'down' | 'flat' | 'new' | 'none';
+
+/** Delta % bulan-ini vs bulan-lalu. `new` = bulan lalu 0 tapi sekarang ada. */
+function computeDelta(curr: number, prev: number): { dir: TrendDir; label: string } {
+	if (prev === 0) {
+		if (curr === 0) return { dir: 'none', label: '' };
+		return { dir: 'new', label: 'Baru bulan ini' };
+	}
+	const pct = ((curr - prev) / prev) * 100;
+	if (Math.abs(pct) < 0.5) return { dir: 'flat', label: '0%' };
+	const sign = pct > 0 ? '+' : '';
+	return { dir: pct > 0 ? 'up' : 'down', label: `${sign}${Math.round(pct)}%` };
+}
+
+const trendVisual: Record<
+	TrendDir,
+	{ icon: typeof TrendingUp; color: string; bg: string }
+> = {
+	up: { icon: TrendingUp, color: '#16a34a', bg: 'rgba(34, 197, 94, 0.12)' },
+	new: { icon: TrendingUp, color: '#16a34a', bg: 'rgba(34, 197, 94, 0.12)' },
+	down: { icon: TrendingDown, color: '#dc2626', bg: 'rgba(220, 38, 38, 0.10)' },
+	flat: { icon: Minus, color: 'var(--text-muted)', bg: 'rgba(140, 130, 121, 0.12)' },
+	none: { icon: Minus, color: 'var(--text-muted)', bg: 'transparent' },
+};
+
+function TrendBadge({ dir, label }: { dir: TrendDir; label: string }) {
+	if (dir === 'none') return null;
+	const v = trendVisual[dir];
+	const Icon = v.icon;
+	return (
+		<span
+			className='inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold'
+			style={{ background: v.bg, color: v.color }}>
+			<Icon size={13} />
+			{label}
+		</span>
+	);
+}
+
+/** Kartu sorotan besar dengan tren bulan-ini vs bulan-lalu + sub-baris all-time. */
+function HighlightCard({
+	icon: Icon,
+	label,
+	value,
+	tone,
+	delta,
+	footnote,
+}: {
+	icon: typeof Wallet;
+	label: string;
+	value: string | number;
+	tone: StatTone;
+	delta: { dir: TrendDir; label: string };
+	footnote: string;
+}) {
+	const s = toneStyles[tone];
+	return (
+		<Card
+			className='flex flex-col gap-3 p-5 transition-shadow'
+			style={{
+				background: 'var(--bg-card)',
+				borderColor: 'var(--border)',
+				boxShadow: 'var(--shadow-sm)',
+			}}>
+			<div className='flex items-center justify-between gap-2'>
+				<span className='flex items-center gap-2'>
+					<span
+						className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl'
+						style={{ background: s.chipBg, color: s.chipColor }}>
+						<Icon size={18} />
+					</span>
+					<span
+						className='text-sm font-medium'
+						style={{ color: 'var(--text-secondary)' }}>
+						{label}
+					</span>
+				</span>
+				<TrendBadge dir={delta.dir} label={delta.label} />
+			</div>
+			<p
+				className='font-serif text-3xl font-bold leading-none'
+				style={{ color: 'var(--text)' }}>
+				{value}
+			</p>
+			<p className='text-xs' style={{ color: 'var(--text-muted)' }}>
+				{footnote}
+			</p>
+		</Card>
+	);
+}
+
+function StatCard({
+	icon: Icon,
+	label,
+	value,
+	tone = 'neutral',
+	href,
+}: {
+	icon: typeof ClipboardList;
+	label: string;
+	value: string | number;
+	tone?: StatTone;
+	href?: string;
+}) {
+	const s = toneStyles[tone];
+	const body = (
+		<Card
+			className='flex h-full flex-row items-center gap-4 p-5 transition-shadow'
+			style={{
+				background: 'var(--bg-card)',
+				borderColor: 'var(--border)',
+				boxShadow: 'var(--shadow-sm)',
+			}}>
+			<span
+				className='flex h-11 w-11 shrink-0 items-center justify-center rounded-xl'
+				style={{ background: s.chipBg, color: s.chipColor }}>
+				<Icon size={20} />
+			</span>
+			<div className='min-w-0 flex-1'>
+				<p
+					className='font-serif text-2xl font-bold leading-tight'
+					style={{ color: 'var(--text)' }}>
+					{value}
+				</p>
+				<p
+					className='truncate text-sm'
+					style={{ color: 'var(--text-muted)' }}>
+					{label}
+				</p>
+			</div>
+			{href && (
+				<ChevronRight
+					size={18}
+					className='shrink-0'
+					style={{ color: 'var(--text-muted)' }}
+				/>
+			)}
+		</Card>
+	);
+
+	if (href) {
+		return (
+			<Link
+				href={href}
+				className='block cursor-pointer transition-opacity hover:opacity-90'>
+				{body}
+			</Link>
+		);
+	}
+	return body;
+}
+
+function HighlightSkeleton() {
+	return (
+		<Card
+			className='flex flex-col gap-3 p-5'
+			style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+			<div className='flex items-center justify-between'>
+				<div className='flex items-center gap-2'>
+					<Skeleton className='h-9 w-9 rounded-xl' />
+					<Skeleton className='h-4 w-28' />
+				</div>
+				<Skeleton className='h-5 w-14 rounded-full' />
+			</div>
+			<Skeleton className='h-8 w-40' />
+			<Skeleton className='h-3 w-32' />
+		</Card>
+	);
+}
+
+function StatSkeleton() {
+	return (
+		<Card
+			className='flex flex-row items-center gap-4 p-5'
+			style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+			<Skeleton className='h-11 w-11 rounded-xl' />
+			<div className='flex-1 space-y-2'>
+				<Skeleton className='h-6 w-20' />
+				<Skeleton className='h-4 w-28' />
+			</div>
+		</Card>
+	);
+}
+
+function HighlightsRow({ data }: { data: Overview }) {
+	const { trends } = data;
+	const revenueDelta = computeDelta(
+		trends.revenueThisMonth,
+		trends.revenueLastMonth,
+	);
+	const ordersDelta = computeDelta(
+		trends.ordersThisMonth,
+		trends.ordersLastMonth,
+	);
+	return (
+		<div className='grid gap-4 sm:grid-cols-2'>
+			<HighlightCard
+				icon={Wallet}
+				label='Pendapatan Bulan Ini'
+				value={formatRupiah(trends.revenueThisMonth)}
+				tone='secondary'
+				delta={revenueDelta}
+				footnote={`Total terkonfirmasi: ${formatRupiah(data.revenue)}`}
+			/>
+			<HighlightCard
+				icon={ClipboardList}
+				label='Pesanan Bulan Ini'
+				value={trends.ordersThisMonth}
+				tone='primary'
+				delta={ordersDelta}
+				footnote={`Total sepanjang waktu: ${data.orders.total} pesanan`}
+			/>
+		</div>
+	);
+}
+
+function SecondaryRow({ data }: { data: Overview }) {
+	return (
+		<div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
+			<StatCard
+				icon={AlertCircle}
+				label='Menunggu Konfirmasi'
+				value={data.orders.pending}
+				tone={data.orders.pending > 0 ? 'accent' : 'neutral'}
+				href='/admin/orders'
+			/>
+			<StatCard
+				icon={CalendarCheck}
+				label='Pasang Hari Ini'
+				value={data.todayInstalls}
+				tone={data.todayInstalls > 0 ? 'secondary' : 'neutral'}
+				href='/admin/calendar'
+			/>
+			<StatCard icon={Users} label='Pelanggan' value={data.customerCount} />
+			<StatCard icon={Package} label='Produk' value={data.productCount} />
+		</div>
+	);
+}
+
+/** Item status pipeline (urutan daur hidup sewa). */
+const PIPELINE: { key: keyof Overview['orders']; status: OrderStatus }[] = [
+	{ key: 'pending', status: 'PENDING' },
+	{ key: 'confirmed', status: 'CONFIRMED' },
+	{ key: 'scheduled', status: 'SCHEDULED' },
+	{ key: 'installed', status: 'INSTALLED' },
+	{ key: 'completed', status: 'COMPLETED' },
+	{ key: 'cancelled', status: 'CANCELLED' },
+];
+
+function StatusPipeline({ orders }: { orders: Overview['orders'] }) {
+	const total = orders.total;
+	return (
+		<Card
+			className='p-5'
+			style={{
+				background: 'var(--bg-card)',
+				borderColor: 'var(--border)',
+				boxShadow: 'var(--shadow-sm)',
+			}}>
+			<div className='mb-4 flex items-baseline justify-between'>
+				<p
+					className='font-serif text-sm font-bold'
+					style={{ color: 'var(--text)' }}>
+					Status Pesanan
+				</p>
+				<span className='text-xs' style={{ color: 'var(--text-muted)' }}>
+					{total} total
+				</span>
+			</div>
+
+			{/* Bar proporsional: lebar tiap segmen sebanding jumlahnya. */}
+			<div
+				className='mb-5 flex h-2.5 w-full overflow-hidden rounded-full'
+				style={{ background: 'var(--bg-surface)' }}>
+				{total === 0
+					? null
+					: PIPELINE.map(({ key, status }) => {
+							const n = orders[key];
+							if (n === 0) return null;
+							return (
+								<span
+									key={status}
+									title={`${ORDER_STATUS_LABEL[status]}: ${n}`}
+									style={{
+										width: `${(n / total) * 100}%`,
+										background: statusColors[status].color,
+									}}
+								/>
+							);
+					  })}
+			</div>
+
+			<div className='grid grid-cols-3 gap-4 sm:grid-cols-6'>
+				{PIPELINE.map(({ key, status }) => {
+					const c = statusColors[status];
+					return (
+						<div key={status} className='flex flex-col gap-1'>
+							<span className='flex items-center gap-1.5'>
+								<span
+									className='h-2 w-2 shrink-0 rounded-full'
+									style={{ background: c.color }}
+								/>
+								<span
+									className='font-serif text-xl font-bold leading-none'
+									style={{ color: 'var(--text)' }}>
+									{orders[key]}
+								</span>
+							</span>
+							<span
+								className='text-[11px] leading-tight'
+								style={{ color: 'var(--text-muted)' }}>
+								{ORDER_STATUS_LABEL[status]}
+							</span>
+						</div>
+					);
+				})}
+			</div>
+		</Card>
+	);
+}
+
+function StatusPipelineSkeleton() {
+	return (
+		<Card
+			className='p-5'
+			style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+			<Skeleton className='mb-4 h-4 w-28' />
+			<Skeleton className='mb-5 h-2.5 w-full rounded-full' />
+			<div className='grid grid-cols-3 gap-4 sm:grid-cols-6'>
+				{Array.from({ length: 6 }).map((_, i) => (
+					<div key={i} className='space-y-1.5'>
+						<Skeleton className='h-5 w-10' />
+						<Skeleton className='h-3 w-16' />
+					</div>
+				))}
+			</div>
+		</Card>
+	);
+}
+
+export default function AdminDashboardPage() {
+	const router = useRouter();
+	const { data, isLoading } = api.admin.dashboard.overview.useQuery();
+	const loading = isLoading || !data;
+
+	return (
+		<div className='space-y-6'>
+			<div>
+				<h1
+					className='font-serif text-xl font-bold'
+					style={{ color: 'var(--text)' }}>
+					Ringkasan
+				</h1>
+				<p className='text-sm' style={{ color: 'var(--text-muted)' }}>
+					Pantau pesanan, jadwal pemasangan, dan performa toko.
+				</p>
+			</div>
+
+			{loading ? (
+				<div className='grid gap-4 sm:grid-cols-2'>
+					<HighlightSkeleton />
+					<HighlightSkeleton />
+				</div>
+			) : (
+				<HighlightsRow data={data} />
+			)}
+
+			{loading ? (
+				<div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
+					{Array.from({ length: 4 }).map((_, i) => (
+						<StatSkeleton key={i} />
+					))}
+				</div>
+			) : (
+				<SecondaryRow data={data} />
+			)}
+
+			{loading ? (
+				<StatusPipelineSkeleton />
+			) : (
+				<StatusPipeline orders={data.orders} />
+			)}
+
+			<section className='space-y-3'>
+				<div className='flex items-center justify-between'>
+					<h2
+						className='font-serif text-lg font-bold'
+						style={{ color: 'var(--text)' }}>
+						Pesanan Terbaru
+					</h2>
+					<Button
+						asChild
+						variant='ghost'
+						size='sm'
+						className='cursor-pointer'>
+						<Link href='/admin/orders'>
+							Lihat semua
+							<ArrowRight size={14} />
+						</Link>
+					</Button>
+				</div>
+
+				<div
+					className='overflow-hidden rounded-2xl border border-[var(--border)]'
+					style={{
+						background: 'var(--bg-card)',
+						boxShadow: 'var(--shadow-sm)',
+					}}>
+					<Table>
+						<TableHeader>
+							<TableRow
+								className='hover:bg-transparent'
+								style={{
+									background: 'rgba(157, 23, 77, 0.04)',
+									color: 'var(--text-muted)',
+								}}>
+								<TableHead className='px-6 py-3 text-xs font-semibold uppercase tracking-wider'>
+									No. Pesanan
+								</TableHead>
+								<TableHead className='px-6 py-3 text-xs font-semibold uppercase tracking-wider'>
+									Pelanggan
+								</TableHead>
+								<TableHead className='px-6 py-3 text-xs font-semibold uppercase tracking-wider'>
+									Status
+								</TableHead>
+								<TableHead className='px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider'>
+									Total
+								</TableHead>
+								<TableHead className='px-6 py-3 text-xs font-semibold uppercase tracking-wider'>
+									Tanggal
+								</TableHead>
+								<TableHead className='px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider'>
+									Aksi
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{loading ? (
+								Array.from({ length: 6 }).map((_, i) => (
+									<TableRow
+										key={`skeleton-${i}`}
+										className='hover:bg-transparent'>
+										{Array.from({ length: 6 }).map((__, c) => (
+											<TableCell key={c} className='px-6 py-4'>
+												<Skeleton className='h-4 w-full' />
+											</TableCell>
+										))}
+									</TableRow>
+								))
+							) : data.recentOrders.length === 0 ? (
+								<TableRow className='hover:bg-transparent'>
+									<TableCell
+										colSpan={6}
+										className='px-6 py-12 text-center text-sm'
+										style={{ color: 'var(--text-muted)' }}>
+										Belum ada pesanan.
+									</TableCell>
+								</TableRow>
+							) : (
+								data.recentOrders.map((o) => {
+									const color = statusColors[o.status];
+									return (
+										<TableRow
+											key={o.id}
+											onClick={() => router.push(`/admin/orders/${o.id}`)}
+											className='cursor-pointer'>
+											<TableCell
+												className='px-6 py-4 font-mono font-semibold'
+												style={{ color: 'var(--text)' }}>
+												{o.orderNumber}
+											</TableCell>
+											<TableCell className='px-6 py-4'>
+												<p className='truncate font-semibold'>
+													{o.customerName}
+												</p>
+											</TableCell>
+											<TableCell className='px-6 py-4'>
+												<Badge
+													className='border-transparent text-[11px] font-semibold'
+													style={{ background: color.bg, color: color.color }}>
+													{ORDER_STATUS_LABEL[o.status]}
+												</Badge>
+											</TableCell>
+											<TableCell
+												className='px-6 py-4 text-right font-semibold'
+												style={{ color: 'var(--primary)' }}>
+												{formatRupiah(o.total)}
+											</TableCell>
+											<TableCell
+												className='px-6 py-4 text-xs'
+												style={{ color: 'var(--text-secondary)' }}>
+												{formatDate(o.createdAt)}
+											</TableCell>
+											<TableCell className='px-6 py-4 text-right'>
+												<ChevronRight
+													size={18}
+													className='inline-block'
+													style={{ color: 'var(--text-muted)' }}
+												/>
+											</TableCell>
+										</TableRow>
+									);
+								})
+							)}
+						</TableBody>
+					</Table>
+				</div>
+			</section>
+		</div>
+	);
+}

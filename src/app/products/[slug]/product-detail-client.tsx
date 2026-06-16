@@ -1,23 +1,37 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import Image from 'next/image';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
 	ArrowRight,
+	CalendarClock,
+	CalendarDays,
 	Check,
 	ChevronRight,
+	Clock,
+	Info,
+	Loader2,
 	MapPin,
 	Minus,
 	Package,
 	Plus,
+	Repeat,
 	ShieldCheck,
 	ShoppingCart,
 	Truck,
 } from 'lucide-react';
 import { formatRupiah, useAuth, useCart } from '@/hooks';
 import type { Product } from '@/lib';
+import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
+import { MIN_LEAD_TIME_DAYS, RENTAL_BUFFER_DAYS } from '@/lib/rental-config';
+import {
+	ProductImage,
+	RentalBadge,
+	RentalDatePicker,
+	RentalDurationSelector,
+} from '@/components';
+import { api } from '@/trpc/react';
 
 const MAX_QUANTITY = 10;
 
@@ -34,15 +48,32 @@ export default function ProductDetailClient({
 	const [quantity, setQuantity] = useState(1);
 	const [activeImage, setActiveImage] = useState(product.image);
 	const [added, setAdded] = useState(false);
-	const [selectedSizeId, setSelectedSizeId] = useState(product.sizes[0].id);
+	// Produk bisa saja belum punya ukuran/template/warna → akses aman (opsional).
+	const [selectedSizeId, setSelectedSizeId] = useState(
+		product.sizes[0]?.id ?? '',
+	);
 	const [selectedTemplateId, setSelectedTemplateId] = useState(
-		product.designTemplates[0].id,
+		product.designTemplates[0]?.id ?? '',
 	);
 	const [selectedColorId, setSelectedColorId] = useState(
-		product.themeColors[0].id,
+		product.themeColors[0]?.id ?? '',
 	);
 	const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
 
+	// Periode sewa (S2.3). installDate null = belum dipilih; durasi default 3 hari.
+	const [installDate, setInstallDate] = useState<Date | null>(null);
+	const [rentalDays, setRentalDays] = useState(3);
+
+	// Batas tanggal dihitung SEKALI (identitas stabil) supaya tidak menjadi input
+	// query yang berubah tiap render → mencegah refetch loop react-query.
+	const [{ minDate, maxDate }] = useState(() => {
+		const today = floorToUtcDay(new Date());
+		const min = addDays(today, MIN_LEAD_TIME_DAYS);
+		// Jendela ~120 hari (dalam batas cap server 366 hari).
+		return { minDate: min, maxDate: addDays(min, 119) };
+	});
+
+	// Bisa undefined bila produk belum punya ukuran/template/warna.
 	const selectedSize =
 		product.sizes.find((s) => s.id === selectedSizeId) ?? product.sizes[0];
 	const selectedTemplate =
@@ -55,31 +86,104 @@ export default function ProductDetailClient({
 		selectedAddonIds.includes(a.id),
 	);
 
+	// Sewa wajib punya ukuran (ketersediaan & harga per ukuran).
+	const hasSize = Boolean(selectedSize);
+
 	const unitPrice = useMemo(() => {
 		const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
-		return selectedSize.price + addonsTotal;
+		return (selectedSize?.price ?? 0) + addonsTotal;
 	}, [selectedSize, selectedAddons]);
 
 	const totalPrice = unitPrice * quantity;
 
-	const cartId = `${product.slug}::${selectedSize.id}::${selectedColor.id}::${
-		selectedTemplate.id
-	}::${[...selectedAddonIds].sort().join(',')}`;
+	// Saat ukuran berganti, RESET tanggal: hari yang kosong untuk satu ukuran bisa
+	// penuh untuk ukuran lain (ketersediaan dihitung per ukuran).
+	useEffect(() => {
+		setInstallDate(null);
+	}, [selectedSize?.label]);
+
+	// Hari penuh (untuk menonaktifkan tanggal di kalender). Re-run saat sizeLabel
+	// berganti (bagian dari input → query key).
+	const productId = product.id ?? '';
+	const bookedDatesQuery = api.rental.getBookedDates.useQuery(
+		{
+			productId,
+			sizeLabel: selectedSize?.label ?? '',
+			from: minDate,
+			to: maxDate,
+		},
+		{ enabled: productId !== '' && hasSize },
+	);
+	const bookedDates = bookedDatesQuery.data ?? [];
+
+	// Ketersediaan untuk tanggal+durasi terpilih. enabled hanya saat tanggal diset.
+	const availabilityQuery = api.rental.checkAvailability.useQuery(
+		{
+			productId,
+			sizeLabel: selectedSize?.label ?? '',
+			installDate: installDate as Date,
+			rentalDays,
+		},
+		{ enabled: installDate !== null && productId !== '' && hasSize },
+	);
+	const availability = availabilityQuery.data;
+	const checkingAvailability =
+		installDate !== null && availabilityQuery.isFetching;
+
+	const pickupDate =
+		installDate !== null ? computePickupDate(installDate, rentalDays) : null;
+
+	// Saran tanggal kosong berikutnya — hanya berguna bila MASIH di dalam jendela
+	// kalender [minDate, maxDate]; di luar itu kalender tak bisa menampilkannya.
+	const suggestion = availability?.nextAvailableDate
+		? floorToUtcDay(availability.nextAvailableDate)
+		: null;
+	const suggestionInWindow =
+		suggestion !== null && suggestion.getTime() <= maxDate.getTime();
+
+	// Jangan aktifkan order saat masih memeriksa (data lama bisa stale, mis. setelah
+	// ganti durasi) — cegah memesan periode yang sebenarnya penuh.
+	const canOrder =
+		hasSize &&
+		installDate !== null &&
+		availability?.available === true &&
+		!availabilityQuery.isFetching;
+
+	// installIso: tanggal pasang di-floor ke tengah malam UTC lalu di-ISO-kan.
+	// Dipakai sebagai bagian cartId DAN sebagai nilai installDate item keranjang.
+	const installIso =
+		installDate !== null ? floorToUtcDay(installDate).toISOString() : '';
+
+	// cartId kini ikut menyandi periode (installIso + rentalDays) supaya dua tanggal
+	// pasang / durasi berbeda menjadi BARIS TERPISAH (tidak digabung quantity-nya).
+	const cartId = `${product.slug}::${selectedSize?.id ?? ''}::${
+		selectedColor?.id ?? ''
+	}::${selectedTemplate?.id ?? ''}::${[...selectedAddonIds]
+		.sort()
+		.join(',')}::${installIso}::${rentalDays}`;
 
 	const cartTitleParts = [
 		product.title,
-		`(${selectedSize.label}`,
-		selectedColor.name ? `· ${selectedColor.name}` : '',
+		`(${selectedSize?.label ?? ''}`,
+		selectedColor?.name ? `· ${selectedColor.name}` : '',
 		`)`,
 	];
 	const cartTitle = cartTitleParts.join(' ').replace(/\s+\)/, ')');
 
 	const cartInput = {
 		id: cartId,
+		productId: product.id ?? '',
+		slug: product.slug,
 		title: cartTitle,
+		image: selectedTemplate?.image || product.image,
+		sizeLabel: selectedSize?.label ?? '',
 		price: unitPrice,
 		priceLabel: formatRupiah(unitPrice),
-		image: selectedTemplate.image || product.image,
+		installDate: installIso,
+		rentalDays,
+		designTemplateName: selectedTemplate?.name,
+		themeColorName: selectedColor?.name,
+		addonNames: selectedAddons.map((a) => a.name),
 	};
 
 	const toggleAddon = (id: string) => {
@@ -89,12 +193,14 @@ export default function ProductDetailClient({
 	};
 
 	const handleAddToCart = () => {
+		if (!canOrder || installDate === null) return;
 		addItem(cartInput, quantity);
 		setAdded(true);
 		setTimeout(() => setAdded(false), 1800);
 	};
 
 	const handleOrderNow = () => {
+		if (!canOrder || installDate === null) return;
 		addItem(cartInput, quantity);
 		const target = '/confirmation-order';
 		router.push(
@@ -105,7 +211,6 @@ export default function ProductDetailClient({
 	return (
 		<main className='floral-bg min-h-[70vh]'>
 			<div className='mx-auto max-w-[1100px] px-6 py-10'>
-				{/* Breadcrumb */}
 				<nav
 					aria-label='Breadcrumb'
 					className='inline-flex items-center gap-1.5 text-xs mb-6'
@@ -128,12 +233,11 @@ export default function ProductDetailClient({
 				</nav>
 
 				<div className='grid lg:grid-cols-2 gap-8 mb-12'>
-					{/* Gallery */}
 					<div>
 						<div
 							className='relative aspect-square rounded-2xl overflow-hidden border border-[var(--border)] mb-3'
 							style={{ background: 'var(--bg-card)' }}>
-							<Image
+							<ProductImage
 								src={activeImage}
 								alt={product.title}
 								fill
@@ -166,7 +270,7 @@ export default function ProductDetailClient({
 													: 'var(--border)',
 												opacity: active ? 1 : 0.7,
 											}}>
-											<Image
+											<ProductImage
 												src={img}
 												alt={`${product.title} thumbnail`}
 												fill
@@ -180,7 +284,6 @@ export default function ProductDetailClient({
 						)}
 					</div>
 
-					{/* Info + actions */}
 					<div className='flex flex-col'>
 						<h1 className='font-serif text-3xl sm:text-4xl font-bold mb-3'>
 							{product.title}
@@ -204,89 +307,67 @@ export default function ProductDetailClient({
 							</span>
 						</div>
 
-						{/* Specs */}
-						{product.specs.length > 0 && (
-							<div className='grid grid-cols-2 gap-4 mb-6'>
-								{product.specs.map((spec) => (
-									<div key={spec.label}>
-										<p
-											className='text-[11px] font-semibold uppercase tracking-wider mb-1'
-											style={{ color: 'var(--text-muted)' }}>
-											{spec.label}
-										</p>
-										<p className='text-sm font-medium'>{spec.value}</p>
-									</div>
-								))}
-								<div>
-									<p
-										className='text-[11px] font-semibold uppercase tracking-wider mb-1'
-										style={{ color: 'var(--text-muted)' }}>
-										Estimasi Pengerjaan
-									</p>
-									<p className='text-sm font-medium'>
-										{product.productionTime}
-									</p>
-								</div>
+						{product.productionTime && (
+							<div className='mb-6'>
+								<p
+									className='text-[11px] font-semibold uppercase tracking-wider mb-1'
+									style={{ color: 'var(--text-muted)' }}>
+									Estimasi Pengerjaan
+								</p>
+								<p className='text-sm font-medium'>
+									{product.productionTime}
+								</p>
 							</div>
 						)}
 
-						{/* Features */}
-						<ul className='space-y-2 mb-6'>
-							{product.features.map((f) => (
-								<li
-									key={f}
-									className='flex items-start gap-2 text-sm'
-									style={{ color: 'var(--text-secondary)' }}>
-									<Check
-										size={16}
-										style={{ color: 'var(--primary)' }}
-										className='mt-0.5 shrink-0'
-									/>
-									{f}
-								</li>
-							))}
-						</ul>
-
-						{/* Ukuran */}
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
 								style={{ color: 'var(--text-muted)' }}>
 								Ukuran
 							</p>
-							<div className='flex flex-wrap gap-2'>
-								{product.sizes.map((size) => {
-									const active = size.id === selectedSizeId;
-									return (
-										<button
-											key={size.id}
-											type='button'
-											onClick={() => setSelectedSizeId(size.id)}
-											className='inline-flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl border-2 text-sm font-semibold cursor-pointer transition-all'
-											style={{
-												borderColor: active
-													? 'var(--primary)'
-													: 'var(--border)',
-												background: active
-													? 'rgba(157, 23, 77, 0.06)'
-													: 'var(--bg-surface)',
-												color: active ? 'var(--primary)' : 'var(--text)',
-											}}>
-											<span>{size.label}</span>
-											<span
-												className='text-[10px] font-medium'
+							{hasSize ? (
+								<div className='flex flex-wrap gap-2'>
+									{product.sizes.map((size) => {
+										const active = size.id === selectedSizeId;
+										return (
+											<button
+												key={size.id}
+												type='button'
+												onClick={() => setSelectedSizeId(size.id)}
+												className='inline-flex flex-col items-start gap-0.5 px-4 py-2 rounded-xl border-2 text-sm font-semibold cursor-pointer transition-all'
 												style={{
-													color: active
+													borderColor: active
 														? 'var(--primary)'
-														: 'var(--text-muted)',
+														: 'var(--border)',
+													background: active
+														? 'rgba(157, 23, 77, 0.06)'
+														: 'var(--bg-surface)',
+													color: active ? 'var(--primary)' : 'var(--text)',
 												}}>
-												{size.priceLabel}
-											</span>
-										</button>
-									);
-								})}
-							</div>
-							{selectedSize.note && (
+												<span>{size.label}</span>
+												<span
+													className='text-[10px] font-medium'
+													style={{
+														color: active
+															? 'var(--primary)'
+															: 'var(--text-muted)',
+													}}>
+													{size.priceLabel}
+												</span>
+											</button>
+										);
+									})}
+								</div>
+							) : (
+								<p
+									className='text-xs'
+									style={{ color: 'var(--text-muted)' }}>
+									Ukuran belum tersedia untuk produk ini — pemesanan belum bisa
+									dilakukan.
+								</p>
+							)}
+							{selectedSize?.note && (
 								<p
 									className='text-[11px] mt-2'
 									style={{ color: 'var(--text-muted)' }}>
@@ -295,7 +376,218 @@ export default function ProductDetailClient({
 							)}
 						</div>
 
-						{/* Template Desain */}
+						<div className='mb-5'>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-2 inline-flex items-center gap-1'
+								style={{ color: 'var(--text-muted)' }}>
+								<CalendarDays size={11} />
+								Periode Sewa
+							</p>
+
+							<RentalDatePicker
+								value={installDate}
+								onChange={setInstallDate}
+								bookedDates={bookedDates}
+								minDate={minDate}
+								maxDate={maxDate}
+								loading={bookedDatesQuery.isFetching}
+							/>
+
+							<p
+								className='text-[10px] font-semibold uppercase tracking-wider mt-3 mb-2'
+								style={{ color: 'var(--text-muted)' }}>
+								Durasi
+							</p>
+							<RentalDurationSelector
+								value={rentalDays}
+								onChange={setRentalDays}
+							/>
+
+							{installDate !== null && pickupDate && (
+								<p
+									className='text-[11px] mt-3'
+									style={{ color: 'var(--text-secondary)' }}>
+									Estimasi bongkar:{' '}
+									<span
+										className='font-semibold'
+										style={{ color: 'var(--text)' }}>
+										{pickupDate.toLocaleDateString('id-ID', {
+											weekday: 'long',
+											day: 'numeric',
+											month: 'long',
+											year: 'numeric',
+											timeZone: 'UTC',
+										})}
+									</span>
+								</p>
+							)}
+
+							{checkingAvailability && (
+								<p
+									className='text-xs mt-2 inline-flex items-center gap-1.5'
+									style={{ color: 'var(--text-muted)' }}>
+									<Loader2 size={13} className='animate-spin' />
+									Memeriksa ketersediaan…
+								</p>
+							)}
+
+							{!checkingAvailability &&
+								installDate !== null &&
+								availability?.available === true && (
+									<p
+										className='text-xs font-semibold mt-2 inline-flex items-center gap-1.5'
+										style={{ color: '#16a34a' }}>
+										<Check size={14} />
+										Tersedia · sisa {availability.remainingUnits} unit
+									</p>
+								)}
+
+							{!checkingAvailability &&
+								installDate !== null &&
+								availability?.available === false && (
+									<div className='mt-2 space-y-1.5'>
+										<p
+											className='text-xs font-semibold'
+											style={{ color: '#dc2626' }}>
+											Tanggal penuh
+										</p>
+										{suggestion && suggestionInWindow && (
+											<button
+												type='button'
+												onClick={() => setInstallDate(suggestion)}
+												className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-all'
+												style={{
+													borderColor: 'var(--primary)',
+													color: 'var(--primary)',
+													background: 'rgba(157, 23, 77, 0.04)',
+												}}>
+												<CalendarDays size={13} />
+												Tersedia mulai{' '}
+												{suggestion.toLocaleDateString('id-ID', {
+													day: 'numeric',
+													month: 'long',
+													year: 'numeric',
+													timeZone: 'UTC',
+												})}
+											</button>
+										)}
+										{suggestion && !suggestionInWindow && (
+											<p
+												className='text-[11px]'
+												style={{ color: 'var(--text-muted)' }}>
+												Tersedia mulai{' '}
+												{suggestion.toLocaleDateString('id-ID', {
+													day: 'numeric',
+													month: 'long',
+													year: 'numeric',
+													timeZone: 'UTC',
+												})}{' '}
+												— di luar jangkauan kalender, silakan hubungi kami.
+											</p>
+										)}
+									</div>
+								)}
+						</div>
+
+						<div
+							className='mb-5 rounded-xl border border-[var(--border)] p-4'
+							style={{ background: 'rgba(157, 23, 77, 0.03)' }}>
+							<p
+								className='text-[11px] font-semibold uppercase tracking-wider mb-3 inline-flex items-center gap-1.5'
+								style={{ color: 'var(--text-muted)' }}>
+								<Info size={12} style={{ color: 'var(--primary)' }} />
+								Ketentuan Sewa
+							</p>
+							<ul className='space-y-2.5'>
+								<li className='flex items-start gap-2'>
+									<Repeat
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Papan bunga ini{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											disewa
+										</span>
+										, bukan dibeli — unit akan{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											diambil kembali
+										</span>{' '}
+										setelah masa sewa.
+									</span>
+								</li>
+								<li className='flex items-start gap-2'>
+									<CalendarClock
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Papan dipasang pada{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											tanggal pasang
+										</span>{' '}
+										yang dipilih dan diambil kembali pada{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											tanggal bongkar
+										</span>{' '}
+										(= tanggal pasang + durasi).
+									</span>
+								</li>
+								<li className='flex items-start gap-2'>
+									<Clock
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Pesan minimal{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											H-{MIN_LEAD_TIME_DAYS}
+										</span>{' '}
+										sebelum tanggal pasang.
+									</span>
+								</li>
+								<li className='flex items-start gap-2'>
+									<Truck
+										size={14}
+										className='mt-0.5 shrink-0'
+										style={{ color: 'var(--primary)' }}
+									/>
+									<span
+										className='text-xs leading-relaxed'
+										style={{ color: 'var(--text-secondary)' }}>
+										Ada jeda{' '}
+										<span
+											className='font-semibold'
+											style={{ color: 'var(--text)' }}>
+											{RENTAL_BUFFER_DAYS} hari
+										</span>{' '}
+										untuk bongkar/pasang antar penyewaan (memengaruhi
+										ketersediaan tanggal).
+									</span>
+								</li>
+							</ul>
+						</div>
+
+						{product.designTemplates.length > 0 && (
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -320,7 +612,7 @@ export default function ProductDetailClient({
 													: 'var(--border)',
 											}}>
 											<div className='relative aspect-square'>
-												<Image
+												<ProductImage
 													src={tpl.image}
 													alt={tpl.name}
 													fill
@@ -343,15 +635,16 @@ export default function ProductDetailClient({
 								})}
 							</div>
 						</div>
+						)}
 
-						{/* Warna Tema */}
+						{product.themeColors.length > 0 && (
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
 								style={{ color: 'var(--text-muted)' }}>
 								Warna Tema:{' '}
 								<span style={{ color: 'var(--text)' }}>
-									{selectedColor.name}
+									{selectedColor?.name}
 								</span>
 							</p>
 							<div className='flex flex-wrap gap-2'>
@@ -389,8 +682,9 @@ export default function ProductDetailClient({
 								})}
 							</div>
 						</div>
+						)}
 
-						{/* Add-on */}
+						{product.addons.length > 0 && (
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2'
@@ -436,8 +730,8 @@ export default function ProductDetailClient({
 								})}
 							</div>
 						</div>
+						)}
 
-						{/* Area Pengiriman */}
 						<div className='mb-5'>
 							<p
 								className='text-[11px] font-semibold uppercase tracking-wider mb-2 inline-flex items-center gap-1'
@@ -460,7 +754,6 @@ export default function ProductDetailClient({
 							</div>
 						</div>
 
-						{/* Quantity + actions */}
 						<div className='mt-auto pt-6 border-t border-[var(--border)] space-y-4'>
 							<div className='flex items-center justify-between gap-4'>
 								<div className='flex items-center gap-4'>
@@ -511,7 +804,8 @@ export default function ProductDetailClient({
 								<button
 									type='button'
 									onClick={handleAddToCart}
-									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold border-2 transition-all hover:scale-[1.02] cursor-pointer'
+									disabled={!canOrder}
+									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold border-2 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
 									style={{
 										borderColor: added ? '#16a34a' : 'var(--primary)',
 										color: added ? '#16a34a' : 'var(--primary)',
@@ -534,7 +828,8 @@ export default function ProductDetailClient({
 								<button
 									type='button'
 									onClick={handleOrderNow}
-									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-all hover:scale-[1.02] cursor-pointer'
+									disabled={!canOrder}
+									className='flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
 									style={{
 										background: 'var(--primary)',
 										boxShadow: '0 2px 12px rgba(157, 23, 77, 0.25)',
@@ -544,7 +839,14 @@ export default function ProductDetailClient({
 								</button>
 							</div>
 
-							{/* Trust badges */}
+							{!canOrder && (
+								<p
+									className='text-[11px] text-center'
+									style={{ color: 'var(--text-muted)' }}>
+									Pilih tanggal &amp; durasi yang tersedia dulu.
+								</p>
+							)}
+
 							<div
 								className='grid grid-cols-3 gap-2 pt-4 border-t border-[var(--border)] text-[11px]'
 								style={{ color: 'var(--text-secondary)' }}>
@@ -568,7 +870,6 @@ export default function ProductDetailClient({
 					</div>
 				</div>
 
-				{/* Related products */}
 				{related.length > 0 && (
 					<section>
 						<div className='flex items-end justify-between mb-5'>
@@ -602,13 +903,16 @@ export default function ProductDetailClient({
 									className='group bg-[var(--bg-card)] rounded-2xl overflow-hidden border border-[var(--border)] card-hover'
 									style={{ boxShadow: 'var(--shadow-sm)' }}>
 									<div className='relative aspect-4/3 overflow-hidden'>
-										<Image
+										<ProductImage
 											src={p.image}
 											alt={p.title}
 											fill
 											className='object-cover transition-transform duration-500 group-hover:scale-105'
 											sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
 										/>
+										<div className='absolute top-3 left-3'>
+											<RentalBadge />
+										</div>
 										<div className='absolute top-3 right-3 glass rounded-full px-3 py-1.5'>
 											<p
 												className='text-xs font-semibold'

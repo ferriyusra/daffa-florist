@@ -6,21 +6,57 @@ const STORAGE_KEY = 'daffa_cart';
 const CART_EVENT = 'daffa-cart-change';
 
 export type CartItem = {
-	id: string;
+	id: string; // cartId — kini ikut menyandi periode (lihat product-detail-client)
+	productId: string;
+	slug: string;
 	title: string;
-	price: number;
-	priceLabel: string;
 	image: string;
+	sizeLabel: string;
+	price: number; // harga satuan (ukuran + addon), sudah dihitung
+	priceLabel: string;
 	quantity: number;
+	// CATATAN serialisasi: localStorage hanya menyimpan string → `Date` tidak bisa
+	// dipertahankan (JSON.parse tak menghidupkan Date). installDate DISIMPAN sebagai
+	// ISO string dari Date tengah-malam UTC (basis date-only). Pemakai mem-`new Date(installDate)`.
+	installDate: string;
+	rentalDays: number;
+	designTemplateName?: string;
+	themeColorName?: string;
+	addonNames: string[];
 };
 
 export type AddCartInput = Omit<CartItem, 'quantity'>;
+
+/**
+ * Item dianggap VALID hanya bila punya semua field sewa yang dibutuhkan
+ * `createRental`. Cart lama (shape pra-S2.5, tanpa productId/installDate/
+ * rentalDays) dibuang saat read agar tak ikut ter-submit & memicu error server
+ * yang membingungkan.
+ */
+function isValidItem(i: unknown): i is CartItem {
+	if (!i || typeof i !== 'object') return false;
+	const o = i as Record<string, unknown>;
+	return (
+		typeof o.id === 'string' &&
+		typeof o.productId === 'string' &&
+		o.productId !== '' &&
+		typeof o.sizeLabel === 'string' &&
+		typeof o.installDate === 'string' &&
+		o.installDate !== '' &&
+		typeof o.rentalDays === 'number' &&
+		typeof o.price === 'number' &&
+		typeof o.quantity === 'number' &&
+		Array.isArray(o.addonNames)
+	);
+}
 
 function readCart(): CartItem[] {
 	if (typeof window === 'undefined') return [];
 	try {
 		const raw = window.localStorage.getItem(STORAGE_KEY);
-		return raw ? (JSON.parse(raw) as CartItem[]) : [];
+		if (!raw) return [];
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? parsed.filter(isValidItem) : [];
 	} catch {
 		return [];
 	}

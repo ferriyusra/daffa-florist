@@ -12,9 +12,11 @@ import {
 	LogIn,
 	LogOut,
 	ShoppingCart,
+	ShieldCheck,
 	User,
 } from 'lucide-react';
-import { useAuth, useCart } from '@/hooks';
+import { useAuth, useCart, useToast } from '@/hooks';
+import { ConfirmDialog } from './confirm-dialog';
 
 const navLinks = [
 	{ label: 'Beranda', href: '/#home' },
@@ -30,6 +32,9 @@ export default function Navbar() {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const { user, isLoading, logout } = useAuth();
 	const { totalItems } = useCart();
+	const toast = useToast();
+	const [confirmLogout, setConfirmLogout] = useState(false);
+	const [loggingOut, setLoggingOut] = useState(false);
 
 	useEffect(() => {
 		const onScroll = () => setScrolled(window.scrollY > 60);
@@ -42,7 +47,6 @@ export default function Navbar() {
 	return (
 		<>
 			<header className='fixed top-0 left-0 right-0 z-50'>
-				{/* Single header bar */}
 				<div
 					className='transition-all duration-300 ease-out border-b'
 					style={{
@@ -52,7 +56,6 @@ export default function Navbar() {
 						boxShadow: scrolled ? 'var(--shadow-md)' : 'none',
 					}}>
 					<div className='mx-auto max-w-[1200px] px-6 h-full flex items-center'>
-						{/* Hamburger — always visible on left */}
 						<button
 							onClick={() => setMobileOpen(!mobileOpen)}
 							className='text-[var(--text)] hover:text-[var(--primary)] transition-colors cursor-pointer mr-6'
@@ -60,7 +63,6 @@ export default function Navbar() {
 							{mobileOpen ? <X size={20} /> : <Menu size={20} />}
 						</button>
 
-						{/* Left — tagline (hidden when scrolled or mobile) */}
 						<div
 							className='hidden md:flex items-center justify-center flex-1 h-full border-r border-[var(--border)] transition-opacity duration-300'
 							style={{
@@ -76,7 +78,6 @@ export default function Navbar() {
 							</p>
 						</div>
 
-						{/* Center — brand */}
 						<a
 							href='/'
 							className='flex flex-col items-center justify-center h-full cursor-pointer flex-1'>
@@ -97,7 +98,6 @@ export default function Navbar() {
 							</span>
 						</a>
 
-						{/* Right — phone CTA (fades on scroll) */}
 						<div
 							className='hidden md:flex items-center justify-center flex-1 h-full border-l border-[var(--border)] transition-opacity duration-300'
 							style={{
@@ -118,7 +118,6 @@ export default function Navbar() {
 							</div>
 						</div>
 
-						{/* Cart icon — always visible */}
 						<Link
 							href='/confirmation-order'
 							aria-label='Lihat keranjang'
@@ -137,10 +136,21 @@ export default function Navbar() {
 							)}
 						</Link>
 
-						{/* Auth state — persistent on right */}
 						<div className='ml-2 flex items-center'>
 							{isLoading ? null : user ? (
 								<div className='flex items-center gap-2'>
+									{user.role === 'ADMIN' && (
+										<Link
+											href='/admin'
+											className='hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors hover:opacity-80 cursor-pointer'
+											style={{
+												background: 'var(--secondary)',
+												color: 'white',
+											}}>
+											<ShieldCheck size={13} />
+											Admin
+										</Link>
+									)}
 									<Link
 										href='/dashboard'
 										className='hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:opacity-80 cursor-pointer'
@@ -154,7 +164,7 @@ export default function Navbar() {
 										</span>
 									</Link>
 									<button
-										onClick={logout}
+										onClick={() => setConfirmLogout(true)}
 										aria-label='Keluar'
 										className='inline-flex items-center justify-center w-9 h-9 rounded-full border border-[var(--border)] hover:border-[var(--primary)] transition-colors cursor-pointer'
 										style={{ color: 'var(--text-secondary)' }}>
@@ -178,7 +188,6 @@ export default function Navbar() {
 				</div>
 			</header>
 
-			{/* Full-screen menu overlay */}
 			<AnimatePresence>
 				{mobileOpen && (
 					<motion.div
@@ -189,7 +198,6 @@ export default function Navbar() {
 						className='fixed inset-0 z-40 overflow-y-auto'
 						style={{ background: 'var(--bg-surface)', top: headerHeight }}>
 						<div className='mx-auto max-w-[800px] px-6 py-10 sm:py-14 flex flex-col min-h-[calc(100dvh-80px)]'>
-							{/* Nav links grid */}
 							<div className='grid sm:grid-cols-2 gap-x-10 gap-y-0 flex-1'>
 								{navLinks.map(({ label, href }, i) => (
 									<motion.div
@@ -219,7 +227,6 @@ export default function Navbar() {
 								))}
 							</div>
 
-							{/* Bottom bar: contact + social */}
 							<motion.div
 								initial={{ opacity: 0 }}
 								animate={{ opacity: 1 }}
@@ -229,7 +236,6 @@ export default function Navbar() {
 									ease: 'easeOut' as const,
 								}}
 								className='border-t border-[var(--border)] pt-6 pb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5'>
-								{/* WhatsApp CTA */}
 								<a
 									href='https://wa.me/6285274320917'
 									target='_blank'
@@ -245,7 +251,6 @@ export default function Navbar() {
 									Chat WhatsApp
 								</a>
 
-								{/* Social + IG handle */}
 								<div className='flex items-center gap-4'>
 									<a
 										href='https://instagram.com/dafaflorist_'
@@ -277,6 +282,25 @@ export default function Navbar() {
 			<div
 				className='transition-all duration-300'
 				style={{ height: headerHeight }}
+			/>
+
+			<ConfirmDialog
+				open={confirmLogout}
+				onClose={() => setConfirmLogout(false)}
+				onConfirm={async () => {
+					setLoggingOut(true);
+					const ok = await logout();
+					if (!ok) {
+						setLoggingOut(false);
+						toast.error('Gagal keluar. Coba lagi.');
+					}
+				}}
+				icon={LogOut}
+				title='Keluar dari akun?'
+				description='Anda akan keluar dari akun dan kembali ke beranda.'
+				confirmLabel='Keluar'
+				loadingLabel='Keluar...'
+				loading={loggingOut}
 			/>
 		</>
 	);

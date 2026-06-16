@@ -1,0 +1,6 @@
+# Caddy: HTTPS otomatis + reverse proxy ke container `app`.
+# {$DOMAIN} diisi dari variabel DOMAIN di .env (default: localhost).
+{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy app:3000
+}

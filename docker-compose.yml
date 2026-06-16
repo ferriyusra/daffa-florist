@@ -1,0 +1,88 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-daffa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-daffa}
+      POSTGRES_DB: ${POSTGRES_DB:-daffa_florist}
+    # Hanya dibuka ke localhost VPS (untuk seed/backup/debug), TIDAK ke internet.
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-daffa}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-daffa}:${POSTGRES_PASSWORD:-daffa}@db:5432/${POSTGRES_DB:-daffa_florist}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NODE_ENV: production
+      # Connection pool — opsional; kosongkan di .env untuk pakai default env.ts.
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-}
+      DATABASE_POOL_IDLE_TIMEOUT_MS: ${DATABASE_POOL_IDLE_TIMEOUT_MS:-}
+      DATABASE_POOL_CONNECTION_TIMEOUT_MS: ${DATABASE_POOL_CONNECTION_TIMEOUT_MS:-}
+      # Midtrans — WAJIB (lihat env.ts). Isi di .env, pakai key sandbox saat uji.
+      MIDTRANS_API_URL: ${MIDTRANS_API_URL}
+      MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY}
+      MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY}
+    # Tidak di-publish ke host — Caddy mengaksesnya lewat network internal Docker.
+    # Untuk tes langsung tanpa Caddy, buka komentar baris di bawah lalu buka :3000.
+    # ports:
+    #   - '3000:3000'
+    expose:
+      - '3000'
+    volumes:
+      - uploads:/app/public/uploads
+
+  # Seeder sekali-jalan: isi data awal (produk, admin, zona ongkir, promo).
+  # ⚠️  DESTRUKTIF — seed menghapus order/user/product lalu mengisi ulang.
+  #     Jalankan HANYA saat setup awal, bukan pada DB yang sudah berisi data asli:
+  #     docker compose --profile seed run --rm seed
+  seed:
+    profiles: ['seed']
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: seeder
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-daffa}:${POSTGRES_PASSWORD:-daffa}@db:5432/${POSTGRES_DB:-daffa_florist}
+    restart: 'no'
+
+  # Reverse proxy + HTTPS otomatis (Let's Encrypt). Set DOMAIN di .env ke domain
+  # asli untuk dapat sertifikat publik; default `localhost` pakai CA lokal Caddy.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  uploads:
+  caddy-data:
+  caddy-config:

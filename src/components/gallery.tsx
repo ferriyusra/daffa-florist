@@ -1,44 +1,10 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-
-const galleryItems = [
-	{
-		category: 'Papan Bunga',
-		title: 'Happy Wedding — Dafa Florist',
-		image: '/product/papan-bunga-5.PNG',
-	},
-	{
-		category: 'Papan Bunga',
-		title: 'Selamat & Sukses — Papan Ucapan',
-		image: '/product/papan-bunga-4.PNG',
-	},
-	{
-		category: 'Papan Bunga',
-		title: 'Happy Wedding — Biru Elegan',
-		image: '/product/papan-bunga-3.PNG',
-	},
-	{
-		category: 'Mobil Pengantin',
-		title: 'Dekorasi Mobil Pengantin',
-		image: '/product/mobil-pengantin-1.PNG',
-	},
-	{
-		category: 'Papan Bunga',
-		title: 'Happy Wedding — Pink Rose',
-		image: '/product/papan-bunga-2.PNG',
-	},
-	{
-		category: 'Papan Bunga',
-		title: 'Happy Wedding — Abu Elegan',
-		image: '/product/papan-bunga-1.PNG',
-	},
-];
-
-const categories = ['Semua', 'Papan Bunga', 'Mobil Pengantin'];
+import { api } from '@/trpc/react';
+import ProductImage from './product-image';
 
 export default function Gallery() {
 	const ref = useRef(null);
@@ -46,10 +12,13 @@ export default function Gallery() {
 	const [filter, setFilter] = useState('Semua');
 	const [lightbox, setLightbox] = useState<number | null>(null);
 
+	const { data: items = [], isLoading } = api.gallery.list.useQuery();
+	const categories = [
+		'Semua',
+		...Array.from(new Set(items.map((g) => g.category))),
+	];
 	const filtered =
-		filter === 'Semua'
-			? galleryItems
-			: galleryItems.filter((g) => g.category === filter);
+		filter === 'Semua' ? items : items.filter((g) => g.category === filter);
 
 	return (
 		<section id='gallery'>
@@ -77,60 +46,71 @@ export default function Gallery() {
 				</div>
 
 				{/* Filter tabs */}
-				<div className='flex flex-wrap justify-center gap-2 mb-10'>
-					{categories.map((cat) => (
-						<button
-							key={cat}
-							onClick={() => setFilter(cat)}
-							className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer ${
-								filter === cat
-									? 'bg-[var(--primary)] text-white shadow-sm'
-									: 'bg-[var(--bg-card)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
-							}`}>
-							{cat}
-						</button>
-					))}
-				</div>
+				{categories.length > 1 && (
+					<div className='flex flex-wrap justify-center gap-2 mb-10'>
+						{categories.map((cat) => (
+							<button
+								key={cat}
+								onClick={() => setFilter(cat)}
+								className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer ${
+									filter === cat
+										? 'bg-[var(--primary)] text-white shadow-sm'
+										: 'bg-[var(--bg-card)] text-[var(--text-secondary)] border border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)]'
+								}`}>
+								{cat}
+							</button>
+						))}
+					</div>
+				)}
 
 				{/* Grid */}
 				<div ref={ref} className='grid sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-					<AnimatePresence mode='popLayout'>
-						{filtered.map((item, i) => (
-							<motion.div
-								key={`${filter}-${item.title}`}
-								layout
-								initial={{ opacity: 0, y: 12 }}
-								animate={{ opacity: inView ? 1 : 0, y: inView ? 0 : 12 }}
-								exit={{ opacity: 0, scale: 0.95 }}
-								transition={{
-									duration: 0.3,
-									delay: i * 0.04,
-									ease: 'easeOut' as const,
-								}}
-								className='group relative aspect-4/3 rounded-2xl overflow-hidden cursor-pointer card-hover border border-[var(--border)]'
-								onClick={() => setLightbox(i)}>
-								<Image
-									src={item.image}
-									alt={item.title}
-									fill
-									className='object-cover transition-transform duration-500 group-hover:scale-110'
-									sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw'
-								/>
+					{isLoading ? (
+						Array.from({ length: 4 }).map((_, i) => (
+							<div
+								key={i}
+								className='aspect-4/3 rounded-2xl border border-[var(--border)] animate-pulse'
+								style={{ background: 'var(--bg-surface)' }}
+							/>
+						))
+					) : (
+						<AnimatePresence mode='popLayout'>
+							{filtered.map((item, i) => (
+								<motion.div
+									key={`${filter}-${item.id}`}
+									layout
+									initial={{ opacity: 0, y: 12 }}
+									animate={{ opacity: inView ? 1 : 0, y: inView ? 0 : 12 }}
+									exit={{ opacity: 0, scale: 0.95 }}
+									transition={{
+										duration: 0.3,
+										delay: i * 0.04,
+										ease: 'easeOut' as const,
+									}}
+									className='group relative aspect-4/3 rounded-2xl overflow-hidden cursor-pointer card-hover border border-[var(--border)]'
+									onClick={() => setLightbox(i)}>
+									<ProductImage
+										src={item.image}
+										alt={item.title}
+										className='object-cover transition-transform duration-500 group-hover:scale-110'
+										sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw'
+									/>
 
-								{/* Hover overlay */}
-								<div className='absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-end'>
-									<div className='p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300'>
-										<span className='text-[10px] font-semibold tracking-wider uppercase text-white/70'>
-											{item.category}
-										</span>
-										<p className='font-serif text-white text-sm font-semibold mt-0.5'>
-											{item.title}
-										</p>
+									{/* Hover overlay */}
+									<div className='absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-end'>
+										<div className='p-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300'>
+											<span className='text-[10px] font-semibold tracking-wider uppercase text-white/70'>
+												{item.category}
+											</span>
+											<p className='font-serif text-white text-sm font-semibold mt-0.5'>
+												{item.title}
+											</p>
+										</div>
 									</div>
-								</div>
-							</motion.div>
-						))}
-					</AnimatePresence>
+								</motion.div>
+							))}
+						</AnimatePresence>
+					)}
 				</div>
 
 				{/* Lightbox */}
@@ -157,11 +137,9 @@ export default function Gallery() {
 									<X size={20} />
 								</button>
 								<div className='relative aspect-4/3'>
-									<Image
+									<ProductImage
 										src={filtered[lightbox].image}
 										alt={filtered[lightbox].title}
-										fill
-										className='object-cover'
 										sizes='(max-width: 768px) 100vw, 672px'
 									/>
 								</div>

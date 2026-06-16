@@ -1,11 +1,56 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { ArrowRight, MapPin, MessageCircle, Star, Truck } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import {
+	ArrowRight,
+	BadgeCheck,
+	CalendarCheck,
+	MapPin,
+	MessageCircle,
+	Truck,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import FloatingPetals from './floating-petals';
 
+const trustBadges = [
+	{
+		icon: Truck,
+		title: 'Antar & Pasang',
+		label: 'Area layanan',
+		color: 'var(--secondary)',
+	},
+	{
+		icon: CalendarCheck,
+		title: 'Cek Tanggal',
+		label: 'Ketersediaan real-time',
+		color: 'var(--accent)',
+	},
+	{
+		icon: BadgeCheck,
+		title: 'Pasang & Ambil',
+		label: 'Ditangani tim',
+		color: 'var(--primary)',
+	},
+];
+
 export default function Hero() {
+	const reduceMotion = useReducedMotion();
+
+	// Gate entrance animations on prefers-reduced-motion.
+	const fade = (y = 30) =>
+		reduceMotion
+			? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 } }
+			: { initial: { opacity: 0, y }, animate: { opacity: 1, y: 0 } };
+
+	const scaleIn = reduceMotion
+		? { initial: { opacity: 1, scale: 1 }, animate: { opacity: 1, scale: 1 } }
+		: { initial: { opacity: 0, scale: 0.95 }, animate: { opacity: 1, scale: 1 } };
+
+	const floatAnim = reduceMotion ? {} : { y: [0, -6, 0] };
+
 	return (
 		<section
 			id='home'
@@ -30,64 +75,59 @@ export default function Hero() {
 				<div className='grid lg:grid-cols-2 gap-10 lg:gap-14 items-center'>
 					{/* Left — copy */}
 					<motion.div
-						initial={{ opacity: 0, y: 30 }}
-						animate={{ opacity: 1, y: 0 }}
+						{...fade(30)}
 						transition={{ duration: 0.6, ease: 'easeOut' }}>
-						<span
-							className='inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold tracking-wide mb-6'
+						<Badge
+							variant='secondary'
+							className='mb-6 px-4 py-2 rounded-full text-xs font-semibold tracking-wide'
 							style={{
 								background: 'rgba(157, 23, 77, 0.08)',
 								color: 'var(--primary)',
 							}}>
-							<MapPin size={13} />
+							<MapPin />
 							Ampar Putih & Sekitarnya
-						</span>
+						</Badge>
 
 						<h1 className='font-serif text-[clamp(2.5rem,5vw,3.75rem)] leading-[1.08] font-bold mb-5'>
-							Karangan Bunga <span className='gradient-text'>Cantik</span> untuk
-							Momen <span className='gradient-text-green'>Spesial</span>
+							Sewa <span className='gradient-text'>Papan Bunga</span> untuk Momen{' '}
+							<span className='gradient-text-green'>Spesial</span>
 						</h1>
 
 						<p
 							className='text-base leading-relaxed mb-8 max-w-[480px]'
 							style={{ color: 'var(--text-secondary)' }}>
-							Papan bunga ucapan, bucket bunga, hingga dekorasi mobil pengantin
-							— rangkaian bunga tahan lama dengan harga terjangkau di Ampar
-							Putih.
+							Papan bunga ucapan untuk wedding, duka cita, hingga grand opening.
+							Pilih tanggal, kami antar &amp; pasang di lokasi acara, lalu ambil
+							kembali setelah masa sewa — area Ampar Putih &amp; Pasaman Barat.
 						</p>
 
 						<div className='flex flex-wrap gap-3 mb-10'>
-							<a href='#product' className='btn-primary'>
-								Lihat Produk
-								<ArrowRight size={16} />
-							</a>
-							<a
-								href='https://wa.me/6285274320917'
-								target='_blank'
-								rel='noopener noreferrer'
-								className='btn-secondary'>
-								<MessageCircle size={16} />
-								WhatsApp Kami
-							</a>
+							<Button
+								asChild
+								className='h-12 rounded-full px-7 text-sm'>
+								<a href='#product'>
+									Sewa Sekarang
+									<ArrowRight size={16} />
+								</a>
+							</Button>
+							<Button
+								asChild
+								variant='outline'
+								className='h-12 rounded-full px-7 text-sm'>
+								<a
+									href='https://wa.me/6285274320917'
+									target='_blank'
+									rel='noopener noreferrer'>
+									<MessageCircle size={16} />
+									WhatsApp Kami
+								</a>
+							</Button>
 						</div>
 
-						{/* Trust badges — inline compact */}
+						{/* Trust badges — rental relevant, compact icon + two-line text */}
 						<div className='flex flex-wrap items-center gap-5'>
-							{[
-								{
-									icon: Star,
-									num: '5.0',
-									label: 'Rating',
-									color: 'var(--accent)',
-								},
-								{
-									icon: Truck,
-									num: '50+',
-									label: 'Terkirim',
-									color: 'var(--secondary)',
-								},
-							].map(({ icon: Icon, num, label, color }) => (
-								<div key={label} className='flex items-center gap-2.5'>
+							{trustBadges.map(({ icon: Icon, title, label, color }) => (
+								<div key={title} className='flex items-center gap-2.5'>
 									<div
 										className='w-9 h-9 rounded-lg flex items-center justify-center'
 										style={{
@@ -96,7 +136,7 @@ export default function Hero() {
 										<Icon size={16} style={{ color }} />
 									</div>
 									<div>
-										<p className='text-sm font-bold leading-tight'>{num}</p>
+										<p className='text-sm font-bold leading-tight'>{title}</p>
 										<p
 											className='text-[11px]'
 											style={{ color: 'var(--text-muted)' }}>
@@ -105,31 +145,12 @@ export default function Hero() {
 									</div>
 								</div>
 							))}
-							<div className='flex items-center gap-2.5'>
-								<div
-									className='w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold'
-									style={{
-										background: 'rgba(157, 23, 77, 0.08)',
-										color: 'var(--primary)',
-									}}>
-									✓
-								</div>
-								<div>
-									<p className='text-sm font-bold leading-tight'>Tahan Lama</p>
-									<p
-										className='text-[11px]'
-										style={{ color: 'var(--text-muted)' }}>
-										Tetap Cantik
-									</p>
-								</div>
-							</div>
 						</div>
 					</motion.div>
 
-					{/* Right — hero image composition */}
+					{/* Right — hero image composition (rich version for lg+) */}
 					<motion.div
-						initial={{ opacity: 0, scale: 0.95 }}
-						animate={{ opacity: 1, scale: 1 }}
+						{...scaleIn}
 						transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
 						className='relative hidden lg:block'>
 						{/* Main image */}
@@ -146,30 +167,31 @@ export default function Hero() {
 							<div className='absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5' />
 						</div>
 
-						{/* Floating badge — top right, clear of image content */}
+						{/* Floating status badge — top right, clear of image content */}
 						<motion.div
-							className='absolute -top-3 -right-3 glass rounded-2xl px-4 py-3 shadow-md'
-							animate={{ y: [0, -6, 0] }}
+							className='absolute -top-3 -right-3'
+							animate={floatAnim}
 							transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>
-							<p
-								className='text-xs font-semibold flex items-center gap-1.5'
-								style={{ color: 'var(--text)' }}>
-								<span className='w-2 h-2 rounded-full bg-green-500 animate-pulse' />
-								Menerima Pesanan
-							</p>
-							<p
-								className='text-[10px] mt-1 font-medium'
-								style={{ color: 'var(--primary)' }}>
-								Segera hadir: Bunga Segar!
-							</p>
+							<Card className='glass gap-1 rounded-2xl border-0 py-3 px-4 shadow-md'>
+								<p
+									className='text-xs font-semibold flex items-center gap-1.5'
+									style={{ color: 'var(--text)' }}>
+									<span className='w-2 h-2 rounded-full bg-green-500 animate-pulse' />
+									Menerima Pesanan
+								</p>
+								<p
+									className='text-[10px] font-medium'
+									style={{ color: 'var(--primary)' }}>
+									Cek tanggal &amp; periode sewa
+								</p>
+							</Card>
 						</motion.div>
 
 						{/* Small secondary image — bottom left offset */}
 						<motion.div
 							className='absolute -bottom-5 -left-5 w-[140px] aspect-square rounded-2xl overflow-hidden shadow-lg border-4'
 							style={{ borderColor: 'var(--bg)' }}
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
+							{...fade(20)}
 							transition={{ duration: 0.6, delay: 0.5, ease: 'easeOut' }}>
 							<Image
 								src='/product/mobil-pengantin-1.PNG'
@@ -179,6 +201,47 @@ export default function Hero() {
 								sizes='140px'
 							/>
 						</motion.div>
+					</motion.div>
+
+					{/* Mobile / tablet image — single main image, shown below copy on < lg */}
+					<motion.div
+						{...scaleIn}
+						transition={{ duration: 0.7, delay: 0.15, ease: 'easeOut' }}
+						className='relative lg:hidden'>
+						<div className='relative aspect-[4/3] sm:aspect-[16/10] rounded-3xl overflow-hidden shadow-lg'>
+							<Image
+								src='/product/papan-bunga-5.PNG'
+								alt='Papan bunga Happy Wedding dari Dafa Florist'
+								fill
+								className='object-cover'
+								sizes='(max-width: 1024px) 100vw, 0vw'
+								priority
+							/>
+							<div className='absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5' />
+							{/* Floating status badge */}
+							<motion.div
+								className='absolute top-3 right-3'
+								animate={floatAnim}
+								transition={{
+									duration: 4,
+									repeat: Infinity,
+									ease: 'easeInOut',
+								}}>
+								<Card className='glass gap-1 rounded-2xl border-0 py-2.5 px-3.5 shadow-md'>
+									<p
+										className='text-xs font-semibold flex items-center gap-1.5'
+										style={{ color: 'var(--text)' }}>
+										<span className='w-2 h-2 rounded-full bg-green-500 animate-pulse' />
+										Menerima Pesanan
+									</p>
+									<p
+										className='text-[10px] font-medium'
+										style={{ color: 'var(--primary)' }}>
+										Cek tanggal &amp; periode sewa
+									</p>
+								</Card>
+							</motion.div>
+						</div>
 					</motion.div>
 				</div>
 			</div>

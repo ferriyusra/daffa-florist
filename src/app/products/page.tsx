@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
 	ArrowRight,
@@ -11,9 +10,10 @@ import {
 	SlidersHorizontal,
 	X,
 } from 'lucide-react';
-import { Footer, Navbar } from '@/components';
-import { productCategories, products, type ProductCategory } from '@/lib';
+import { Footer, Navbar, ProductImage, RentalBadge } from '@/components';
+import { productCategories, type ProductCategory } from '@/lib';
 import { formatRupiah } from '@/hooks';
+import { api } from '@/trpc/react';
 
 type SortOption = 'recommended' | 'price-asc' | 'price-desc' | 'name';
 
@@ -42,6 +42,8 @@ function CatalogScreen() {
 	const [maxPrice, setMaxPrice] = useState<number>(1_000_000);
 	const [sort, setSort] = useState<SortOption>('recommended');
 	const [filtersOpen, setFiltersOpen] = useState(false);
+
+	const { data: products = [], isLoading } = api.product.list.useQuery();
 
 	const filtered = useMemo(() => {
 		const term = search.trim().toLowerCase();
@@ -74,7 +76,7 @@ function CatalogScreen() {
 			sorted.sort((a, b) => a.title.localeCompare(b.title));
 
 		return sorted;
-	}, [search, activeCategories, maxPrice, sort]);
+	}, [products, search, activeCategories, maxPrice, sort]);
 
 	const toggleCategory = (cat: ProductCategory) => {
 		setActiveCategories((prev) =>
@@ -97,7 +99,6 @@ function CatalogScreen() {
 	return (
 		<main className='floral-bg min-h-[70vh]'>
 			<div className='mx-auto max-w-[1200px] px-6 py-12'>
-				{/* Header */}
 				<div className='mb-8'>
 					<span
 						className='inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase mb-3'
@@ -117,7 +118,6 @@ function CatalogScreen() {
 					</p>
 				</div>
 
-				{/* Search + sort bar */}
 				<div className='flex flex-col sm:flex-row gap-3 mb-6'>
 					<div className='relative flex-1'>
 						<Search
@@ -170,7 +170,6 @@ function CatalogScreen() {
 				</div>
 
 				<div className='grid lg:grid-cols-[260px_1fr] gap-6'>
-					{/* Sidebar filters */}
 					<aside
 						className={`${
 							filtersOpen ? 'block' : 'hidden'
@@ -272,9 +271,7 @@ function CatalogScreen() {
 						</div>
 					</aside>
 
-					{/* Results */}
 					<div>
-						{/* Active filter chips */}
 						{(activeCategories.length > 0 || search) && (
 							<div className='flex flex-wrap items-center gap-2 mb-4'>
 								<span
@@ -318,7 +315,17 @@ function CatalogScreen() {
 							</p>
 						</div>
 
-						{filtered.length === 0 ? (
+						{isLoading ? (
+							<div className='grid sm:grid-cols-2 xl:grid-cols-3 gap-5'>
+								{Array.from({ length: 6 }).map((_, i) => (
+									<div
+										key={i}
+										className='rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] aspect-4/3 animate-pulse'
+										style={{ boxShadow: 'var(--shadow-sm)' }}
+									/>
+								))}
+							</div>
+						) : filtered.length === 0 ? (
 							<div
 								className='text-center py-16 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)]'
 								style={{ boxShadow: 'var(--shadow-sm)' }}>
@@ -355,14 +362,13 @@ function CatalogScreen() {
 										className='group bg-[var(--bg-card)] rounded-2xl overflow-hidden border border-[var(--border)] card-hover flex flex-col'
 										style={{ boxShadow: 'var(--shadow-sm)' }}>
 										<div className='relative aspect-4/3 overflow-hidden'>
-											<Image
+											<ProductImage
 												src={p.image}
 												alt={p.title}
-												fill
 												className='object-cover transition-transform duration-500 group-hover:scale-105'
 												sizes='(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw'
 											/>
-											<div className='absolute top-3 left-3'>
+											<div className='absolute top-3 left-3 flex flex-col items-start gap-1.5'>
 												<span
 													className='inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider'
 													style={{
@@ -371,6 +377,7 @@ function CatalogScreen() {
 													}}>
 													{p.category}
 												</span>
+												<RentalBadge />
 											</div>
 											<div className='absolute top-3 right-3 glass rounded-full px-3 py-1.5'>
 												<p

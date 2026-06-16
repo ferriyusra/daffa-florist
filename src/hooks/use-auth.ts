@@ -1,57 +1,54 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-
-const STORAGE_KEY = 'daffa_user';
-const AUTH_EVENT = 'daffa-auth-change';
+import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 
 export type AuthUser = {
+	id: string;
 	name: string;
 	email: string;
+	role: 'CUSTOMER' | 'ADMIN';
 };
 
-function readUser(): AuthUser | null {
-	if (typeof window === 'undefined') return null;
-	try {
-		const raw = window.localStorage.getItem(STORAGE_KEY);
-		return raw ? (JSON.parse(raw) as AuthUser) : null;
-	} catch {
-		return null;
-	}
-}
-
 export function useAuth() {
-	const [user, setUser] = useState<AuthUser | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
+	const { data: session, status } = useSession();
+	const router = useRouter();
 
-	useEffect(() => {
-		setUser(readUser());
-		setIsLoading(false);
+	const user: AuthUser | null = session?.user
+		? {
+				id: session.user.id,
+				name: session.user.name ?? '',
+				email: session.user.email ?? '',
+				role: session.user.role,
+			}
+		: null;
 
-		const sync = () => setUser(readUser());
-		const onStorage = (e: StorageEvent) => {
-			if (e.key === STORAGE_KEY) sync();
-		};
+	/**
+	 * Keluar: bersihkan sesi lalu arahkan (default beranda). `redirect: false`
+	 * agar navigasi ditangani router (tanpa reload penuh); `refresh()` me-revalidate
+	 * server components & middleware dengan sesi yang sudah kosong.
+	 *
+	 * Tak pernah melempar — mengembalikan `true` bila sukses, `false` bila gagal,
+	 * agar pemanggil bisa menangani kegagalan tanpa unhandled rejection.
+	 */
+	const logout = useCallback(
+		async (redirectTo: string = '/'): Promise<boolean> => {
+			try {
+				await signOut({ redirect: false });
+				router.push(redirectTo);
+				router.refresh();
+				return true;
+			} catch {
+				return false;
+			}
+		},
+		[router],
+	);
 
-		window.addEventListener('storage', onStorage);
-		window.addEventListener(AUTH_EVENT, sync);
-		return () => {
-			window.removeEventListener('storage', onStorage);
-			window.removeEventListener(AUTH_EVENT, sync);
-		};
-	}, []);
-
-	const login = useCallback((next: AuthUser) => {
-		window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-		setUser(next);
-		window.dispatchEvent(new Event(AUTH_EVENT));
-	}, []);
-
-	const logout = useCallback(() => {
-		window.localStorage.removeItem(STORAGE_KEY);
-		setUser(null);
-		window.dispatchEvent(new Event(AUTH_EVENT));
-	}, []);
-
-	return { user, isLoading, login, logout };
+	return {
+		user,
+		isLoading: status === 'loading',
+		logout,
+	};
 }

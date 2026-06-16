@@ -242,7 +242,6 @@ export default function Contact() {
 									<input
 										id='name'
 										type='text'
-										required
 										value={formState.name}
 										onChange={(e) =>
 											setFormState({ ...formState, name: e.target.value })
@@ -262,7 +261,6 @@ export default function Contact() {
 									<input
 										id='phone'
 										type='tel'
-										required
 										value={formState.phone}
 										onChange={(e) =>
 											setFormState({ ...formState, phone: e.target.value })
@@ -283,7 +281,6 @@ export default function Contact() {
 								</label>
 								<select
 									id='product'
-									required
 									value={formState.product}
 									onChange={(e) =>
 										setFormState({ ...formState, product: e.target.value })

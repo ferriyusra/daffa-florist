@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING // menunggu pembayaran/verifikasi
+  CONFIRMED // pembayaran terverifikasi
+  SCHEDULED // jadwal pasang ditetapkan
+  INSTALLED // sudah dipasang di lokasi
+  COMPLETED // pesanan tuntas
+  CANCELLED // dibatalkan
+}
+
+enum PaymentStatus {
+  PENDING // snap token dibuat, menunggu pembayaran
+  PAID // settlement/capture dari Midtrans (= order CONFIRMED)
+  FAILED // deny / cancel
+  EXPIRED // kedaluwarsa
+  REFUNDED // refund (masa depan)
+}
+
+model User {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String?
+  email          String   @unique
+  phone          String?
+  hashedPassword String
+  role           UserRole @default(CUSTOMER)
+  isActive       Boolean  @default(true) // admin bisa nonaktifkan akun (blokir login)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  addresses Address[]
+  orders    Order[]
+}
+
+model Address {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  recipientName String
+  phone         String
+  fullAddress   String
+  city          String
+  province      String?
+  postalCode    String?
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+}
+
+model Product {
+  id               String   @id @default(uuid()) @db.Uuid
+  slug             String   @unique
+  title            String
+  shortDescription String
+  description      String   @db.Text
+  category         String
+  basePrice        Int
+  image            String
+  images           String[]
+  tags             String[]
+  productionTime   String?
+  serviceAreas     String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  sizes           ProductSize[]
+  designTemplates ProductTemplate[]
+  themeColors     ProductThemeColor[]
+  addons          ProductAddon[]
+  orderItems      OrderItem[]
+
+  @@index([category])
+}
+
+model ProductSize {
+  id        String  @id @default(uuid()) @db.Uuid
+  productId String  @db.Uuid
+  label     String
+  price     Int
+  unitCount Int     @default(1) // jumlah unit fisik tersedia untuk disewa (S1.3 pendekatan a)
+  note      String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductTemplate {
+  id        String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  name      String
+  image     String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductThemeColor {
+  id        String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  name      String
+  value     String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductAddon {
+  id        String @id @default(uuid()) @db.Uuid
+  productId String @db.Uuid
+  name      String
+  price     Int
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Order {
+  id           String      @id @default(uuid()) @db.Uuid
+  orderNumber  String      @unique
+  userId       String      @db.Uuid
+  addressId    String?     @db.Uuid
+  status       OrderStatus @default(PENDING)
+  subtotal     Int
+  shippingCost Int         @default(0)
+  shippingArea String? // snapshot nama zona ongkir terpilih (DeliveryArea.name) saat order dibuat/diubah admin
+
+  // Pengiriman: rilis awal ongkir diisi manual admin per zona.
+  // Field provider/layanan/resi disiapkan (nullable) untuk integrasi kurir di M5.
+  shippingProvider String? // MANUAL | JNE | GOSEND | ...
+  shippingService  String? // jenis layanan provider
+  trackingNumber   String? // no. resi dari provider
+
+  // Sewa & ringkasan biaya: total = subtotal + shippingCost - discount
+  discount  Int       @default(0) // potongan harga
+  total     Int
+  eventDate DateTime? // tanggal & jam acara
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id])
+  address  Address?    @relation(fields: [addressId], references: [id])
+  items    OrderItem[]
+  payments Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([eventDate])
+}
+
+model Payment {
+  id              String        @id @default(uuid()) @db.Uuid
+  orderId         String        @db.Uuid
+  amount          Int // snapshot Order.total saat snap token dibuat (Rupiah)
+  status          PaymentStatus @default(PENDING)
+  midtransOrderId String        @unique // order_id ke Midtrans, unik per attempt (cegah duplikat)
+  snapToken       String?
+  snapRedirectUrl String?
+  paymentType     String? // jenis pembayaran dari webhook (bank_transfer/gopay/...)
+  transactionId   String? // transaction_id Midtrans
+  rawNotification Json? // payload webhook terakhir, untuk audit/debug
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model OrderItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  orderId            String   @db.Uuid
+  productId          String?  @db.Uuid
+  productSlug        String
+  productTitle       String
+  productImage       String
+  sizeLabel          String?
+  price              Int
+  quantity           Int
+  designTemplateName String?
+  themeColorName     String?
+  addonNames         String[]
+
+  // Periode sewa per item. installDate & rentalDays diinput pelanggan;
+  // pickupDate = turunan (installDate + rentalDays), dihitung server saat createRental.
+  installDate DateTime
+  rentalDays  Int
+  pickupDate  DateTime
+  unitId      String?  @db.Uuid // unit fisik dialokasikan (relasi ProductUnit menyusul di S1.3)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  // Query ketersediaan/jadwal sewa (ERD §4): tumpang tindih periode per produk.
+  @@index([productId, installDate, pickupDate])
+  @@index([installDate])
+  @@index([pickupDate])
+  @@index([unitId])
+}
+
+model GalleryItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  image     String
+  category  String
+  sortOrder Int      @default(0) // urutan tampil (kecil dulu)
+  isActive  Boolean  @default(true) // sembunyikan dari galeri publik bila false
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model DeliveryArea {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique
+  district     String? // wilayah induk (mis. Pasaman Barat)
+  shippingCost Int      @default(0) // ongkir zona (Rupiah)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+enum PromoType {
+  PERCENT // diskon persen (value = 1..100)
+  AMOUNT // diskon nominal (value = Rupiah)
+}
+
+model Promo {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique
+  description String?
+  type        PromoType
+  value       Int // persen (1-100) atau nominal (Rupiah) sesuai `type`
+  startsAt    DateTime? // periode aktif (nullable = tanpa batas)
+  endsAt      DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
+}
