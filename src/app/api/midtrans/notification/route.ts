@@ -51,6 +51,14 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: 'Signature tidak valid.' }, { status: 401 });
 	}
 
+	// Tombol "Test Configuration" di dashboard Midtrans mengirim order_id sintetis
+	// yang tak ada di DB. Signature sudah terverifikasi (server key benar) → akui
+	// dengan 200 agar uji konfigurasi lulus, tanpa memproses apa pun.
+	if (order_id.startsWith('payment_notif_test_')) {
+		logger.info({ order_id }, 'Webhook Midtrans: notifikasi uji diterima');
+		return NextResponse.json({ received: true });
+	}
+
 	const payment = await prisma.payment.findUnique({
 		where: { midtransOrderId: order_id },
 		select: { id: true, orderId: true, amount: true, status: true },
