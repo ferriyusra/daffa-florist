@@ -25,6 +25,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # Tunggu migrasi DB selesai (service migrate) sebelum app start.
+      migrate:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-daffa}:${POSTGRES_PASSWORD:-daffa}@db:5432/${POSTGRES_DB:-daffa_florist}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
@@ -46,6 +49,22 @@ services:
       - '3000'
     volumes:
       - uploads:/app/public/uploads
+
+  # Migrasi DB sekali-jalan, otomatis tiap `up` (app menunggunya selesai).
+  # Pakai stage `seeder` yang punya node_modules PENUH — Prisma 7 CLI butuh
+  # dependensi (@prisma/config, effect, dll) yang tak ada di image runner ramping.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: seeder
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-daffa}:${POSTGRES_PASSWORD:-daffa}@db:5432/${POSTGRES_DB:-daffa_florist}
+    command: ['node', 'node_modules/prisma/build/index.js', 'migrate', 'deploy']
+    restart: 'no'
 
   # Seeder sekali-jalan: isi data awal (produk, admin, zona ongkir, promo).
   # ⚠️  DESTRUKTIF — seed menghapus order/user/product lalu mengisi ulang.
