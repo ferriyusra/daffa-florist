@@ -67,7 +67,11 @@ const paymentStatusMeta: Record<
 	string,
 	{ label: string; bg: string; color: string }
 > = {
-	PENDING: { label: 'Menunggu', bg: 'rgba(234, 179, 8, 0.15)', color: '#a16207' },
+	PENDING: {
+		label: 'Menunggu',
+		bg: 'rgba(234, 179, 8, 0.15)',
+		color: '#a16207',
+	},
 	PAID: { label: 'Lunas', bg: 'rgba(34, 197, 94, 0.12)', color: '#16a34a' },
 	FAILED: { label: 'Gagal', bg: 'rgba(220, 38, 38, 0.12)', color: '#dc2626' },
 	EXPIRED: {
@@ -75,7 +79,11 @@ const paymentStatusMeta: Record<
 		bg: 'rgba(120, 120, 120, 0.14)',
 		color: '#6b7280',
 	},
-	REFUNDED: { label: 'Refund', bg: 'rgba(99, 102, 241, 0.12)', color: '#4f46e5' },
+	REFUNDED: {
+		label: 'Refund',
+		bg: 'rgba(99, 102, 241, 0.12)',
+		color: '#4f46e5',
+	},
 };
 
 /** Pesan konfirmasi spesifik untuk transisi tertentu (fallback generik). */
@@ -142,7 +150,6 @@ function Section({
 	);
 }
 
-
 export default function OrderDetail({ order }: { order: Order }) {
 	const router = useRouter();
 	const toast = useToast();
@@ -156,7 +163,9 @@ export default function OrderDetail({ order }: { order: Order }) {
 	// Editor ongkir: amount = nominal manual, deliveryAreaId = zona terpilih
 	// (kosong = override manual). Memilih zona mengisi amount; mengedit amount
 	// menghapus deliveryAreaId.
-	const [shippingAmount, setShippingAmount] = useState(String(order.shippingCost));
+	const [shippingAmount, setShippingAmount] = useState(
+		String(order.shippingCost),
+	);
 	const [shippingAreaId, setShippingAreaId] = useState('');
 
 	// Sinkronkan editor dengan nilai server setelah tersimpan (getById di-invalidate)
@@ -166,8 +175,7 @@ export default function OrderDetail({ order }: { order: Order }) {
 		setShippingAreaId('');
 	}, [order.shippingCost, order.shippingArea]);
 
-	const { data: deliveryAreas = [] } =
-		api.admin.deliveryArea.list.useQuery();
+	const { data: deliveryAreas = [] } = api.admin.deliveryArea.list.useQuery();
 
 	const setShipping = api.admin.order.setShipping.useMutation({
 		onSuccess: () => {
@@ -344,8 +352,8 @@ export default function OrderDetail({ order }: { order: Order }) {
 														className='text-xs mt-0.5'
 														style={{ color: 'var(--text-secondary)' }}>
 														{item.sizeLabel ? `${item.sizeLabel} · ` : ''}
-														{item.quantity} unit ·{' '}
-														{formatRupiah(item.price)}/unit
+														{item.quantity} unit · {formatRupiah(item.price)}
+														/unit
 													</p>
 												</div>
 												<span
@@ -363,8 +371,8 @@ export default function OrderDetail({ order }: { order: Order }) {
 													style={{ color: 'var(--primary)' }}
 												/>
 												<span>
-													Pasang {formatRentalDate(item.installDate)} →
-													Bongkar {formatRentalDate(item.pickupDate)} ·{' '}
+													Pasang {formatRentalDate(item.installDate)} → Bongkar{' '}
+													{formatRentalDate(item.pickupDate)} ·{' '}
 													{item.rentalDays} hari
 												</span>
 											</p>
@@ -405,9 +413,7 @@ export default function OrderDetail({ order }: { order: Order }) {
 									style={{ color: 'var(--text-secondary)' }}>
 									{order.address.phone} · {order.address.fullAddress},{' '}
 									{order.address.city}
-									{order.address.province
-										? `, ${order.address.province}`
-										: ''}
+									{order.address.province ? `, ${order.address.province}` : ''}
 								</p>
 							</>
 						) : (
@@ -513,8 +519,8 @@ export default function OrderDetail({ order }: { order: Order }) {
 						)}
 						{nextStatuses.length === 0 ? (
 							<p className='text-sm' style={{ color: 'var(--text-muted)' }}>
-								Pesanan {ORDER_STATUS_LABEL[order.status].toLowerCase()} —
-								tidak ada aksi lanjutan.
+								Pesanan {ORDER_STATUS_LABEL[order.status].toLowerCase()} — tidak
+								ada aksi lanjutan.
 							</p>
 						) : (
 							<div className='flex flex-col gap-2.5'>
@@ -564,68 +570,6 @@ export default function OrderDetail({ order }: { order: Order }) {
 								</dd>
 							</div>
 
-							{/* Editor ongkir (admin) */}
-							<div className='rounded-xl border border-[var(--border)] p-3 mt-1 space-y-3'>
-								<div className='space-y-1.5'>
-									<Label htmlFor='shippingZone' className='text-xs'>
-										Pilih zona
-									</Label>
-									<Select
-										value={shippingAreaId || undefined}
-										onValueChange={(id) => {
-											setShippingAreaId(id);
-											const z = deliveryAreas.find((a) => a.id === id);
-											if (z) setShippingAmount(String(z.shippingCost));
-										}}>
-										<SelectTrigger
-											id='shippingZone'
-											className='w-full'
-											aria-label='Zona pengiriman'>
-											<SelectValue placeholder='Pilih zona pengiriman' />
-										</SelectTrigger>
-										<SelectContent className='max-h-64'>
-											{deliveryAreas.map((z) => (
-												<SelectItem key={z.id} value={z.id}>
-													{z.name} — {formatRupiah(z.shippingCost)}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-								<div className='space-y-1.5'>
-									<Label htmlFor='shippingAmount' className='text-xs'>
-										Atau nominal manual (Rp)
-									</Label>
-									<Input
-										id='shippingAmount'
-										type='number'
-										min={0}
-										value={shippingAmount}
-										onChange={(e) => {
-											setShippingAmount(e.target.value);
-											// Edit manual = override → lupakan zona terpilih.
-											setShippingAreaId('');
-										}}
-									/>
-								</div>
-								<Button
-									type='button'
-									className='w-full justify-center'
-									onClick={handleSaveShipping}
-									disabled={setShipping.isPending || amountInvalid}>
-									{setShipping.isPending ? 'Menyimpan...' : 'Simpan Ongkir'}
-								</Button>
-							</div>
-							{order.discount > 0 && (
-								<div className='flex items-center justify-between'>
-									<dt style={{ color: 'var(--text-secondary)' }}>Diskon</dt>
-									<dd
-										className='font-medium'
-										style={{ color: 'var(--secondary)' }}>
-										-{formatRupiah(order.discount)}
-									</dd>
-								</div>
-							)}
 							<div className='flex items-center justify-between pt-3 mt-1 border-t border-[var(--border)]'>
 								<dt className='font-semibold'>Total</dt>
 								<dd
@@ -643,8 +587,7 @@ export default function OrderDetail({ order }: { order: Order }) {
 				open={pending !== null}
 				onClose={() => setPending(null)}
 				onConfirm={() => {
-					if (pending)
-						updateStatus.mutate({ id: order.id, status: pending });
+					if (pending) updateStatus.mutate({ id: order.id, status: pending });
 				}}
 				title={pending ? ACTION_LABEL[pending] : ''}
 				description={pending ? confirmCopy[pending] : undefined}

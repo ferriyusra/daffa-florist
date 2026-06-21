@@ -14,6 +14,12 @@ export { default as Gallery } from './gallery';
 export { default as Hero } from './hero';
 export { default as ImageUpload } from './image-upload';
 export { default as Navbar } from './navbar';
+export {
+	PageLoader,
+	SkeletonBlock,
+	ProductCardSkeleton,
+	ProductGridSkeleton,
+} from './page-loading';
 export { default as ProductImage } from './product-image';
 export { default as Products } from './products';
 export { default as ProgressBar } from './progress-bar';

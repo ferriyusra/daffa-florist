@@ -62,7 +62,8 @@
       "Bash(docker compose *)",
       "Bash(command -v orb)",
       "Bash(orb start *)",
-      "Bash(awk -F= '/^MIDTRANS_\\(SERVER|CLIENT\\)_KEY=/ { *)"
+      "Bash(awk -F= '/^MIDTRANS_\\(SERVER|CLIENT\\)_KEY=/ { *)",
+      "Bash(echo \"EXIT_CODE=$?\")"
     ],
     "additionalDirectories": [
       "/tmp",
