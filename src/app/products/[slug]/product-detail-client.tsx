@@ -21,7 +21,13 @@ import {
 	ShoppingCart,
 	Truck,
 } from 'lucide-react';
-import { formatRupiah, useAuth, useCart } from '@/hooks';
+import {
+	formatRupiah,
+	MAX_CART_UNITS,
+	useAuth,
+	useCart,
+	useToast,
+} from '@/hooks';
 import type { Product } from '@/lib';
 import { addDays, computePickupDate, floorToUtcDay } from '@/lib/rental';
 import { MIN_LEAD_TIME_DAYS, RENTAL_BUFFER_DAYS } from '@/lib/rental-config';
@@ -45,6 +51,7 @@ export default function ProductDetailClient({
 	const router = useRouter();
 	const { user } = useAuth();
 	const { addItem } = useCart();
+	const toast = useToast();
 	const [quantity, setQuantity] = useState(1);
 	const [activeImage, setActiveImage] = useState(product.image);
 	const [added, setAdded] = useState(false);
@@ -194,14 +201,30 @@ export default function ProductDetailClient({
 
 	const handleAddToCart = () => {
 		if (!canOrder || installDate === null) return;
-		addItem(cartInput, quantity);
+		const res = addItem(cartInput, quantity);
+		if (!res.ok) {
+			toast.error(
+				res.remaining > 0
+					? `Keranjang maksimal ${MAX_CART_UNITS} unit. Sisa kuota ${res.remaining} unit lagi.`
+					: `Keranjang sudah penuh (maksimal ${MAX_CART_UNITS} unit).`,
+			);
+			return;
+		}
 		setAdded(true);
 		setTimeout(() => setAdded(false), 1800);
 	};
 
 	const handleOrderNow = () => {
 		if (!canOrder || installDate === null) return;
-		addItem(cartInput, quantity);
+		const res = addItem(cartInput, quantity);
+		if (!res.ok) {
+			toast.error(
+				res.remaining > 0
+					? `Keranjang maksimal ${MAX_CART_UNITS} unit. Sisa kuota ${res.remaining} unit lagi.`
+					: `Keranjang sudah penuh (maksimal ${MAX_CART_UNITS} unit).`,
+			);
+			return;
+		}
 		const target = '/confirmation-order';
 		router.push(
 			user ? target : `/login?redirect=${encodeURIComponent(target)}`,

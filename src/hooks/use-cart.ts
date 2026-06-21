@@ -5,6 +5,13 @@ import { useCallback, useEffect, useState } from 'react';
 const STORAGE_KEY = 'daffa_cart';
 const CART_EVENT = 'daffa-cart-change';
 
+/** Batas total unit (jumlah seluruh qty) yang boleh ada di keranjang. */
+export const MAX_CART_UNITS = 10;
+
+export type AddItemResult =
+	| { ok: true }
+	| { ok: false; reason: 'limit'; remaining: number };
+
 export type CartItem = {
 	id: string; // cartId — kini ikut menyandi periode (lihat product-detail-client)
 	productId: string;
@@ -87,18 +94,31 @@ export function useCart() {
 		};
 	}, []);
 
-	const addItem = useCallback((item: AddCartInput, quantity = 1) => {
-		const current = readCart();
-		const idx = current.findIndex((i) => i.id === item.id);
-		const next =
-			idx >= 0
-				? current.map((i, n) =>
-						n === idx ? { ...i, quantity: i.quantity + quantity } : i,
-					)
-				: [...current, { ...item, quantity }];
-		writeCart(next);
-		setItems(next);
-	}, []);
+	const addItem = useCallback(
+		(item: AddCartInput, quantity = 1): AddItemResult => {
+			const current = readCart();
+			// Batas berdasarkan TOTAL unit (jumlah semua qty), bukan jumlah jenis.
+			const currentUnits = current.reduce((sum, i) => sum + i.quantity, 0);
+			if (currentUnits + quantity > MAX_CART_UNITS) {
+				return {
+					ok: false,
+					reason: 'limit',
+					remaining: Math.max(0, MAX_CART_UNITS - currentUnits),
+				};
+			}
+			const idx = current.findIndex((i) => i.id === item.id);
+			const next =
+				idx >= 0
+					? current.map((i, n) =>
+							n === idx ? { ...i, quantity: i.quantity + quantity } : i,
+						)
+					: [...current, { ...item, quantity }];
+			writeCart(next);
+			setItems(next);
+			return { ok: true };
+		},
+		[],
+	);
 
 	const removeItem = useCallback((id: string) => {
 		const next = readCart().filter((i) => i.id !== id);

@@ -86,7 +86,11 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang='id'>
-			<body className='antialiased'>
+			{/* suppressHydrationWarning: ekstensi browser (Grammarly, dark-mode,
+			    password manager) kerap menyuntik atribut ke <body> sebelum React
+			    hydrate → memicu warning mismatch yang benign. Ini hanya menekan cek
+			    atribut <body> itu sendiri, bukan komponen anak. */}
+			<body className='antialiased' suppressHydrationWarning>
 				<Providers>{children}</Providers>
 			</body>
 		</html>
