@@ -39,15 +39,12 @@ const trustBadges = [
 export default function Hero() {
 	const reduceMotion = useReducedMotion();
 
-	// Gate entrance animations on prefers-reduced-motion.
-	const fade = (y = 30) =>
-		reduceMotion
-			? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 } }
-			: { initial: { opacity: 0, y }, animate: { opacity: 1, y: 0 } };
-
-	const scaleIn = reduceMotion
-		? { initial: { opacity: 1, scale: 1 }, animate: { opacity: 1, scale: 1 } }
-		: { initial: { opacity: 0, scale: 0.95 }, animate: { opacity: 1, scale: 1 } };
+	// LCP-safe: konten di atas lipatan (judul H1, gambar hero) TIDAK boleh
+	// mulai dari opacity:0 — itu menunda LCP sampai JS hydrate + animasi selesai.
+	// `rise` hanya menganimasikan transform (opacity tetap 1), jadi elemen
+	// langsung ter-paint di HTML SSR; gambar hero utama bahkan dirender statis.
+	const rise = (y = 24) =>
+		reduceMotion ? { initial: false as const } : { initial: { y }, animate: { y: 0 } };
 
 	const floatAnim = reduceMotion ? {} : { y: [0, -6, 0] };
 
@@ -75,7 +72,7 @@ export default function Hero() {
 				<div className='grid lg:grid-cols-2 gap-10 lg:gap-14 items-center'>
 					{/* Left — copy */}
 					<motion.div
-						{...fade(30)}
+						{...rise(28)}
 						transition={{ duration: 0.6, ease: 'easeOut' }}>
 						<Badge
 							variant='secondary'
@@ -148,11 +145,9 @@ export default function Hero() {
 						</div>
 					</motion.div>
 
-					{/* Right — hero image composition (rich version for lg+) */}
-					<motion.div
-						{...scaleIn}
-						transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
-						className='relative hidden lg:block'>
+					{/* Right — hero image composition (rich version for lg+).
+					    Wrapper statis (bukan motion) supaya gambar LCP langsung paint. */}
+					<div className='relative hidden lg:block'>
 						{/* Main image */}
 						<div className='relative aspect-[3/4] rounded-3xl overflow-hidden shadow-lg'>
 							<Image
@@ -191,7 +186,7 @@ export default function Hero() {
 						<motion.div
 							className='absolute -bottom-5 -left-5 w-[140px] aspect-square rounded-2xl overflow-hidden shadow-lg border-4'
 							style={{ borderColor: 'var(--bg)' }}
-							{...fade(20)}
+							{...rise(16)}
 							transition={{ duration: 0.6, delay: 0.5, ease: 'easeOut' }}>
 							<Image
 								src='/product/mobil-pengantin-1.PNG'
@@ -201,13 +196,11 @@ export default function Hero() {
 								sizes='140px'
 							/>
 						</motion.div>
-					</motion.div>
+					</div>
 
-					{/* Mobile / tablet image — single main image, shown below copy on < lg */}
-					<motion.div
-						{...scaleIn}
-						transition={{ duration: 0.7, delay: 0.15, ease: 'easeOut' }}
-						className='relative lg:hidden'>
+					{/* Mobile / tablet image — single main image, shown below copy on < lg.
+					    Wrapper statis supaya gambar LCP langsung paint di mobile. */}
+					<div className='relative lg:hidden'>
 						<div className='relative aspect-[4/3] sm:aspect-[16/10] rounded-3xl overflow-hidden shadow-lg'>
 							<Image
 								src='/product/papan-bunga-5.PNG'
@@ -242,7 +235,7 @@ export default function Hero() {
 								</Card>
 							</motion.div>
 						</div>
-					</motion.div>
+					</div>
 				</div>
 			</div>
 		</section>

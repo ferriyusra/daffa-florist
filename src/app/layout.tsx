@@ -1,6 +1,23 @@
 import type { Metadata } from 'next';
+import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+
+// Self-hosted via next/font: menghapus @import render-blocking ke Google Fonts
+// (2 koneksi eksternal) — fonts di-preload, otomatis font-display: swap.
+const inter = Inter({
+	subsets: ['latin'],
+	weight: ['300', '400', '500', '600', '700'],
+	variable: '--font-inter',
+	display: 'swap',
+});
+
+const playfair = Playfair_Display({
+	subsets: ['latin'],
+	weight: ['400', '500', '600', '700'],
+	variable: '--font-playfair',
+	display: 'swap',
+});
 
 const siteUrl = 'https://daffa-florist.vercel.app/'; // Ganti dengan domain asli
 
@@ -85,7 +102,7 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang='id'>
+		<html lang='id' className={`${inter.variable} ${playfair.variable}`}>
 			{/* suppressHydrationWarning: ekstensi browser (Grammarly, dark-mode,
 			    password manager) kerap menyuntik atribut ke <body> sebelum React
 			    hydrate → memicu warning mismatch yang benign. Ini hanya menekan cek
