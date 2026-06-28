@@ -420,10 +420,22 @@ export const orderRouter = createTRPCRouter({
 				// dengan nomor baru (loop terbatas) — jangan gagalkan booking.
 				for (let attempt = 0; attempt < MAX_ORDER_NUMBER_ATTEMPTS; attempt++) {
 					try {
-						return await tx.order.create({
+						const order = await tx.order.create({
 							data: data(generateOrderNumber()),
 							include: { items: true, address: true },
 						});
+						// Catatan status awal (audit trail). fromStatus null = pesanan
+						// baru lahir; changedBy = pelanggan pembuat order.
+						await tx.orderStatusHistory.create({
+							data: {
+								orderId: order.id,
+								fromStatus: null,
+								toStatus: 'PENDING',
+								changedBy: ctx.session.user.id,
+								note: 'Pesanan dibuat',
+							},
+						});
+						return order;
 					} catch (err) {
 						// Hanya retry bila bentrok justru pada `orderNumber` — jangan
 						// telan P2002 dari unique constraint lain (mis. alokasi unit).

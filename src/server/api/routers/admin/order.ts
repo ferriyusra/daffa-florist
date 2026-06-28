@@ -191,6 +191,17 @@ export const adminOrderRouter = createTRPCRouter({
 						},
 						orderBy: { createdAt: 'desc' },
 					},
+					statusHistory: {
+						select: {
+							id: true,
+							fromStatus: true,
+							toStatus: true,
+							note: true,
+							createdAt: true,
+							changedByUser: { select: { name: true, email: true } },
+						},
+						orderBy: { createdAt: 'asc' },
+					},
 				},
 			});
 			if (!order) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -203,8 +214,9 @@ export const adminOrderRouter = createTRPCRouter({
 	 * `@/lib/order-status`. CANCELLED/COMPLETED sudah dianggap tidak aktif oleh
 	 * `checkSizeAvailability` (unit otomatis bebas), jadi tak perlu kerja ekstra.
 	 *
-	 * TODO: catat riwayat perubahan (OrderStatusHistory) bila modelnya sudah ada
-	 * (direncanakan di ERD, belum diimplementasikan).
+	 * Tiap transisi sukses dicatat ke `OrderStatusHistory` (audit trail, ERD §5.2)
+	 * di dalam transaksi yang sama dengan CAS — riwayat hanya tertulis bila status
+	 * benar-benar berubah.
 	 */
 	updateStatus: adminProcedure
 		.input(
@@ -233,13 +245,27 @@ export const adminOrderRouter = createTRPCRouter({
 				});
 			}
 
-			// Compare-and-swap: tulis hanya bila status masih sama dengan yang
-			// divalidasi → cegah race dua admin (last-write tak menimpa diam-diam).
-			const res = await ctx.prisma.order.updateMany({
-				where: { id: input.id, status: order.status },
-				data: { status: input.status },
+			// Compare-and-swap + catat audit trail dalam SATU transaksi: tulis hanya
+			// bila status masih sama dengan yang divalidasi → cegah race dua admin
+			// (last-write tak menimpa diam-diam), dan riwayat hanya tercatat bila
+			// transisi benar-benar terjadi.
+			const changed = await ctx.prisma.$transaction(async (tx) => {
+				const res = await tx.order.updateMany({
+					where: { id: input.id, status: order.status },
+					data: { status: input.status },
+				});
+				if (res.count === 0) return false;
+				await tx.orderStatusHistory.create({
+					data: {
+						orderId: input.id,
+						fromStatus: order.status,
+						toStatus: input.status,
+						changedBy: ctx.session.user.id,
+					},
+				});
+				return true;
 			});
-			if (res.count === 0) {
+			if (!changed) {
 				throw new TRPCError({
 					code: 'CONFLICT',
 					message: 'Status pesanan sudah berubah. Muat ulang halaman.',

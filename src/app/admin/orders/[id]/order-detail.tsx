@@ -9,6 +9,7 @@ import {
 	CalendarDays,
 	CheckCircle2,
 	CreditCard,
+	History,
 	MapPin,
 	Package,
 	Receipt,
@@ -489,6 +490,68 @@ export default function OrderDetail({ order }: { order: Order }) {
 									);
 								})}
 							</ul>
+						)}
+					</Section>
+
+					{/* Riwayat status (audit trail) — urut terlama → terbaru. */}
+					<Section title='Riwayat Status' icon={History}>
+						{order.statusHistory.length === 0 ? (
+							<p className='text-sm' style={{ color: 'var(--text-muted)' }}>
+								Belum ada riwayat perubahan status.
+							</p>
+						) : (
+							<ol className='relative space-y-5 pl-6'>
+								{/* garis penghubung timeline */}
+								<span
+									className='absolute left-[5px] top-1 bottom-1 w-px'
+									style={{ background: 'var(--border)' }}
+								/>
+								{order.statusHistory.map((h) => {
+									const c = statusColors[h.toStatus];
+									const actor =
+										h.changedByUser?.name ??
+										h.changedByUser?.email ??
+										'Sistem';
+									return (
+										<li key={h.id} className='relative'>
+											<span
+												className='absolute -left-6 top-1 w-[11px] h-[11px] rounded-full ring-2'
+												style={{
+													background: c.color,
+													// ring memakai warna kartu agar titik tampak "mengambang"
+													boxShadow: '0 0 0 2px var(--bg-card)',
+												}}
+											/>
+											<div className='flex flex-wrap items-center gap-2'>
+												<span
+													className='inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold'
+													style={{ background: c.bg, color: c.color }}>
+													{ORDER_STATUS_LABEL[h.toStatus]}
+												</span>
+												{h.fromStatus && (
+													<span
+														className='text-[11px]'
+														style={{ color: 'var(--text-muted)' }}>
+														dari {ORDER_STATUS_LABEL[h.fromStatus]}
+													</span>
+												)}
+											</div>
+											<p
+												className='text-[11px] mt-1'
+												style={{ color: 'var(--text-secondary)' }}>
+												{formatInstantTime(h.createdAt)} · oleh {actor}
+											</p>
+											{h.note && (
+												<p
+													className='text-[11px] mt-0.5'
+													style={{ color: 'var(--text-muted)' }}>
+													{h.note}
+												</p>
+											)}
+										</li>
+									);
+								})}
+							</ol>
 						)}
 					</Section>
 				</div>

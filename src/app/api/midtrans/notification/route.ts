@@ -119,6 +119,19 @@ export async function POST(req: Request) {
 			where: { id: payment.orderId, status: 'PENDING' },
 			data: { status: 'CONFIRMED' },
 		});
+		// Catat audit trail hanya bila CAS benar-benar mengubah status (count === 1)
+		// → idempoten terhadap notifikasi ganda. changedBy null = aksi sistem.
+		if (res.count === 1) {
+			await prisma.orderStatusHistory.create({
+				data: {
+					orderId: payment.orderId,
+					fromStatus: 'PENDING',
+					toStatus: 'CONFIRMED',
+					changedBy: null,
+					note: 'Pembayaran terverifikasi (Midtrans)',
+				},
+			});
+		}
 		logger.info(
 			{ order_id, orderId: payment.orderId, confirmed: res.count },
 			'Webhook Midtrans: pembayaran lunas',

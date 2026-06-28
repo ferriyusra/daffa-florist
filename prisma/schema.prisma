@@ -35,13 +35,34 @@ model User {
   email          String   @unique
   phone          String?
   hashedPassword String
-  role           UserRole @default(CUSTOMER)
-  isActive       Boolean  @default(true) // admin bisa nonaktifkan akun (blokir login)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  role           UserRole  @default(CUSTOMER)
+  isActive       Boolean   @default(true) // admin bisa nonaktifkan akun (blokir login)
+  passwordChangedAt DateTime? // saat password terakhir diganti; JWT terbit sebelum ini dianggap basi (logout paksa). NULL = belum pernah → tak pernah dibatalkan.
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  addresses Address[]
-  orders    Order[]
+  addresses           Address[]
+  orders              Order[]
+  statusChanges       OrderStatusHistory[] // perubahan status yang dicatat atas nama user ini (changedBy)
+  passwordResetTokens PasswordResetToken[]
+}
+
+// Token reset password (ERD auth). Yang disimpan = SHA-256 dari token mentah,
+// bukan tokennya — kalau DB bocor token tak bisa dipakai. Token berlaku 1 jam,
+// sekali pakai (`usedAt`), dan dibatalkan massal saat user minta token baru atau
+// berhasil reset. Rate-limit dihitung dari `createdAt` (maks 3 / 5 menit / user).
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique // SHA-256 hex dari token mentah
+  expiresAt DateTime // createdAt + 1 jam
+  usedAt    DateTime? // diisi saat token dipakai (sekali pakai)
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt]) // rate-limit & pembatalan massal per user
+  @@index([expiresAt]) // pembersihan token kedaluwarsa
 }
 
 model Address {
@@ -159,14 +180,34 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User        @relation(fields: [userId], references: [id])
-  address  Address?    @relation(fields: [addressId], references: [id])
-  items    OrderItem[]
-  payments Payment[]
+  user          User                 @relation(fields: [userId], references: [id])
+  address       Address?             @relation(fields: [addressId], references: [id])
+  items         OrderItem[]
+  payments      Payment[]
+  statusHistory OrderStatusHistory[]
 
   @@index([userId])
   @@index([status])
   @@index([eventDate])
+}
+
+// Audit trail tiap perubahan status pesanan (ERD §5.2). Dicatat OTOMATIS oleh
+// server di setiap transisi — bukan input manual: saat order dibuat
+// (fromStatus null → PENDING), saat webhook Midtrans melunasi (PENDING →
+// CONFIRMED, changedBy null = sistem), dan tiap `admin.order.updateStatus`.
+model OrderStatusHistory {
+  id         String       @id @default(uuid()) @db.Uuid
+  orderId    String       @db.Uuid
+  fromStatus OrderStatus? // null pada catatan pertama (pembuatan order)
+  toStatus   OrderStatus
+  changedBy  String?      @db.Uuid // null = sistem (webhook), selain itu userId aktor
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  order         Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser User? @relation(fields: [changedBy], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
 }
 
 model Payment {
