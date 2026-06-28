@@ -9,7 +9,10 @@ export const registerFields = z.object({
 	email: z
 		.string()
 		.min(1, 'Email wajib diisi.')
-		.email('Format email tidak valid.'),
+		.email('Format email tidak valid.')
+		// Simpan lowercase+trim — konsisten dgn login & reset agar lookup email
+		// tak meleset karena beda kapitalisasi.
+		.transform((v) => v.trim().toLowerCase()),
 	phone: z
 		.string()
 		.min(8, 'Nomor WhatsApp minimal 8 digit.')

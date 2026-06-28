@@ -33,6 +33,7 @@ function LoginForm() {
 
 	const redirectTo = searchParams.get('redirect') ?? '/dashboard';
 	const justRegistered = searchParams.get('registered') === '1';
+	const justReset = searchParams.get('reset') === '1';
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -153,12 +154,12 @@ function LoginForm() {
 									Ingat saya
 								</span>
 							</label>
-							<a
-								href='#'
+							<Link
+								href='/forgot-password'
 								className='font-medium transition-colors'
 								style={{ color: 'var(--primary)' }}>
 								Lupa password?
-							</a>
+							</Link>
 						</div>
 
 						{justRegistered && !error && (
@@ -170,6 +171,18 @@ function LoginForm() {
 								}}>
 								Akun berhasil dibuat. Silakan masuk dengan email & password
 								Anda.
+							</p>
+						)}
+
+						{justReset && !error && (
+							<p
+								className='text-sm rounded-xl px-4 py-3'
+								style={{
+									background: 'rgba(61, 107, 79, 0.1)',
+									color: 'var(--secondary)',
+								}}>
+								Password berhasil diperbarui. Silakan masuk dengan password
+								baru Anda.
 							</p>
 						)}
 

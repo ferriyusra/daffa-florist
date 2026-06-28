@@ -20,6 +20,10 @@ declare module 'next-auth/jwt' {
 	interface JWT {
 		id: string;
 		role: AppUserRole;
+		// Stempel waktu (epoch ms) password user saat token diterbitkan. Dipakai
+		// di config.ts (Node) untuk membatalkan JWT lama bila password berubah.
+		// Tipe-saja di sini → tetap aman edge (tanpa impor runtime).
+		passwordChangedAt?: number | null;
 	}
 }
 
@@ -33,7 +37,7 @@ export const baseAuthConfig = {
 	// Di belakang reverse proxy (Caddy/Nginx) host dari header tak sama dengan
 	// origin asli — tanpa ini NextAuth v5 menolak request (`UntrustedHost`).
 	trustHost: true,
-	session: { strategy: 'jwt' },
+	session: { strategy: 'jwt', maxAge: 60 * 60 }, // 1 jam — wajib login ulang setelahnya
 	pages: { signIn: '/login' },
 	callbacks: {
 		jwt({ token, user }) {
