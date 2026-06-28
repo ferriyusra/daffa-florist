@@ -99,13 +99,54 @@ zona ongkir, dan promo contoh. **Segera ganti password admin** setelah login.
 
 ## Update aplikasi (deploy ulang)
 
+Cara cepat — pakai script (`git pull` → build → restart → bersihkan image lama):
+
 ```bash
-cd /var/www/daffa-florist
+cd ~/daffa-florist
+./scripts/redeploy.sh
+```
+
+Atau sekali-jalan dari Mac (tanpa login manual):
+
+```bash
+ssh ubuntu@<IP-VPS> 'cd ~/daffa-florist && ./scripts/redeploy.sh'
+```
+
+Manual (kalau perlu langkah terpisah):
+
+```bash
+cd ~/daffa-florist
 git pull
 docker compose up -d --build
 ```
 
-Migrasi baru jalan otomatis saat container start.
+Migrasi baru jalan otomatis lewat service `migrate` (selesai dulu, baru `app` start).
+
+## Update `.env` di VPS
+
+`.env` ada **hanya di VPS** (tidak masuk git). Untuk mengubah nilai — mis. ganti
+key Midtrans Sandbox → Production, ganti `NEXTAUTH_SECRET`, atau password DB:
+
+```bash
+cd ~/daffa-florist
+nano .env          # ubah nilainya, simpan: Ctrl+O, Enter, Ctrl+X
+docker compose up -d
+```
+
+**Penting:**
+
+- **Wajib `docker compose up -d`** (bukan `restart`) — perintah ini me-recreate
+  container yang env-nya berubah agar nilai baru terbaca. `docker compose restart`
+  **tidak** membaca ulang `.env`.
+- **Tidak perlu `--build`** kalau yang berubah hanya `.env` (kode tidak berubah) —
+  lebih cepat.
+- Ganti **`MIDTRANS_API_URL`** ke `https://api.midtrans.com` saat pindah ke key
+  Production; biarkan `https://api.sandbox.midtrans.com` untuk Sandbox.
+- Ubah **`POSTGRES_PASSWORD`** setelah DB pernah jalan = **tidak otomatis** mengganti
+  password user di volume DB lama. Kalau benar-benar perlu, ganti lewat SQL atau
+  reset volume (`docker compose down -v` — ⚠️ menghapus semua data).
+- Setelah ganti **`DOMAIN`/`NEXTAUTH_URL`**, Caddy akan menerbitkan sertifikat HTTPS
+  baru otomatis (pastikan DNS domain baru sudah mengarah ke VPS).
 
 ## Backup database otomatis
 
@@ -117,6 +158,22 @@ Jadwalkan backup harian. Edit cron: `crontab -e`, tambahkan:
 
 Backup tersimpan di `/var/backups/daffa-florist/`, otomatis hapus yang >7 hari.
 Restore: `gunzip -c db-XXXX.sql.gz | docker compose exec -T db psql -U daffa daffa_florist`.
+
+## Ringkasan perintah
+
+| Tujuan                      | Perintah                                                              |
+| --------------------------- | -------------------------------------------------------------------- |
+| Konek ke VPS                | `ssh ubuntu@<IP-VPS>`                                                 |
+| Deploy update (di VPS)      | `cd ~/daffa-florist && ./scripts/redeploy.sh`                        |
+| Deploy update (dari Mac)    | `ssh ubuntu@<IP-VPS> 'cd ~/daffa-florist && ./scripts/redeploy.sh'`  |
+| Update `.env` lalu terapkan | `nano .env` → `docker compose up -d`                                  |
+| Cek status container        | `docker compose ps`                                                  |
+| Lihat log app               | `docker compose logs app --tail=30`                                  |
+| Lihat log migrasi           | `docker compose logs migrate`                                        |
+| Seed data awal (sekali)     | `docker compose --profile seed run --rm seed`                       |
+| Backup DB manual            | `sh scripts/backup-db.sh`                                            |
+| Stop semua (data aman)      | `docker compose down`                                               |
+| Stop + **hapus data DB**    | `docker compose down -v`  ⚠️                                          |
 
 ## Troubleshooting
 
