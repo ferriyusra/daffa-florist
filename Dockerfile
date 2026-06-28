@@ -34,6 +34,9 @@ ENV NEXTAUTH_SECRET="build-time-placeholder"
 ENV MIDTRANS_API_URL="https://api.sandbox.midtrans.com"
 ENV MIDTRANS_CLIENT_KEY="build-time-placeholder"
 ENV MIDTRANS_SERVER_KEY="build-time-placeholder"
+# NEXTAUTH_URL & RESEND_API_KEY wajib di produksi (env.ts) → dummy build-time.
+ENV NEXTAUTH_URL="https://build.example.com"
+ENV RESEND_API_KEY="build-time-placeholder"
 
 # Client Prisma di-generate ke src/generated/prisma (gitignored & dockerignored),
 # jadi harus dibuat di sini sebelum build — kalau tidak, import @/generated/prisma gagal.

@@ -41,6 +41,10 @@ services:
       MIDTRANS_API_URL: ${MIDTRANS_API_URL}
       MIDTRANS_CLIENT_KEY: ${MIDTRANS_CLIENT_KEY}
       MIDTRANS_SERVER_KEY: ${MIDTRANS_SERVER_KEY}
+      # Resend (email reset password) — RESEND_API_KEY WAJIB di produksi.
+      # EMAIL_FROM opsional (punya default di env.ts); kosongkan untuk pakai default.
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:-}
     # Tidak di-publish ke host — Caddy mengaksesnya lewat network internal Docker.
     # Untuk tes langsung tanpa Caddy, buka komentar baris di bawah lalu buka :3000.
     # ports:
